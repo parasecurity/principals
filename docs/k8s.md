@@ -126,6 +126,18 @@ echo "minikube installed successfully"
 echo "Please logout and login for changes to take effect"
 ```
 
+## Install octant
+
+Octant provides a web interface for kubernetes.
+
+```
+wget https://github.com/vmware-tanzu/octant/releases/download/v0.16.3/octant_0.16.3_Linux-64bit.deb
+
+sudo dpkg -i octant_0.16.3_Linux-64bit.deb
+```
+
+It needs a browser installed!
+
 ## User specific steps
 
 These needs to be done once.
