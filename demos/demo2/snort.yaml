@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: snort 
+spec:
+  containers:
+  - name: snort
+    image: linton/docker-snort
+    command:
+      - sleep
+      - infinity
+    imagePullPolicy: IfNotPresent
+
