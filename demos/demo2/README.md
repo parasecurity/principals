@@ -1,6 +1,23 @@
-## Create the containers 
+## Start minikube node
+
+```sh
+minikube start \
+    --vm-driver=docker \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/12 \
+    --extra-config=kubelet.network-plugin=cni
 
 ```
+
+## Start Andrea
+
+```sh
+kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml
+
+```
+
+## Create the containers 
+
+```sh
 # Alice
 kubectl apply -f ./alice.yaml
 
@@ -16,62 +33,57 @@ kubectl apply -f ./snort.yaml
 
 Find the name of the snort-pod
 
-```
+```sh
 kubectl exec -n kube-system -it antrea-agent-s6gml -- ovs-vsctl show | grep snort 
 
 ```
 
 Set up port mirroring to snort pod
 
-```
-kubectl exec -n kube-system -it antrea-agent-s6gml -- ovs-vsctl \
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl \
   -- --id=@p get port snort-XXXX \
   -- --id=@m create mirror name=m0 select-all=true output-port=@p \
   -- set bridge br-int mirrors=@m
+
 ```
+
 ## Inspect trafic inside bridge
 
-Add ping alert in snort 
-
-```
-# Paste this in opt/rules 
-alert icmp any any -> any any (msg:"Pinging...";sid:1000004;)
-
-```
 Execute snort
 
-```
+```sh
 kubectl exec -it snort -- snort -i eth0 -c /etc/snort/etc/snort.conf -A console
 
 ```
 
 Ping google from malice 
 
-```
-kubectl exec -it malice -- ping -c3 google.com
+```sh
+kubectl exec -it malice -- ping -c3 8.8.8.8
 
 ```
 
-Ping and responce should appear on snort!
+Ping should appear on snort!
 
 ## Create snort pod with 2 network devices
 
 We are going to download and install multus-cni on kubernetes installation
 
-```
+```sh
 git clone https://github.com/intel/multus-cni.git && cd multus-cni
 cat ./images/multus-daemonset.yml | kubectl apply -f -
 
 ```
 
 Check that multus is live
-```
+```sh
 kubectl get pods --all-namespaces | grep -i multus
 
 ```
 
-Add an new interface for pods to use 
-```
+Add a new interface for pods to use 
+```sh
 cat <\<EOF | kubectl create -f -
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
@@ -99,7 +111,15 @@ EOF
 ```
 
 Create the new snort pod
-```
+```sh
 kubectl apply -f ./snort-multus.yaml
 
 ```
+
+Expose antrea-controller service 
+```sh
+ kubectl expose deployment/antrea-controller --namespace=kube-system 
+ kubectl get ep antrea-controller --namespace=kube-system
+
+
+ ```
