@@ -123,3 +123,20 @@ Expose antrea-controller service
 
 
  ```
+
+## Inspect traffic with script
+
+Start snort on background
+```sh
+# -A unsock -l create a tmp/snort_alert sock
+# Start snort on background
+snort -i eth0 -A unsock -l /tmp -c /etc/snort/etc/snort.conf -D
+
+```
+
+Run script to connect to socket
+```sh
+python simple_icmp.py 
+
+
+```
