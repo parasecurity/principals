@@ -71,8 +71,7 @@ Ping should appear on snort!
 We are going to download and install multus-cni on kubernetes installation
 
 ```sh
-git clone https://github.com/intel/multus-cni.git && cd multus-cni
-cat ./images/multus-daemonset.yml | kubectl apply -f -
+kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml
 
 ```
 
