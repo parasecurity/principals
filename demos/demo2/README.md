@@ -68,7 +68,31 @@ Ping should appear on snort!
 
 ## Create snort pod with 2 network devices
 
-We are going to download and install multus-cni on kubernetes installation
+Delete the previous config
+
+```sh
+minikube delete
+
+```
+
+Start minikube node
+
+```sh
+minikube start \
+    --vm-driver=docker \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/12 \
+    --extra-config=kubelet.network-plugin=cni
+
+```
+
+Start Andrea
+
+```sh
+kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml
+
+```
+
+Download and install multus-cni 
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml
@@ -76,52 +100,72 @@ kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/image
 ```
 
 Check that multus is live
+
 ```sh
 kubectl get pods --all-namespaces | grep -i multus
 
 ```
 
-Add a new interface for pods to use 
-```sh
-cat <\<EOF | kubectl create -f -
-apiVersion: "k8s.cni.cncf.io/v1"
-kind: NetworkAttachmentDefinition
-metadata:
-  name: macvlan-conf
-spec:
-  config: '{
-      "cniVersion": "0.3.0",
-      "type": "macvlan",
-      "master": "eth0",
-      "mode": "bridge",
-      "ipam": {
-        "type": "host-local",
-        "subnet": "192.168.1.0/24",
-        "rangeStart": "192.168.1.200",
-        "rangeEnd": "192.168.1.216",
-        "routes": [
-          { "dst": "0.0.0.0/0" }
-        ],
-        "gateway": "192.168.1.1"
-      }
-    }'
-EOF
+Create network interface
+
+```sh 
+kubectl create -f ./2port-conf.yaml
 
 ```
 
-Create the new snort pod
+Create a snort and alice pod with 2 port interfaces
+
 ```sh
+# Snort
 kubectl apply -f ./snort-multus.yaml
 
+# Alice
+kubectl apply -f ./alice-multus.yaml
 ```
 
-Expose antrea-controller service 
+Check the interfaces inside snort,alice
+
 ```sh
- kubectl expose deployment/antrea-controller --namespace=kube-system 
- kubectl get ep antrea-controller --namespace=kube-system
+kubectl exec -it alice-2ports -- ip a
+kubectl exec -it snort-2ports -- ip a
+```
 
+You should be able to ping both interfaces
 
- ```
+```sh
+kubectl exec -it alice-2ports -- ip a
+# Ping eth0 of alice
+kubectl exec -it snort-2ports -- ping XXXXXXXX
+# Ping net1 of alice
+kubectl exec -it snort-2ports -- ping XXXXXXXX
+```
+
+Find the name of the snort-pod
+
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl show | grep snort 
+
+```
+
+Set up port mirroring to snort pod
+
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl \
+  -- --id=@p get port snort-XXXX \
+  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
+  -- set bridge br-int mirrors=@m
+
+```
+
+You should be able to ping net1 interface of alice!
+
+```sh
+kubectl exec -it alice-2ports -- ip a
+# Ping eth0 of alice should fail
+kubectl exec -it snort-2ports -- ping XXXXXXXX
+# Ping net1 of alice still works!
+kubectl exec -it snort-2ports -- ping XXXXXXXX
+```
 
 ## Inspect traffic with script
 
