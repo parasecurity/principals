@@ -99,17 +99,17 @@ kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/image
 
 ```
 
-Check that multus is live
+Check that pod are live 
 
 ```sh
-kubectl get pods --all-namespaces | grep -i multus
+watch kubectl get pods --all-namespaces 
 
 ```
 
 Create network interface
 
 ```sh 
-kubectl create -f ./2port-conf.yaml
+kubectl create -f ./2port.yaml
 
 ```
 
@@ -117,37 +117,40 @@ Create a snort and alice pod with 2 port interfaces
 
 ```sh
 # Snort
-kubectl apply -f ./snort-multus.yaml
+kubectl apply -f ./snort.yaml
 
-# Alice
-kubectl apply -f ./alice-multus.yaml
+# Flow controller
+kubectl apply -f ./flow-controller.yaml
+
+# Malice 
+kubectl apply -f ./malice.yaml
 ```
 
-Check the interfaces inside snort,alice
+Check the interfaces inside snort, flow-controller
 
 ```sh
-kubectl exec -it alice-2ports -- ip a
-kubectl exec -it snort-2ports -- ip a
+kubectl exec -it flow-controller -- ip a
+kubectl exec -it snort -- ip a
 ```
 
 You should be able to ping both interfaces
 
 ```sh
-kubectl exec -it alice-2ports -- ip a
+kubectl exec -it flow-controller -- ip a
 # Ping eth0 of alice
-kubectl exec -it snort-2ports -- ping XXXXXXXX
+kubectl exec -it snort -- ping XXXXXXXX
 # Ping net1 of alice
-kubectl exec -it snort-2ports -- ping XXXXXXXX
+kubectl exec -it snort -- ping XXXXXXXX
 ```
 
-Find the name of the snort-pod
+Find the name of the snort
 
 ```sh
 kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl show | grep snort 
 
 ```
 
-Set up port mirroring to snort pod
+Set up port mirroring to snort 
 
 ```sh
 kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl \
@@ -157,14 +160,14 @@ kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl \
 
 ```
 
-You should be able to ping net1 interface of alice!
+You should be able to ping net1 interface of flow-controller 
 
 ```sh
-kubectl exec -it alice-2ports -- ip a
+kubectl exec -it flow-controller -- ip a
 # Ping eth0 of alice should fail
-kubectl exec -it snort-2ports -- ping XXXXXXXX
+kubectl exec -it snort -- ping XXXXXXXX
 # Ping net1 of alice still works!
-kubectl exec -it snort-2ports -- ping XXXXXXXX
+kubectl exec -it snort -- ping XXXXXXXX
 ```
 
 ## Inspect traffic with script
