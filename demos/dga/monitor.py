@@ -82,7 +82,7 @@ class PacketMonitor:
             ip_dst = packet[IP].dst
 
             domain = str(packet.getlayer(DNS).qd.qname)
-            print(str(ip_src), str(ip_dst), domain)
+            print(str(ip_src), str(ip_dst), domain, self.detector.is_dga(domain))
 
     def sniff_packets(self):
         if iface:
