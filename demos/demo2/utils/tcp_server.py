@@ -1,10 +1,8 @@
-# -*- coding:utf-8 -*-
-
 import socket
-from datetime import datetime
+import os
 
 # address and port is arbitrary
-def server(host='127.0.0.1', port=60260):
+def server(host='192.168.49.2', port=2378):
   # create socket
   with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
     sock.bind((host, port))
@@ -14,22 +12,23 @@ def server(host='127.0.0.1', port=60260):
     conn, addr = sock.accept()
 
     with conn as c:
-      # display the current time
-      time = datetime.now().ctime()
-      print("[+] Connecting by {0}:{1} ({2})".format(addr[0], addr[1], time))
 
       while True:
         request = c.recv(4096)
+        address = request.decode('utf-8')
 
-        if not request:
-          print("[-] Not Received")
+        if address == 'exit':
+          print("Close the program")
+          response = "exit"
+          c.sendall(response.encode('utf-8'))
           break
 
-        print("[+] Received", repr(request.decode('utf-8')))
+        print("[+] Received", repr(address))
+        os.system('ovs-ofctl add-flow br-int ip,nw_src=' + address + ',actions=drop')
 
-        response = input("[+] Enter string : ")
+        response = "ok"
         c.sendall(response.encode('utf-8'))
-        print("[+] Sending to {0}:{1}".format(addr[0], addr[1]))
 
 if __name__ == "__main__":
   server()
+
