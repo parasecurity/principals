@@ -186,3 +186,38 @@ python simple_icmp.py
 
 
 ```
+
+## Link a local image (or dockerfile) to kubernetes
+
+Start the registy
+```sh
+
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+```
+
+Build the image and push it 
+```sh
+docker build . -t XXXX
+
+docker tag dga:v1.0.0 localhost:5000/dga:v1.0.0
+
+docker push localhost:5000/dga:v1.0.0  
+```
+
+Link minikube with the local registry
+```
+#Add --insecure-registry="192.168.49.1:5000" to minikube start
+minikube start \ 
+    --vm-driver=docker \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/12 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000"
+```
+
+Add to kubernetes yaml: 192.168.49.1:5000/XXXX
+
+## Run dga script
+
+```sh
+
+```

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: alice
+  name: nslookup
 spec:
   containers:
-  - name: alice
-    image: praqma/network-multitool
+  - name: nslookup
+    image: mkrishnamurthy/nslookup 
     command:
       - sleep
       - infinity
