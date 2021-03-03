@@ -15,7 +15,8 @@ def client(host="192.168.49.2", port=2378, hostlocal="192.168.1.201", portlocal=
     
     # Ip to connect to send tcp packets
     # This ip and port is for antrea-agent
-    sock.connect((host, port))
+    sock_2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock_2.connect((host, port))
     
     with conn as c:
 
@@ -28,7 +29,7 @@ def client(host="192.168.49.2", port=2378, hostlocal="192.168.1.201", portlocal=
         
         # We pass to be blocked the ip through data
         print("[+] Forwarding to {}:{}".format(host, port))
-        sock.sendall(address.encode('utf-8'))
+        sock_2.sendall(address.encode('utf-8'))
 
 if __name__ == "__main__":
   client()

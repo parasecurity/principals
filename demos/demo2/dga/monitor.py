@@ -1,4 +1,5 @@
 from scapy.all import *
+import socket
 import argparse
 import time
 import tensorflow as tf
@@ -6,6 +7,7 @@ import numpy as np
 from tensorflow.python.keras.preprocessing import sequence
 from tensorflow import keras
 from typing import List, Tuple
+
 
 def as_keras_metric(method):
     """ from https://stackoverflow.com/questions/43076609/how-to-calculate-precision-and-recall-in-keras """
@@ -70,6 +72,15 @@ class PacketMonitor:
     iface = None
     detector = None
 
+    def establish_connection(self, host="192.168.1.204", port=8080):
+        # Ip and port of flow-controller
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+        self.socket.connect((host, port))        
+
+    def send_ip(self, address):
+        # Send bad ip address
+        self.socket.sendall(address.encode('utf-8'))
+
     def process_packet(self, packet):
         """
         This function is executed whenever a packet is sniffed
@@ -82,7 +93,13 @@ class PacketMonitor:
             ip_dst = packet[IP].dst
 
             domain = str(packet.getlayer(DNS).qd.qname)
-            print(str(ip_src), str(ip_dst), domain, self.detector.is_dga(domain))
+            
+            # We ignore the requests send from antrea agent ip
+            if str(ip_src) != "172.16.0.1" and str(ip_src) != "172.16.0.2":
+                print(str(ip_src), str(ip_dst), domain, self.detector.is_dga(domain))
+                if self.detector.is_dga(domain) == True:
+                    self.send_ip(str(ip_src))
+
 
     def sniff_packets(self):
         if iface:
@@ -95,6 +112,7 @@ class PacketMonitor:
     def __init__(self, iface, detector):
         self.iface = iface
         self.detector = detector
+        self.establish_connection()
         pass
 
 if __name__ == "__main__":
@@ -109,3 +127,4 @@ if __name__ == "__main__":
     iface = args.iface
     packet_monitor = PacketMonitor(iface, detector)
     packet_monitor.sniff_packets()
+    packet_monitor.socket.close()

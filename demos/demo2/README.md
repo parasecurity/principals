@@ -109,7 +109,7 @@ watch kubectl get pods --all-namespaces
 Create network interface
 
 ```sh 
-kubectl create -f ./2port.yaml
+kubectl create -f ./2_port.yaml
 
 ```
 
