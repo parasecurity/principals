@@ -109,22 +109,24 @@ class PacketMonitor:
             # sniff with default interface
             sniff(filter="port 53", prn=self.process_packet, store=False)
 
-    def __init__(self, iface, detector):
+    def __init__(self, iface, detector, address):
         self.iface = iface
         self.detector = detector
-        self.establish_connection()
+        self.establish_connection(address)
         pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DGA detector")
     parser.add_argument("-i", "--iface", help="Interface to use, default is scapy's default interface")
     parser.add_argument("-m", "--model", help="DGA detection model to load")
+    parser.add_argument("-a", "--address", help="Ip address of flow controller")
     args = parser.parse_args()
 
     model_path = args.model
     detector = DGADetector(model_path)
 
     iface = args.iface
-    packet_monitor = PacketMonitor(iface, detector)
+    address = args.address
+    packet_monitor = PacketMonitor(iface, detector, address)
     packet_monitor.sniff_packets()
     packet_monitor.socket.close()

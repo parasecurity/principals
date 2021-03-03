@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: nslookup
+  name: malice 
 spec:
   containers:
-  - name: nslookup
+  - name: malice
     image: mkrishnamurthy/nslookup 
     command:
       - sleep
