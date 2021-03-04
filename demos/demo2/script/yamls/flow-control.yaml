@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: flow-control 
+  annotations:
+    k8s.v1.cni.cncf.io/networks: macvlan-conf
+spec:
+  containers:
+  - name: flow-control
+    image: 192.168.49.1:5000/flow-control:v1.0.0
+    command:
+      - sleep
+      - infinity
+    imagePullPolicy: Always 
+

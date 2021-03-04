@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg()
+{
+	local message="$1"
+	local bold=$(tput bold)
+	local normal=$(tput sgr0)
+
+	echo "${bold}${message}${normal}"
+}
+
+waitUntilAllPodsRun()
+{
+	echo -en "\tWaiting for all pods to be deployed. This might take several minutes."
+
+	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
+	do
+		echo -n "."
+		sleep 10
+	done
+
+	echo ""
+}
+
+readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
+readonly REGISTRY_STATUS=$(docker ps | grep registry:2 | awk '{print $2}')
+
+if [[ "$MINIKUBE_STATUS" == "Running" ]];
+then
+	echo "Please first stop/clean minikube before running the demo"
+	exit 0
+fi
+
+if [[ "$REGISTRY_STATUS" == "registry:2" ]];
+then
+	echo "Please first clean local registry before running the demo"
+	exit 0
+fi
+
+msg "Starting local docker registry"
+
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+msg "Creating DGA docker image"
+
+docker build images/dga -t dga:v1.0.0
+docker tag dga:v1.0.0 localhost:5000/dga:v1.0.0
+docker push localhost:5000/dga:v1.0.0
+sleep 5
+
+msg "Creating flow-control docker image"
+
+docker build images/flow-control -t flow-control:v1.0.0
+docker tag flow-control:v1.0.0 localhost:5000/flow-control:v1.0.0
+docker push localhost:5000/flow-control:v1.0.0
+sleep 5
+
+msg "Starting minikube cluster"
+
+minikube start \
+    --vm-driver=docker \
+    --network-plugin=cni \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000"
+
+msg "Adding Antrea CNI"
+
+kubectl apply \
+    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
+    > /dev/null
+
+msg "Adding Multus CNI"
+
+kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml \
+  > /dev/null
+
+waitUntilAllPodsRun
+
+# Adding network config that allows pods with 2 network interfaces
+kubectl create -f ./2_port.yaml
+sleep 5
+
+# Setup Antrea Agent alias
+readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
+readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
+sleep 5
+
+msg "Adding demo pods"
+kubectl apply -f yamls > /dev/null
+
+waitUntilAllPodsRun
+
+msg "Setting up dga network monitoring"
+
+msg "Copying tcp server code to antrea agent"
+kubectl cp agent_server.py kube-system/$ANTREA_AGENT:home/
+
+# Setup pods names and ip addresses
+readonly ALICE_POD_1=alice1
+readonly ALICE_POD_2=alice2
+readonly ALICE_POD_3=alice3
+readonly MALICE_POD=malice
+readonly FLOW_CONTROL_POD=flow-control
+readonly DGA=$($ANTREA_POD ovs-vsctl show | grep dga | awk '{print $2}' | sed '2!d')
+readonly FLOW_CONTROL_IP=$(kubectl exec -it flow-control -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
+readonly ANTREA_IP=192.168.42.2
+
+msg "Starting antrea-agent server"
+$ANTREA_POD bash -c 'python3 home/agent_server.py &' > /dev/null
+sleep 5
+
+msg "Starting flow-control service"
+kubectl exec -it "$FLOW_CONTROL_POD" -- bash -c "python3 forward.py -l $FLOW_CONTROL_IP -s $ANTREA_IP"  
+sleep 5
+
+msg "Starting mirroring on dga port"
+kubectl exec -n kube-system -it $ANTREA_AGENT -- ovs-vsctl \
+  -- --id=@p get port $DGA \
+  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
+  -- set bridge br-int mirrors=@m
+sleep 5
+
+msg "Starting dga service"
+kubectl exec -it dga -- bash -c "python3 monitor.py -m dga.model -a $FLOW_CONTROL_IP" > /dev/null
+sleep 5
+
+msg "Starting Demo"
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_1" 
+kubectl exec -it "$ALICE_POD_1" -- nslookup google.com
+sleep 5
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_2" 
+kubectl exec -it "$ALICE_POD_2" -- nslookup amazon.com 
+sleep 5
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_3" 
+kubectl exec -it "$ALICE_POD_3" -- nslookup netflix.com 
+sleep 5
+
+msg "Send a malicius nslookup request from $MALICE_POD" 
+kubectl exec -it "$MALICE_POD" -- nslookup gqoppwnan.com 
+sleep 5
+
+msg "Connectivity from $MALICE_POD should be terminated automaticaly"
+
+msg "Verify that there is no connectivity from $MALICE_POD" 
+kubectl exec -it "$MALICE_POD" -- ping -c3 gqoppwnan.com && true
+sleep 5
+
+echo -e "\n\n"
+
+msg "End of demo2!"
+echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
+echo -e "\tUse 'minikube delete' to clean kubernetes cluster"

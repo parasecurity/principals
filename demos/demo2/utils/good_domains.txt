@@ -1,0 +1,7 @@
+google.com
+amazon.com
+facebook.com
+youtube.com
+gmail.com
+netflix.com
+github.com
