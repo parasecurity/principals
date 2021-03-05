@@ -22,7 +22,7 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
     
         with conn as c:
 
-        while True:
+          while True:
 
             # We receive the ip from dga
             request = c.recv(4096)
