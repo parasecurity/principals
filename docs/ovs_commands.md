@@ -1,6 +1,6 @@
 # Base commands 
 
-OVS is feature rich with different configuration commands, but the majority of your configuration and troubleshooting can be accomplished with the following 4 commands:
+OVS is feature rich with different configuration commands, but the majority of your configuration and troubleshooting can be accomplished with the following 3 commands:
 
   - ovs-vsctl : Used for configuring the ovs-vswitchd configuration database (known as ovs-db)
   - ovs-ofctl : A command line tool for monitoring and administering OpenFlow switches
