@@ -76,10 +76,12 @@ class PacketMonitor:
         # Ip and port of flow-controller
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
         self.socket.connect((host, port))        
+        pass
 
     def send_ip(self, address):
         # Send bad ip address
         self.socket.sendall(address.encode('utf-8'))
+        pass
 
     def process_packet(self, packet):
         """
@@ -87,20 +89,29 @@ class PacketMonitor:
         """
         if IP not in packet:
             return
-    
-        if packet.haslayer(DNS) and packet.getlayer(DNS).qr == 0:
-            ip_src = packet[IP].src
-            ip_dst = packet[IP].dst
+        
+        if not packet.haslayer(DNS):
+            return
 
-            domain = str(packet.getlayer(DNS).qd.qname)
+        dns_layer = packet.getlayer(DNS)
+        
+        if dns_layer.ancount > 0 and dns_layer.qd:
+            ip_src = str(packet[IP].src)
+            ip_dst = str(packet[IP].dst)
+            domain = str(dns_layer.qd.qname)
             
-            # We ignore the requests send from antrea agent ip
             if str(ip_src) != "172.16.0.1" and str(ip_src) != "172.16.0.2":
-                print(str(ip_src), str(ip_dst), domain, self.detector.is_dga(domain))
-                if self.detector.is_dga(domain) == True:
-                    self.send_ip(str(ip_src))
+                dga_result = self.detector.is_dga(domain)
+                print(ip_src, ip_dst, domain, dga_result)
 
+                if dga_result == False:
+                    return
 
+                for x in range(dns_layer.ancount):
+                    resolved_ip = str(dns_layer.an[x].rdata)
+                    print("Blocking: " + resolved_ip)
+                    self.send_ip(resolved_ip)
+    
     def sniff_packets(self):
         if iface:
             # `process_packet` is the callback
