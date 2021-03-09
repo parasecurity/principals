@@ -133,3 +133,4 @@ bringRegistryDown
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
+echo -e "\tUse 'docker rmi -f $FLOW_IMAGE_ID' to clean the demo image"
