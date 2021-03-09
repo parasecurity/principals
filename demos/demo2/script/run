@@ -88,8 +88,6 @@ setupDgaImage
 
 msg "Starting minikube cluster"
 minikube start \
-    --cpus=8 \
-    --memory=16000 \
     --vm-driver=docker \
     --network-plugin=cni \
     --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
