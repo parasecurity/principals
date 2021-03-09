@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: flow-control
-    image: 192.168.49.1:5000/flow-control:v1.0.0
+    image: 192.168.49.1:5000/tsi-flow-control:v1.0.0
     command:
       - sleep
       - infinity

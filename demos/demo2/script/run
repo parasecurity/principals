@@ -28,24 +28,24 @@ waitUntilAllPodsRun()
 
 setupFlowControlImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep flow-control)
+	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-flow-control)
 
-	docker build images/flow-control -t flow-control:v1.0.0 &> /dev/null
-	docker tag flow-control:v1.0.0 localhost:5000/flow-control:v1.0.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/flow-control:v1.0.0
+	docker build images/flow-control -t tsi-flow-control:v1.0.0 &> /dev/null
+	docker tag tsi-flow-control:v1.0.0 localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.0.0
 
-	readonly FLOW_IMAGE_ID=$(docker inspect flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 setupDgaImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep dga)
+	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-dga)
 
-	docker build images/dga -t dga:v1.0.0 &> /dev/null
-	docker tag dga:v1.0.0 localhost:5000/dga:v1.0.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/dga:v1.0.0
+	docker build images/dga -t tsi-dga:v1.0.0 &> /dev/null
+	docker tag tsi-dga:v1.0.0 localhost:5000/tsi-dga:v1.0.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-dga:v1.0.0
 
-	readonly DGA_IMAGE_ID=$(docker inspect dga:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly DGA_IMAGE_ID=$(docker inspect tsi-dga:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 bringRegistryDown()
