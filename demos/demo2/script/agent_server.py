@@ -24,6 +24,7 @@ def server(host='192.168.49.2', port=2378):
           break
 
         print("[+] Received", repr(address))
+        os.system('ovs-ofctl add-flow br-int ip,nw_dst=' + address + ',actions=drop')
         os.system('ovs-ofctl add-flow br-int ip,nw_src=' + address + ',actions=drop')
 
         response = "ok"
