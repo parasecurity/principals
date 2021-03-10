@@ -34,12 +34,29 @@ ovs-ofctl del-flows --strict \<name of bridge\> ip,nw_dst=\<ip\>
 > Block all outgoing/incoming traffic from an specific bridge port
 ```sh
 ovs-ofctl add-flow \<name of bridge\> in_port=\<bridge port\>,actions=drop
-
 ``
 
 > Unblock all outgoing/incoming traffic from an specific bridge port
 ```sh
 ovs-ofctl del-flows --strict \<name of bridge\> in_port=\<bridge port\>,actions=drop
-
 ``
+
+> Block all outgoing traffic by matching field dl\_src with an Ethernet source address. This value uses 6 pairs of hexadecimal digits to specify, eg: 00:0B:C4:A8:22:B0.
+```sh
+ovs-ofctl add-flow \<bridge\> dl_src=\<mac\>,actions=drop
+```
+
+> Unblock all outgoing traffic by matching field dl\_src with an Ethernet source address. 
+```sh
+ovs-ofctl del-flows --strict \<bridge\> dl_src=\<mac\>
+```
+> Block all incoming traffic by matching field dl\_dst with an Ethernet source address. This value uses 6 pairs of hexadecimal digits to specify, eg: 00:0B:C4:A8:22:B0.
+```sh
+ovs-ofctl add-flow \<bridge\> dl_dst=\<mac\>,actions=drop
+```
+
+> Unblock all outgoing traffic by matching field dl\_dst with an Ethernet source address. 
+```sh
+ovs-ofctl del-flows --strict \<bridge\> dl_dst=\<mac\>
+```
 
