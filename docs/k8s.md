@@ -232,6 +232,38 @@ antrea ovs-vsctl show
 antrea ovs-ofctl dump-flows br-int
 ```
 
+## Link a local docker image (or Dockerfile) to kubernetes
+
+Start the local registy
+
+```sh
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+```
+
+Build the image and push it 
+
+```sh
+docker build . -t XXXX
+
+docker tag dga:v1.0.0 localhost:5000/dga:v1.0.0
+
+docker push localhost:5000/dga:v1.0.0  
+```
+
+Link minikube with the local registry
+
+```
+#Add --insecure-registry="192.168.49.1:5000" to minikube start
+minikube start \
+    --vm-driver=docker \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/12 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000"
+
+```
+
+Add to kubernetes yaml: 192.168.49.1:5000/XXXX
+
 ## Demo 1 - Block/Unblock traffic
 
 Create a demo directory:
@@ -344,3 +376,182 @@ Ping alice from malice to verify it works again:
 kubectl exec -it malice -- ping -c3 172.16.0.xxx
 ```
 
+## Demo 2 - DGA detection capability
+
+Create the local registry with dga, flow-control docker images hosted there
+
+```sh
+# Start the local registy
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+```
+
+Create, tag, push dga image on local registry
+
+```sh
+# Build the dga docker image
+docker build . -t dga:v1.0.0
+
+# Tag it 
+docker tag dga:v1.0.0 localhost:5000/dga:v1.0.0
+
+# Upload it to the local registry
+docker push localhost:5000/dga:v1.0.0
+```
+
+Create, tag, push flow-control image on local registry
+
+```sh
+# Build the dga docker image
+docker build . -t flow-control:v1.0.0                            
+
+# Tag it 
+docker tag flow-control:v1.0.0 localhost:5000/flow-control:v1.0.0
+
+# Upload it to the local registry
+docker push localhost:5000/flow-control:v1.0.0 
+```
+
+Stop and delete the previous minikube session
+
+```sh
+minikube stop
+minikube delete
+```
+
+Start minikube
+
+```sh
+minikube start \
+    --vm-driver=docker \
+    --network-plugin=cni \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000"
+```
+
+Download and install Andrea
+
+```sh
+kubectl apply -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml
+
+```
+
+Download and install multus-cni
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml
+```
+
+Check that pod are live 
+
+```sh
+watch kubectl get pods --all-namespaces 
+```
+
+Create new network configuration
+
+```sh 
+kubectl create -f ./2_port.yaml
+```
+
+Create dga, flow-control pods
+
+```sh
+# Create dga pod 
+kubectl apply -f ./dga.yaml
+
+# Create flow controller pod
+kubectl apply -f ./flow-control.yaml
+```
+
+Create some alice, malice pods to generate trafic
+
+```sh
+# Create alice pod 
+kubectl apply -f alice.yaml 
+
+# Create malice pod 
+kubectl apply -f ./malice.yaml
+```
+
+Check the interfaces inside dga, flow-controller and nslookup
+
+```sh
+kubectl exec -it dga -- ip a
+kubectl exec -it flow-control -- ip a
+kubectl exec -it nslookup -- ip a
+```
+
+You should be able to ping both interfaces
+
+```sh
+# Get both ips of flow-control
+kubectl exec -it flow-control -- ip a
+
+# Ping eth0 of flow-controller 
+kubectl exec -it dga -- ping XXXXXXXX
+
+# Ping net1 of flow-controller 
+kubectl exec -it dga -- ping XXXXXXXX
+```
+
+Find the name of the dga
+
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl show | grep dga 
+```
+
+Set up port mirroring to snort 
+
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- ovs-vsctl \
+  -- --id=@p get port dga-XXXX \
+  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
+  -- set bridge br-int mirrors=@m
+
+```
+
+Copy antrea_agent_server.py script inside antrea-agent
+```sh
+kubectl cp utils/agent_server.py kube-system/antrea-agent-XXXX:home/
+```
+
+Start antrea_agent_server script
+```sh
+kubectl exec -n kube-system -it antrea-agent-XXXX -- python3 home/server.py
+```
+Start flow-control script
+```sh
+# -l : Ip to listen for data
+# -s : Ip to send data
+kubectl exec -it flow-control -- python3 forward.py -l <flow-control ip> -s <antrea-agent ip>
+```
+
+Start dga script 
+```sh
+# -m : Machine learning model to load
+# -a : Ip to send data
+kubectl exec -it dga -- bash -c "python3 monitory.py -m dga.model -a <flow-control ip>"
+```
+
+Send some requests from alice 
+```sh
+kubectl exec -it alice -- nslookup google.com
+kubectl exec -it alice -- nslookup amazon.com
+kubectl exec -it alice -- nslookup facebook.com
+
+# All those requests should be printed to dga monitor
+```
+
+nslookup to a bad address from malice pod
+```sh
+kubectl exec -it malice -- nslookup gqoppwnan.com
+```
+After that request all traffic should be blocked to `gqoppwnan.com`.
+
+
+Try to access `gqoppwnan.com` from another pod
+```sh
+kubectl exec -it alice -- nslookup gqoppwnan.com
+kubectl exec -it alice -- nslookup gqoppwnan.com
+```
