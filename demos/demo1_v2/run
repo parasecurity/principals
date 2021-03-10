@@ -26,23 +26,19 @@ waitUntilAllPodsRun()
 	echo ""
 }
 
-bringRegistryDown()
+setupFlowControlImage()
 {
-	local name="minikube_registry"
-	local state=$(docker ps -a -f "name=$name" --format "{{.State}}")
+	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-flow-control)
 
-	if [[ "$state" == "running" ]];
-	then
-		docker stop "$name" &> /dev/null
-		docker rm "$name" &> /dev/null
-	elif [[ "$state" != "" ]];
-	then
-		docker rm "$name" &> /dev/null
-	fi
+	docker build images/flow-control -t tsi-flow-control:v1.0.0 &> /dev/null
+	docker tag tsi-flow-control:v1.0.0 localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.0.0
+
+	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
-readonly REGISTRY_STATUS=$(docker ps -a -f "name=minikube_registry" --format "{{.State}}")
+readonly REGISTRY_STATUS=$(docker ps -q -f "name=minikube_registry")
 
 if [[ "$MINIKUBE_STATUS" == "Running" ]];
 then
@@ -50,19 +46,16 @@ then
 	exit 0
 fi
 
-if [[ "$REGISTRY_STATUS" != "running" ]];
+if [[ "$REGISTRY_STATUS" == "" ]];
 then
-	[[ "$REGISTRY_STATUS" != "" ]] && docker rm minikube_registry
+	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
 
 	msg "Starting local docker registry"
 	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
 fi
 
 msg "Creating flow-control docker image"
-docker build flow-control -t flow-control:v1.0.0 &> /dev/null
-docker tag flow-control:v1.0.0 localhost:5000/flow-control:v1.0.0 &> /dev/null
-docker push localhost:5000/flow-control:v1.0.0 &> /dev/null
-readonly FLOW_IMAGE_ID=$(docker inspect flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+setupFlowControlImage
 
 msg "Starting minikube cluster"
 minikube start \
@@ -86,12 +79,12 @@ readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-age
 readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent -- "
 
 msg "Adding demo pods"
-kubectl apply -f yamls > /dev/null
+kubectl apply -f yamls/pods > /dev/null
 
 waitUntilAllPodsRun
 
 msg "Copying tcp server code to antrea agent"
-kubectl cp agent_server.py kube-system/$ANTREA_AGENT:home/ > /dev/null
+kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT:home/ > /dev/null
 
 # Setup pods names and ip addresses
 readonly ALICE_POD=alice
@@ -129,7 +122,8 @@ echo -e "\n\n"
 
 msg "End of demo1!"
 msg "Bringing local registry down"
-bringRegistryDown
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
