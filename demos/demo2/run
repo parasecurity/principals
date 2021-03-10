@@ -107,7 +107,7 @@ kubectl apply -f yamls/pods > /dev/null
 waitUntilAllPodsRun
 
 msg "Copying tcp server code to antrea agent"
-kubectl cp agent_server.py kube-system/$ANTREA_AGENT:home/
+kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT:home/
 
 # Setup pods names and ip addresses
 readonly ALICE_POD_1=alice1
