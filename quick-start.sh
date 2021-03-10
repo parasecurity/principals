@@ -24,8 +24,8 @@ waitUntilAllPodsRun()
 }
 
 msg "Deleting existing minikube configuration"
-minikube stop > /dev/null
-minikube delete > /dev/null
+minikube stop > /dev/null & true
+minikube delete > /dev/null & true
 
 msg "Starting minikube cluster"
 

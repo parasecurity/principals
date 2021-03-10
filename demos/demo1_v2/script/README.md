@@ -32,3 +32,20 @@ When all prerequisites are satisfied, you can start the demo with:
 ./run
 ```
 
+## Current interface
+
+Flow controller supports input through a `.json` file.
+
+The json fields are:
+```
+json = {
+    action: <action>,
+    argument: <ip address>,
+    server_ip: <ip address of ovs-controller>
+}
+```
+
+The possible actions are:
+
+- Block: You block a given ip address 
+- Unblock: You unblock a given ip address

@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
   - name: alice1
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
@@ -18,7 +18,7 @@ metadata:
 spec:
   containers:
   - name: alice2
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
@@ -31,7 +31,7 @@ metadata:
 spec:
   containers:
   - name: alice3
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
@@ -44,7 +44,7 @@ metadata:
 spec:
   containers:
   - name: alice4
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
@@ -57,7 +57,7 @@ metadata:
 spec:
   containers:
   - name: alice5
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
@@ -70,7 +70,7 @@ metadata:
 spec:
   containers:
   - name: alice6
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
