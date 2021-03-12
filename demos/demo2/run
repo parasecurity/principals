@@ -156,6 +156,7 @@ kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 gqoppwnan.com && true
 
 msg "Actually connectivity from any pod to gqoppwnan.com should now be blocked"
 kubectl exec -it "$ALICE_POD_1" -- ping -c3 -W1 gqoppwnan.com && true
+kubectl exec -it "$ALICE_POD_2" -- ping -c3 -W1 216.218.185.162 && true
 
 msg "Pod $MALICE_POD still has network access" 
 kubectl exec -it "$MALICE_POD" -- ping -c3 google.com && true
