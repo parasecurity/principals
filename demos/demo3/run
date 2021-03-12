@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+#  Demo 3 - Throttle traffic 
+#
+set -euo pipefail
+
+msg()
+{
+	local message="$1"
+	local bold=$(tput bold)
+	local normal=$(tput sgr0)
+
+	echo "${bold}${message}${normal}"
+}
+
+waitUntilAllPodsRun()
+{
+	echo -en "\tWaiting for all pods to be deployed. This might take several minutes."
+
+	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
+	do
+		echo -n "."
+		sleep 10
+	done
+
+	echo ""
+}
+
+setupFlowControlImage()
+{
+	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-flow-control)
+
+	docker build images/flow-control -t tsi-flow-control:v1.0.0 &> /dev/null
+	docker tag tsi-flow-control:v1.0.0 localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.0.0
+
+	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+}
+
+readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
+readonly REGISTRY_STATUS=$(docker ps -q -f "name=minikube_registry")
+
+if [[ "$MINIKUBE_STATUS" == "Running" ]];
+then
+	echo "Please first stop/clean minikube before running the demo"
+	exit 0
+fi
+
+if [[ "$REGISTRY_STATUS" == "" ]];
+then
+	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
+
+	msg "Starting local docker registry"
+	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
+fi
+
+msg "Creating flow-control docker image"
+setupFlowControlImage
+
+msg "Starting minikube cluster"
+minikube start \
+    --vm-driver=docker \
+    --network-plugin=cni \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000"
+
+msg "Adding Antrea CNI"
+
+kubectl apply \
+    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
+    > /dev/null
+
+waitUntilAllPodsRun
+
+# Setup Antrea Agent alias
+readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
+readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
+readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent -- "
+
+msg "Adding demo pods"
+kubectl apply -f yamls/pods > /dev/null
+
+waitUntilAllPodsRun
+
+msg "Copying tcp server code to antrea agent"
+kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT:home/ > /dev/null
+
+# Setup pods names and ip addresses
+readonly NETPERF_SERVER_POD=host
+readonly NETPERF_CLIENT1_POD=client1
+readonly NETPERF_CLIENT2_POD=client2
+readonly FLOW_CONTROL_POD=flow-control
+readonly NETPERF_SERVER_IP=$(kubectl get -A po -o wide | grep -w "$NETPERF_SERVER_POD" | awk '{print $7}')
+readonly ANTREA_IP=$(kubectl get -A po -o wide | grep -w "$ANTREA_AGENT" | awk '{print $7}')
+readonly NETPERF_CLIENT1_PORT=$($ANTREA_EXEC ovs-vsctl show | grep $NETPERF_CLIENT1_POD | awk '{print $2}' | head -1)
+readonly NETPERF_CLIENT2_PORT=$($ANTREA_EXEC ovs-vsctl show | grep $NETPERF_CLIENT2_POD | awk '{print $2}' | head -1)
+
+msg "Starting antrea-agent server"
+$ANTREA_EXEC bash -c "nohup python3 home/agent_server.py &"
+sleep 5 
+
+msg "Starting Demo"
+sleep 5 
+
+msg "Starting netperf server on the measurement"
+kubectl exec "$NETPERF_SERVER_POD" -- netserver &> /dev/null
+sleep 5 
+
+msg "Verify throughput value for $NETPERF_CLIENT1_POD"
+kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP 
+sleep 5 
+
+msg "Verify throughput value for $NETPERF_CLIENT2_POD"
+kubectl exec -it "$NETPERF_CLIENT2_POD" -- netperf -H $NETPERF_SERVER_IP 
+sleep 5 
+
+msg "Limiting rate of $NETPERF_CLIENT1_POD to 1 Mbps"
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 forward.py -i '{\"action\": \"throttle\", \"argument\": {\"port\": \"$NETPERF_CLIENT1_PORT\", \"limit\": \"1\"}, \"server_ip\": \"$ANTREA_IP\"}'" &> /dev/null
+sleep 5 
+
+msg "Limiting rate of $NETPERF_CLIENT2_POD to 10 Mbps"
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 forward.py -i '{\"action\": \"throttle\", \"argument\": {\"port\": \"$NETPERF_CLIENT2_PORT\", \"limit\": \"10\"}, \"server_ip\": \"$ANTREA_IP\"}'" &> /dev/null
+sleep 5 
+
+msg "Verify throughput value for $NETPERF_CLIENT1_POD"
+kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP 
+sleep 5 
+
+msg "Verify throughput value for $NETPERF_CLIENT2_POD"
+kubectl exec -it "$NETPERF_CLIENT2_POD" -- netperf -H $NETPERF_SERVER_IP 
+sleep 5 
+
+echo -e "\n\n"
+
+msg "End of demo3!"
+msg "Bringing local registry down"
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
+
+echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
+echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
+echo -e "\tUse 'docker rmi -f $FLOW_IMAGE_ID' to clean the demo image"
