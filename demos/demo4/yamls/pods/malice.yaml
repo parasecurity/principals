@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
   - name: malice
-    image: mkrishnamurthy/nslookup
+    image: praqma/network-multitool
     command:
       - sleep
       - infinity
