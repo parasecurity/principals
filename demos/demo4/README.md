@@ -43,11 +43,11 @@ When all prerequisites are satisfied, you can start the demo with:
 
 ## Pods created
 
-`DGA detector` pod runs a service that uses a machine learning model to detects requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the  reserved IP address is forwarded to the Flow controller.
+`DGA detector` pod runs a service that uses a machine learning model to detects requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resolved IP address is forwarded to the Flow controller.
 
 `Flow controller` pod runs a service that listens for  requests  from a DGA detector. When a request arrives it is forwarded to the OVS controller.
 
-`OVS controller` pod runs a service on the same pod with the Open vSwitch bridge. It listens for commands from  from the Flow controller. When a command arrives it gets applied to the Open vSwitch bridge.
+`OVS controller` pod runs a service on the same pod with the Open vSwitch bridge. It listens for commands from the Flow controller. When a command arrives it gets applied to the Open vSwitch bridge.
 
 `Honeypot` pod runs a daemon that executes a low interaction honeypot. It is responsible to react to malicious tcp requests on port 80 from other pods on the cluster.
 

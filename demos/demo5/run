@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Demo 
+#  Demo 5: Tarpitting malicious connections
 #
 set -euo pipefail
 
@@ -28,13 +28,13 @@ waitUntilAllPodsRun()
 
 setupFlowControlImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-flow-control)
+	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-control/tags/list | grep v1.5.0)
 
-	docker build images/flow-control -t tsi-flow-control:v1.0.0 &> /dev/null
-	docker tag tsi-flow-control:v1.0.0 localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
+	docker build images/flow-control -t tsi-flow-control:v1.5.0 &> /dev/null
+	docker tag tsi-flow-control:v1.5.0 localhost:5000/tsi-flow-control:v1.5.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.5.0 &> /dev/null
 
-	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.5.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 setupDgaImage()
@@ -80,7 +80,6 @@ minikube start \
     --insecure-registry="192.168.49.1:5000"
 
 msg "Adding Antrea CNI"
-
 kubectl apply \
     -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
     > /dev/null
@@ -114,11 +113,8 @@ readonly ALICE_POD_3=alice3
 readonly MALICE_POD=malice
 readonly FLOW_CONTROL_POD=flow-control
 readonly DGA_POD=dga
-readonly HONEYPOT_POD=dionaea
 readonly DGA_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "dga-.{6}" | head -1)
-readonly HONEYPOT_MAC=$(kubectl exec -it dionaea -- bash -c 'cat /sys/class/net/*/address' |  sed '1!d')
 readonly FLOW_CONTROL_IP=$(kubectl exec -it flow-control -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
-readonly HONEYPOT_IP=$(kubectl get -A po -o wide | grep $HONEYPOT_POD | awk '{print $7}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
 
 msg "Starting antrea-agent server"
@@ -126,7 +122,7 @@ $ANTREA_EXEC bash -c "nohup python3 home/agent_server.py &"
 sleep 5 
 
 msg "Starting flow-control service"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "nohup python3 forward.py -i '{\"action\": \"forward\", \"argument\": {\"honeypot_ip\": \"$HONEYPOT_IP\", \"honeypot_mac\": \"$HONEYPOT_MAC\"}, \"send_ip\": \"$ANTREA_IP\", \"listen_ip\": \"$FLOW_CONTROL_IP\"}' &" &> /dev/null
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "nohup python3 forward.py -i '{\"action\": \"tarpit\", \"send_ip\": \"$ANTREA_IP\", \"listen_ip\": \"$FLOW_CONTROL_IP\"}' &" &> /dev/null
 sleep 5
 
 msg "Starting mirroring on dga port"
@@ -135,12 +131,14 @@ $ANTREA_POD ovs-vsctl \
   -- --id=@m create mirror name=m0 select-all=true output-port=@p \
   -- set bridge br-int mirrors=@m &> /dev/null
 
+msg "Adding queues on pods"
+$ANTREA_POD bash -c "ovs-vsctl list-ports br-int | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
+  --id=@newqos create qos type=linux-htb \
+      queues:100=@queue -- \
+  --id=@queue create queue other-config:max-rate=1000000 &> /dev/null"
+
 msg "Starting dga service"
 kubectl exec $DGA_POD -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CONTROL_IP &>/dev/null &"  
-sleep 5
-
-msg "Starting honeypot monitoring service"
-kubectl exec $HONEYPOT_POD -- bash -c "dionaea/bin/dionaea -D -l all,-debug -L '*'"  
 sleep 5
 
 msg "Starting Demo"
@@ -154,27 +152,9 @@ msg "Send a malicius nslookup request from $MALICE_POD"
 kubectl exec -it "$MALICE_POD" -- nslookup gqoppwnan.com && true
 sleep 5 
 
-msg "Connectivity from $MALICE_POD to gqoppwnan.com should now be blocked"
-kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 gqoppwnan.com && true
-sleep 3
-
-msg "But pod $MALICE_POD still has network access" 
-kubectl exec -it "$MALICE_POD" -- ping -c3 google.com && true
-
-msg "Actually connectivity from any pod to gqoppwnan.com should now be blocked"
-kubectl exec -it "$ALICE_POD_1" -- ping -c3 -W1 gqoppwnan.com && true
-kubectl exec -it "$ALICE_POD_2" -- ping -c3 -W1 216.218.185.162 && true
-sleep 3
-
-msg "Every wget request to gqoppwnan.com is forwarded to honeypot"
-kubectl exec -it "$MALICE_POD" -- wget gqoppwnan.com/malware.exe && true
-sleep 3 
-kubectl exec -it "$ALICE_POD_1" -- wget gqoppwnan.com/malware.exe && true
+msg "Bandwidth should be limited when you are trying to download a file from the malicious domain"
+kubectl exec -it "$ALICE_POD_3" -- wget gqoppwnan.com/malware.exe && true
 sleep 5
-
-msg "All wget requests to gqoppwnan.com should be logged to honeypot"
-kubectl exec -it $HONEYPOT_POD -- bash -c "cat dionaea/var/log/dionaea/dionaea.log | grep 'http.py:15'"  
-sleep 5 
 
 echo -e "\n\n"
 
