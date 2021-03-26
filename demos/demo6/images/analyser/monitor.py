@@ -2,6 +2,7 @@ from scapy.all import *
 import socket
 import argparse
 import time
+import json
 
 class DomainList:
     domains = None
@@ -29,14 +30,25 @@ class PacketMonitor:
         self.socket.connect((host, port))
         pass
 
-    def send_ip(self, address):
-        self.socket.sendall(address.encode('utf-8'))
+    def send_data(self, data):
+        self.socket.sendall(data.encode('utf-8'))
         pass
 
     def trim_domain_string(self, domain):
         domain = domain[:-2]
         domain = domain[2:]
         return domain
+    
+    def create_send_object(self, ts, domain, ip_src, resolved_ip, mac_src, port_src):
+        obj = {
+            "ts": ts,
+            "domain": domain,
+            "ip_src": ip_src,
+            "resolved_ip": resolved_ip,
+            "mac_src": mac_src,
+            "port_src": port_src
+        }
+        return json.dumps(obj)
 
     def process_packet(self, packet):
         """
@@ -54,27 +66,23 @@ class PacketMonitor:
         if dns_layer.ancount > 0 and dns_layer.qd:
             ts = time.time()
             ip_src = str(packet[IP].src)
-            ip_dst = str(packet[IP].dst)
+            mac_src = str(packet.src)
             if UDP in packet:
-                port_src=packet[UDP].sport
-                port_dst=packet[UDP].dport
+                port_src=str(packet[UDP].sport)
             if TCP in packet:
-                port_src=packet[TCP].sport
-                port_dst=packet[TCP].dport
-
+                port_src=str(packet[TCP].sport)
 
             domain = self.trim_domain_string(str(dns_layer.qd.qname))
-
             dga_result = self.domains.exist(domain)
-            print(ip_src, ip_dst, domain, dga_result)
 
             if dga_result == False:
                 return
 
             for x in range(dns_layer.ancount):
                 resolved_ip = str(dns_layer.an[x].rdata)
-                print("Blocking: " + resolved_ip)
-                #self.send_ip(resolved_ip)
+                print(ts, domain, ip_src, resolved_ip, mac_src, port_src)
+                send_object = self.create_send_object(ts, domain, ip_src, resolved_ip, mac_src, port_src)
+                self.send_data(send_object)
 
     def sniff_packets(self):
         if iface:
@@ -87,7 +95,7 @@ class PacketMonitor:
     def __init__(self, iface, domains, address):
         self.iface = iface
         self.domains = domains
-        #self.establish_connection(address)
+        self.establish_connection(address)
         pass
 
 if __name__ == "__main__":

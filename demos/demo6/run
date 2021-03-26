@@ -26,26 +26,26 @@ waitUntilAllPodsRun()
 	echo ""
 }
 
-setupFlowControlImage()
+setupLoggerImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-control/tags/list | grep v1.6.0)
+	local exists=$(curl -s http://localhost:5000/v2/tsi-logger/tags/list | grep v1.6.0)
 
-	docker build images/flow-control -t tsi-flow-control:v1.6.0 &> /dev/null
-	docker tag tsi-flow-control:v1.6.0 localhost:5000/tsi-flow-control:v1.6.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.6.0 &> /dev/null
+	docker build images/logger -t tsi-logger:v1.6.0 &> /dev/null
+	docker tag tsi-logger:v1.6.0 localhost:5000/tsi-logger:v1.6.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-logger:v1.6.0 &> /dev/null
 
-	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly LOGGER_IMAGE_ID=$(docker inspect tsi-logger:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
-setupDgaImage()
+setupAnalyserImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/tsi-dga/tags/list | grep v1.6.0)
+	local exists=$(curl -s http://localhost:5000/v2/tsi-analyser/tags/list | grep v1.6.0)
 
-	docker build images/dga -t tsi-dga:v1.6.0 &> /dev/null
-	docker tag tsi-dga:v1.6.0 localhost:5000/tsi-dga:v1.6.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-dga:v1.6.0 &> /dev/null
+	docker build images/analyser -t tsi-analyser:v1.6.0 &> /dev/null
+	docker tag tsi-analyser:v1.6.0 localhost:5000/tsi-analyser:v1.6.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-analyser:v1.6.0 &> /dev/null
 
-	readonly DGA_IMAGE_ID=$(docker inspect tsi-dga:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly ANALYSER_IMAGE_ID=$(docker inspect tsi-analyser:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
@@ -65,11 +65,11 @@ then
 	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
 fi
 
-msg "Creating dga docker image"
-setupDgaImage
+msg "Creating analyser docker image"
+setupAnalyserImage
 
-msg "Creating flow-control docker image"
-setupFlowControlImage
+msg "Creating logger docker image"
+setupLoggerImage
 
 msg "Starting minikube cluster"
 minikube start \
@@ -108,25 +108,37 @@ readonly ALICE_POD_1=alice1
 readonly ALICE_POD_2=alice2
 readonly ALICE_POD_3=alice3
 readonly MALICE_POD=malice
-readonly FLOW_CONTROL_POD=flow-control
-readonly DGA_POD=dga
-readonly DGA_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "dga-.{6}" | head -1)
-readonly FLOW_CONTROL_IP=$(kubectl exec -it flow-control -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
+readonly LOGGER_POD=logger
+readonly ANALYSER_POD=analyser
+readonly ANALYSER_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "analyser-.{6}" | head -1)
+readonly LOGGER_IP=$(kubectl exec -it logger -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
 
-#msg "Starting flow-control service"
-#kubectl exec "$FLOW_CONTROL_POD" -- bash -c "nohup python3 forward.py -i '{\"action\": \"tarpit\", \"send_ip\": \"$ANTREA_IP\", \"listen_ip\": \"$FLOW_CONTROL_IP\"}' &" &> /dev/null
-#sleep 5
+msg "Starting logger service"
+kubectl exec "$LOGGER_POD" -- bash -c "nohup python3 logger.py -i '{\"listen_ip\": \"$LOGGER_IP\"}' &" &> /dev/null
+sleep 5
 
 msg "Starting mirroring on dga port"
 $ANTREA_POD ovs-vsctl \
-  -- --id=@p get port $DGA_PORT \
+  -- --id=@p get port $ANALYSER_PORT \
   -- --id=@m create mirror name=m0 select-all=true output-port=@p \
   -- set bridge br-int mirrors=@m &> /dev/null
 
-#msg "Starting dga service"
-#kubectl exec $DGA_POD -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CONTROL_IP &>/dev/null &"  
-#sleep 5
+msg "Starting dga service"
+kubectl exec $ANALYSER_POD -- bash -c "nohup python3 monitor.py -d domains.txt -a $LOGGER_IP &>/dev/null &"  
+sleep 5
+
+msg "Sending a request to google.com"
+kubectl exec $ALICE_POD_1 -- ping -c3 google.com
+sleep 2
+
+msg "Sending a request to amazon.com"
+kubectl exec $ALICE_POD_2 -- ping -c3 amazon.com
+sleep 2
+
+msg "All requests should be saved to $LOGGER_POD log"
+kubectl exec $LOGGER_POD -- cat data.log
+sleep 5
 
 echo -e "\n\n"
 
@@ -137,4 +149,4 @@ docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
-echo -e "\tUse 'docker rmi -f $FLOW_IMAGE_ID $DGA_IMAGE_ID' to clean the demo image"
+echo -e "\tUse 'docker rmi -f $LOGGER_IMAGE_ID $ANALYSER_IMAGE_ID' to clean the demo image"

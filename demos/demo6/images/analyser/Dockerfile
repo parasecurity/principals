@@ -7,4 +7,4 @@ RUN yum -y install gcc gcc-c++
 RUN pip3 install -r /tmp/requirements.txt
 
 WORKDIR "/tmp"
-CMD ["python3 monitory.py -m dga.model"]
+CMD ["python3 monitory.py -d domains.txt"]

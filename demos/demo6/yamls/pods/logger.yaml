@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: flow-control 
+  name: logger 
   annotations:
     k8s.v1.cni.cncf.io/networks: macvlan-conf
 spec:
   containers:
-  - name: flow-control
-    image: 192.168.49.1:5000/tsi-flow-control:v1.6.0
+  - name: logger 
+    image: 192.168.49.1:5000/tsi-logger:v1.6.0
     command:
       - sleep
       - infinity
