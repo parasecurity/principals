@@ -103,9 +103,6 @@ kubectl apply -f yamls/pods > /dev/null
 
 waitUntilAllPodsRun
 
-msg "Copying service code to antrea agent"
-kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT:home/ > /dev/null
-
 # Setup pods names and ip addresses
 readonly ALICE_POD_1=alice1
 readonly ALICE_POD_2=alice2
@@ -117,13 +114,9 @@ readonly DGA_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "dga-.{6}" | head -1)
 readonly FLOW_CONTROL_IP=$(kubectl exec -it flow-control -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
 
-msg "Starting antrea-agent server"
-$ANTREA_EXEC bash -c "nohup python3 home/agent_server.py &"
-sleep 5 
-
-msg "Starting flow-control service"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "nohup python3 forward.py -i '{\"action\": \"tarpit\", \"send_ip\": \"$ANTREA_IP\", \"listen_ip\": \"$FLOW_CONTROL_IP\"}' &" &> /dev/null
-sleep 5
+#msg "Starting flow-control service"
+#kubectl exec "$FLOW_CONTROL_POD" -- bash -c "nohup python3 forward.py -i '{\"action\": \"tarpit\", \"send_ip\": \"$ANTREA_IP\", \"listen_ip\": \"$FLOW_CONTROL_IP\"}' &" &> /dev/null
+#sleep 5
 
 msg "Starting mirroring on dga port"
 $ANTREA_POD ovs-vsctl \
@@ -131,9 +124,9 @@ $ANTREA_POD ovs-vsctl \
   -- --id=@m create mirror name=m0 select-all=true output-port=@p \
   -- set bridge br-int mirrors=@m &> /dev/null
 
-msg "Starting dga service"
-kubectl exec $DGA_POD -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CONTROL_IP &>/dev/null &"  
-sleep 5
+#msg "Starting dga service"
+#kubectl exec $DGA_POD -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CONTROL_IP &>/dev/null &"  
+#sleep 5
 
 echo -e "\n\n"
 

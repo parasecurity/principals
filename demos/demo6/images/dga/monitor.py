@@ -25,15 +25,18 @@ class PacketMonitor:
     detector = None
 
     def establish_connection(self, host="192.168.1.204", port=8080):
-        # Ip and port of flow-controller
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
         pass
 
     def send_ip(self, address):
-        # Send bad ip address
         self.socket.sendall(address.encode('utf-8'))
         pass
+
+    def trim_domain_string(self, domain):
+        domain = domain[:-2]
+        domain = domain[2:]
+        return domain
 
     def process_packet(self, packet):
         """
@@ -49,21 +52,29 @@ class PacketMonitor:
         dns_layer = packet.getlayer(DNS)
 
         if dns_layer.ancount > 0 and dns_layer.qd:
+            ts = time.time()
             ip_src = str(packet[IP].src)
             ip_dst = str(packet[IP].dst)
-            domain = str(dns_layer.qd.qname)
+            if UDP in packet:
+                port_src=packet[UDP].sport
+                port_dst=packet[UDP].dport
+            if TCP in packet:
+                port_src=packet[TCP].sport
+                port_dst=packet[TCP].dport
 
-            if str(ip_src) != "172.16.0.1" and str(ip_src) != "172.16.0.2":
-                dga_result = self.domains.exist(domain)
-                print(ip_src, ip_dst, domain, dga_result)
 
-                if dga_result == False:
-                    return
+            domain = self.trim_domain_string(str(dns_layer.qd.qname))
 
-                for x in range(dns_layer.ancount):
-                    resolved_ip = str(dns_layer.an[x].rdata)
-                    print("Blocking: " + resolved_ip)
-                    #self.send_ip(resolved_ip)
+            dga_result = self.domains.exist(domain)
+            print(ip_src, ip_dst, domain, dga_result)
+
+            if dga_result == False:
+                return
+
+            for x in range(dns_layer.ancount):
+                resolved_ip = str(dns_layer.an[x].rdata)
+                print("Blocking: " + resolved_ip)
+                #self.send_ip(resolved_ip)
 
     def sniff_packets(self):
         if iface:

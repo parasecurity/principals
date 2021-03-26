@@ -1,6 +1,6 @@
 FROM centos:8
 
-COPY dga.model monitor.py requirements.txt /tmp/
+COPY domains.txt monitor.py requirements.txt /tmp/
 
 RUN yum -y install python3-pip python3-devel
 RUN yum -y install gcc gcc-c++ 
