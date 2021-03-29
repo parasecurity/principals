@@ -21,6 +21,34 @@ class DomainList:
     def __init__(self, path):
         self.load_domains(path)
 
+
+class PacketInfo(object):
+
+    def create_send_object(self):
+        obj = {
+            "ts": self.ts,
+            "domain": self.domain,
+            "ip_src": self.ip_src,
+            "ip_dst": self.ip_dst,
+            "resolved_ip": self.resolved_ip,
+            "mac_src": self.mac_src,
+            "mac_dst": self.mac_dst,
+            "port_src": self.port_src,
+            "port_dst": self.port_dst
+        }
+        return json.dumps(obj)
+
+    def __init__(self, ts, domain, ip_src, ip_dst, resolved_ip, mac_src, mac_dst, port_src, port_dst):
+        self.ts = ts
+        self.domain = domain
+        self.ip_src = ip_src
+        self.ip_dst = ip_dst
+        self.resolved_ip = resolved_ip
+        self.mac_src = mac_src
+        self.mac_dst = mac_dst
+        self.port_src = port_src
+        self.port_dst = port_dst
+
 class PacketMonitor:
     iface = None
     detector = None
@@ -39,17 +67,6 @@ class PacketMonitor:
         domain = domain[2:]
         return domain
     
-    def create_send_object(self, ts, domain, ip_src, resolved_ip, mac_src, port_src):
-        obj = {
-            "ts": ts,
-            "domain": domain,
-            "ip_src": ip_src,
-            "resolved_ip": resolved_ip,
-            "mac_src": mac_src,
-            "port_src": port_src
-        }
-        return json.dumps(obj)
-
     def process_packet(self, packet):
         """
         This function is executed whenever a packet is sniffed
@@ -66,11 +83,15 @@ class PacketMonitor:
         if dns_layer.ancount > 0 and dns_layer.qd:
             ts = time.time()
             ip_src = str(packet[IP].src)
+            ip_dst = str(packet[IP].dst)
             mac_src = str(packet.src)
+            mac_dst = str(packet.dst)
             if UDP in packet:
-                port_src=str(packet[UDP].sport)
+                port_src = str(packet[UDP].sport)
+                port_dst = str(packet[UDP].dport)
             if TCP in packet:
-                port_src=str(packet[TCP].sport)
+                port_src = str(packet[TCP].sport)
+                port_dst = str(packet[TCP].dport)
 
             domain = self.trim_domain_string(str(dns_layer.qd.qname))
             dga_result = self.domains.exist(domain)
@@ -80,8 +101,8 @@ class PacketMonitor:
 
             for x in range(dns_layer.ancount):
                 resolved_ip = str(dns_layer.an[x].rdata)
-                print(ts, domain, ip_src, resolved_ip, mac_src, port_src)
-                send_object = self.create_send_object(ts, domain, ip_src, resolved_ip, mac_src, port_src)
+                packet_info = PacketInfo(ts, domain, ip_src, ip_dst, resolved_ip, mac_src, mac_dst, port_src, port_dst)
+                send_object = packet_info.create_send_object()
                 self.send_data(send_object)
 
     def sniff_packets(self):
