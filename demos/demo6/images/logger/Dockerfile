@@ -1,6 +1,6 @@
 FROM centos:8
 
-COPY logger.py /home/
+COPY logger.py logger_server.py /home/
 
 RUN yum install -y python3
 

@@ -136,10 +136,6 @@ msg "Sending a request to amazon.com"
 kubectl exec $ALICE_POD_2 -- ping -c3 amazon.com
 sleep 2
 
-msg "All requests should be saved to $LOGGER_POD log"
-kubectl exec $LOGGER_POD -- cat data.log
-sleep 5
-
 echo -e "\n\n"
 
 msg "End of demo6!"
