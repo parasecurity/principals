@@ -7,8 +7,8 @@ def request(send_ip, send_port):
         print('[+] Querying logger data from {0}:{1}'.format(send_ip, send_port))
         sock.connect((send_ip, send_port))
         sock.sendall(b'Get logs')
-        data = sock.recv(1024).decode('utf-8')     
-        print('Received:', data)
+        data = sock.recv(2048).decode('utf-8')  
+        print(data)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Logger Client')

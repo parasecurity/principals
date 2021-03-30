@@ -103,6 +103,9 @@ kubectl apply -f yamls/pods > /dev/null
 
 waitUntilAllPodsRun
 
+msg "Adding services"
+kubectl apply -f yamls/services > /dev/null
+
 # Setup pods names and ip addresses
 readonly ALICE_POD_1=alice1
 readonly ALICE_POD_2=alice2
@@ -113,9 +116,14 @@ readonly ANALYSER_POD=analyser
 readonly ANALYSER_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "analyser-.{6}" | head -1)
 readonly LOGGER_IP=$(kubectl exec -it logger -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
+readonly SERVICES_IP=$(minikube ip)
 
 msg "Starting logger service"
 kubectl exec "$LOGGER_POD" -- bash -c "nohup python3 logger.py -i '{\"listen_ip\": \"$LOGGER_IP\"}' &" &> /dev/null
+sleep 5
+
+msg "Starting logger server"
+kubectl exec "$LOGGER_POD" -- bash -c "nohup python3 logger_server.py &"
 sleep 5
 
 msg "Starting mirroring on dga port"
@@ -136,8 +144,10 @@ msg "Sending a request to amazon.com"
 kubectl exec $ALICE_POD_2 -- ping -c3 amazon.com
 sleep 2
 
-echo -e "\n\n"
+msg "Fetch data from cluster using local program"
+python3 utils/logger_client.py -i "{\"send_ip\":\"$SERVICES_IP\", \"send_port\":\"30062\"}"
 
+echo -e "\n\n"
 msg "End of demo6!"
 msg "Bringing local registry down"
 docker stop minikube_registry &> /dev/null
