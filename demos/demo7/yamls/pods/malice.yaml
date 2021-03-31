@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: malice
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: malice
+  template:
+    metadata:
+      labels:
+        app: malice
+    spec:
+      containers:
+      - name: malice
+        image: praqma/network-multitool
+        command:
+          - sleep
+          - infinity
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

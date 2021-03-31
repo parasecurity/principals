@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+#  Demo 7: 2 nodes
+#
+set -euo pipefail
+
+msg()
+{
+	local message="$1"
+	local bold=$(tput bold)
+	local normal=$(tput sgr0)
+
+	echo "${bold}${message}${normal}"
+}
+
+waitUntilAllPodsRun()
+{
+	echo -en "\tWaiting for all pods to be deployed. This might take several minutes."
+
+	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
+	do
+		echo -n "."
+		sleep 10
+	done
+
+	echo ""
+}
+
+setupFlowControllerImage()
+{
+	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-controller/tags/list | grep v1.7.0)
+
+	docker build images/logger -t tsi-flow-controller:v1.7.0 &> /dev/null
+	docker tag tsi-flow-controller:v1.7.0 localhost:5000/tsi-flow-controller:v1.7.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-controller:v1.7.0 &> /dev/null
+
+	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-controller:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+}
+
+readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
+readonly REGISTRY_STATUS=$(docker ps -q -f "name=minikube_registry")
+
+if [[ "$MINIKUBE_STATUS" == "Running" ]];
+then
+	echo "Please first stop/clean minikube before running the demo"
+	exit 0
+fi
+
+if [[ "$REGISTRY_STATUS" == "" ]];
+then
+	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
+
+	msg "Starting local docker registry"
+	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
+fi
+
+#msg "Creating flow-controller docker image"
+#setupFlowControllerImage
+
+msg "Starting minikube cluster"
+minikube start \
+    --vm-driver=docker \
+    --network-plugin=cni \
+    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
+    --extra-config=kubelet.network-plugin=cni \
+    --insecure-registry="192.168.49.1:5000" \
+	--nodes=2
+
+msg "Adding Antrea CNI"
+kubectl apply \
+    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
+    > /dev/null
+
+msg "Adding Multus CNI"
+kubectl apply \
+    -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml \
+    > /dev/null
+
+waitUntilAllPodsRun
+
+msg "Adding 2port network configuration"
+kubectl apply -f yamls/2_port.yaml > /dev/null
+
+readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
+readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
+readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent -- "
+
+msg "Adding pods"
+kubectl apply -f yamls/pods > /dev/null
+
+waitUntilAllPodsRun
+
+# Setup pods names and ip addresses
+readonly ALICE_POD_1=alice1
+readonly ALICE_POD_2=alice2
+readonly ALICE_POD_3=alice3
+readonly MALICE_POD=malice
+readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
+readonly SERVICES_IP=$(minikube ip)
+
+echo -e "\n\n"
+msg "End of demo7!"
+msg "Bringing local registry down"
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
+
+echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
+echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
+#echo -e "\tUse 'docker rmi -f  $FLOW_IMAGE_ID' to clean the demo image"
