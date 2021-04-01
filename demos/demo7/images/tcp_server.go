@@ -4,11 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"math/rand"
 	"net"
 	"strings"
 	"sync"
-	"time"
 )
 
 type connections struct {
@@ -17,16 +15,18 @@ type connections struct {
 }
 
 var args struct {
-	port *string
+	in_port  *string
+	out_port *string
 }
 
 func init() {
-	args.port = flag.String("port", "12345", "The server port")
+	args.in_port = flag.String("in_port", "12345", "The server port")
+	args.out_port = flag.String("out_port", "23456", "The server port")
 	flag.Parse()
 }
 
 func handleConnection(c net.Conn, connList *connections) {
-	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+	fmt.Printf("Serving sender %s\n", c.RemoteAddr().String())
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
@@ -38,37 +38,70 @@ func handleConnection(c net.Conn, connList *connections) {
 		if temp == "STOP" {
 			break
 		}
+		// whenever a flow controller sends data we forward the data to all agent servers
 		connList.l.RLock()
-		for _, conn := range connList.c {
-			conn.Write([]byte(netData))
+		for idx, conn := range connList.c {
+			_, err := conn.Write([]byte(netData))
+			if err != nil {
+				// if an agent server connection is closed we remove it from the list
+				connList.l.RUnlock()
+				connList.l.Lock()
+				closeOutConn(idx, conn, connList)
+				connList.l.Unlock()
+				connList.l.RLock()
+			}
 		}
 		connList.l.RUnlock()
 	}
 	c.Close()
 	fmt.Printf("Connection closed %s\n", c.RemoteAddr().String())
-	for idx, conn := range connList.c {
-		if conn == c {
-			fmt.Printf("Removing %s from list\n", c.RemoteAddr().String())
-			connList.l.Lock()
-			connList.c[idx] = connList.c[len(connList.c)-1]
-			connList.c = connList.c[:len(connList.c)-1]
-			connList.l.Unlock()
-		}
-	}
+	// if a flow controller connection is closed we let the handler terminate
+}
+
+func closeOutConn(idx int, c net.Conn, connList *connections) {
+	c.Close()
+	fmt.Printf("Removing %s from list\n", c.RemoteAddr().String())
+	connList.c[idx] = connList.c[len(connList.c)-1]
+	connList.c = connList.c[:len(connList.c)-1]
 }
 
 func main() {
-	url := ":" + *args.port
-	l, err := net.Listen("tcp4", url)
+	// port to listen to input connections (flow controllers)
+	in_url := ":" + *args.in_port
+	in_listener, err := net.Listen("tcp4", in_url)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	defer l.Close()
-	rand.Seed(time.Now().Unix())
+	defer in_listener.Close()
+
+	// port to listen to output connections (agent servers)
+	out_url := ":" + *args.out_port
+	out_listener, err := net.Listen("tcp4", out_url)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer out_listener.Close()
+
+	// list of all agent server connections
 	connList := new(connections)
+
+	// whenever a flow controller connects we open a new handler
+	go func() {
+		for {
+			c, err := in_listener.Accept()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			go handleConnection(c, connList)
+		}
+	}()
+
+	// whenever an agent server connects we add the connection to the list
 	for {
-		c, err := l.Accept()
+		c, err := out_listener.Accept()
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -76,6 +109,6 @@ func main() {
 		connList.l.Lock()
 		connList.c = append(connList.c, c)
 		connList.l.Unlock()
-		go handleConnection(c, connList)
+		fmt.Printf("Serving receiver %s\n", c.RemoteAddr().String())
 	}
 }

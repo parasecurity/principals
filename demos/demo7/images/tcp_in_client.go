@@ -21,6 +21,7 @@ func init() {
 }
 
 func main() {
+	//test client that reads data from stdin and writes to connection
 	url := *args.ip + ":" + *args.port
 	c, err := net.Dial("tcp4", url)
 	if err != nil {
@@ -28,32 +29,27 @@ func main() {
 		return
 	}
 
-	go func() {
-		for {
-			message, err := bufio.NewReader(c).ReadString('\n')
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-			fmt.Print("->: " + message)
-		}
-	}()
-
 	for {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print(">> ")
 		text, err := reader.ReadString('\n')
 		if err != nil {
+			//if we get an io error, let the client terminate
 			fmt.Println("Error, exiting")
-			c.Close()
-			c = nil
 			break
 		} else {
 			if strings.TrimSpace(string(text)) == "STOP" {
+				//if we get the string STOP, let the client terminate
 				fmt.Println("TCP client exiting...")
-				return
+				break
 			}
-			fmt.Fprintf(c, text+"\n")
+			_, err := c.Write([]byte(text + "\n"))
+			if err != nil {
+				//if the connection is closed, let the client terminate
+				fmt.Println(err)
+				break
+			}
 		}
 	}
+	c.Close()
 }
