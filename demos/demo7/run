@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Demo 7: 2 nodes
+#  Demo 7: 2 nodes communication
 #
 set -euo pipefail
 
@@ -26,15 +26,26 @@ waitUntilAllPodsRun()
 	echo ""
 }
 
-setupFlowControllerImage()
+setupFlowServerImage()
 {
-	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-controller/tags/list | grep v1.7.0)
+	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-server/tags/list | grep v1.7.0)
 
-	docker build images/logger -t tsi-flow-controller:v1.7.0 &> /dev/null
-	docker tag tsi-flow-controller:v1.7.0 localhost:5000/tsi-flow-controller:v1.7.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-controller:v1.7.0 &> /dev/null
+	docker build images/flow_control_server -t tsi-flow-server:v1.7.0 &> /dev/null
+	docker tag tsi-flow-server:v1.7.0 localhost:5000/tsi-flow-server:v1.7.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-server:v1.7.0 &> /dev/null
 
-	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-controller:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+	readonly FLOW_SERVER_IMAGE_ID=$(docker inspect tsi-flow-server:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
+}
+
+setupFlowClientImage()
+{
+	local exists=$(curl -s http://localhost:5000/v2/tsi-flow-client/tags/list | grep v1.7.0)
+
+	docker build images/flow_control_client -t tsi-flow-client:v1.7.0 &> /dev/null
+	docker tag tsi-flow-client:v1.7.0 localhost:5000/tsi-flow-client:v1.7.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-client:v1.7.0 &> /dev/null
+
+	readonly FLOW_CLIENT_IMAGE_ID=$(docker inspect tsi-flow-client:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
@@ -54,8 +65,11 @@ then
 	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
 fi
 
-#msg "Creating flow-controller docker image"
-#setupFlowControllerImage
+msg "Creating flow server docker image"
+setupFlowServerImage
+
+msg "Creating flow client docker image"
+setupFlowClientImage
 
 msg "Starting minikube cluster"
 minikube start \
@@ -63,8 +77,7 @@ minikube start \
     --network-plugin=cni \
     --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
     --extra-config=kubelet.network-plugin=cni \
-    --insecure-registry="192.168.49.1:5000" \
-	--nodes=2
+    --insecure-registry="192.168.49.1:5000" 
 
 msg "Adding Antrea CNI"
 kubectl apply \
@@ -101,9 +114,9 @@ readonly SERVICES_IP=$(minikube ip)
 echo -e "\n\n"
 msg "End of demo7!"
 msg "Bringing local registry down"
-docker stop minikube_registry &> /dev/null
-docker rm minikube_registry &> /dev/null
+#docker stop minikube_registry &> /dev/null
+#docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
-#echo -e "\tUse 'docker rmi -f  $FLOW_IMAGE_ID' to clean the demo image"
+echo -e "\tUse 'docker rmi -f $FLOW_SERVER_IMAGE_ID $FLOW_CLIENT_IMAGE_ID' to clean the demo image"

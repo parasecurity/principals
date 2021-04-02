@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: flow-server
+  name: flow-server
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flow-server
+  template:
+    metadata:
+      labels:
+        app: flow-server
+    spec:
+      containers:
+      - name: flow-server
+        image: 192.168.49.1:5000/tsi-flow-server:v1.7.0
+        command:
+          - sleep
+          - infinity
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 12345
+          - containerPort: 23456
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: server-in
+spec:
+  selector:
+    app: flow-server
+  ports:
+  - port: 12345
+    targetPort: 12345
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: server-out
+spec:
+  selector:
+    app: flow-server
+  ports:
+  - port: 23456
+    targetPort: 23456

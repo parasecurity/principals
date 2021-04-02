@@ -2,28 +2,27 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app: flow-control
-    component: flow-control-client
-  name: flow-control-client
-  namespace: kube-system
+    app: flow-client
+  name: flow-client
 spec:
   selector:
     matchLabels:
-      app: flow-control
-      component: flow-control-client
+      app: flow-client
   template:
     metadata:
       labels:
-        app: flow-control
-        component: flow-control-client
+        app: flow-client
     spec:
       containers:
-      - name: flow-control-client
-        image: praqma/network-multitool
+      - name: flow-client
+        image: 192.168.49.1:5000/tsi-flow-client:v1.7.0
         command:
           - sleep
           - infinity
         imagePullPolicy: Always
+        ports:
+          - containerPort: 12345
+          - containerPort: 23456
         resources:
           limits:
             memory: "128Mi"
