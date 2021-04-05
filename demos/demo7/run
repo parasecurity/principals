@@ -100,7 +100,7 @@ readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent 
 
 msg "Adding second node to kubernetes cluster"
 minikube node add
-sleep 5
+sleep 10
 
 waitUntilAllPodsRun
 
@@ -110,21 +110,34 @@ kubectl apply -f yamls/pods > /dev/null
 waitUntilAllPodsRun
 
 # Setup pods names and ip addresses
-readonly MALICE_POD=malice
 readonly FLOW_CLIENT_1=$(kubectl get -A po | grep "flow-client" | awk '{print $2}' | head -1)
 readonly FLOW_CLIENT_2=$(kubectl get -A po | grep "flow-client" | awk '{print $2}' | tail -1)
 readonly FLOW_SERVER=$(kubectl get -A po | grep "flow-server" | awk '{print $2}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep "antrea-agent" | awk '{print $7}')
-readonly SERVICES_IP=$(minikube ip)
+readonly FLOW_SERVER_IP=$(kubectl get -A po -o wide | grep "flow-server" | awk '{print $7}')
 
 msg "Starting flow-control server"
-#kubectl exec $FLOW_SERVER -n kube-system -- "nohup go run tcp_server.go"
+kubectl exec $FLOW_SERVER -n kube-system -- bash -c "nohup go run tcp_server.go &"
+
+msg "Listening on flow-client 1"
+kubectl exec $FLOW_CLIENT_1 -- bash -c "nohup go run tcp_out_client.go -ip $FLOW_SERVER_IP &"
+
+msg "Listening on flow-client 2"
+kubectl exec $FLOW_CLIENT_2 -- bash -c "nohup go run tcp_out_client.go -ip $FLOW_SERVER_IP &"
+
+msg "Sending a message from flow-client 1"
+kubectl exec $FLOW_CLIENT_1 -- ./tcp_in_client -ip $FLOW_SERVER_IP -msg "Hey from client 1"
+
+msg "Message should be in flow-client 2"
+kubectl exec $FLOW_CLIENT_2 -- cat out_client.log
+
+sleep 2
 
 echo -e "\n\n"
 msg "End of demo7!"
 msg "Bringing local registry down"
-#docker stop minikube_registry &> /dev/null
-#docker rm minikube_registry &> /dev/null
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"

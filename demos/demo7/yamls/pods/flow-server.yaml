@@ -29,25 +29,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: server-in
-spec:
-  selector:
-    app: flow-server
-  ports:
-  - port: 12345
-    targetPort: 12345
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: server-out
-spec:
-  selector:
-    app: flow-server
-  ports:
-  - port: 23456
-    targetPort: 23456
