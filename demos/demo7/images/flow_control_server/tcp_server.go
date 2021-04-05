@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"flag"
-	"fmt"
+	"log"
 	"net"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
 )
@@ -14,23 +16,49 @@ type connections struct {
 	l sync.RWMutex
 }
 
-var args struct {
-	in_port  *string
-	out_port *string
-}
+var (
+	args struct {
+		in_port  *string
+		out_port *string
+		logPath  *string
+	}
+	sigs *chan os.Signal
+)
 
 func init() {
 	args.in_port = flag.String("in_port", "12345", "The server port")
 	args.out_port = flag.String("out_port", "23456", "The server port")
+	args.logPath = flag.String("lp", "./server.log", "The path to the log file")
 	flag.Parse()
+
+	// open log file
+	logFile, err := os.OpenFile(*args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetOutput(logFile)
+
+	// setup signal catching
+	sigs := make(chan os.Signal, 1)
+	// catch all signals since not explicitly listing
+	signal.Notify(sigs)
+	// method invoked upon seeing signal
+	go func() {
+		s := <-sigs
+		log.Printf("RECEIVED SIGNAL: %s", s)
+		os.Exit(1)
+	}()
 }
 
 func handleConnection(c net.Conn, connList *connections) {
-	fmt.Printf("Serving sender %s\n", c.RemoteAddr().String())
+	log.Printf("Serving sender %s\n", c.RemoteAddr().String())
 	for {
 		netData, err := bufio.NewReader(c).ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			break
 		}
 
@@ -54,13 +82,13 @@ func handleConnection(c net.Conn, connList *connections) {
 		connList.l.RUnlock()
 	}
 	c.Close()
-	fmt.Printf("Connection closed %s\n", c.RemoteAddr().String())
+	log.Printf("Connection closed %s\n", c.RemoteAddr().String())
 	// if a flow controller connection is closed we let the handler terminate
 }
 
 func closeOutConn(idx int, c net.Conn, connList *connections) {
 	c.Close()
-	fmt.Printf("Removing %s from list\n", c.RemoteAddr().String())
+	log.Printf("Removing %s from list\n", c.RemoteAddr().String())
 	connList.c[idx] = connList.c[len(connList.c)-1]
 	connList.c = connList.c[:len(connList.c)-1]
 }
@@ -70,7 +98,7 @@ func main() {
 	in_url := ":" + *args.in_port
 	in_listener, err := net.Listen("tcp4", in_url)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer in_listener.Close()
@@ -79,7 +107,7 @@ func main() {
 	out_url := ":" + *args.out_port
 	out_listener, err := net.Listen("tcp4", out_url)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		return
 	}
 	defer out_listener.Close()
@@ -92,7 +120,7 @@ func main() {
 		for {
 			c, err := in_listener.Accept()
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 			go handleConnection(c, connList)
@@ -103,12 +131,12 @@ func main() {
 	for {
 		c, err := out_listener.Accept()
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		connList.l.Lock()
 		connList.c = append(connList.c, c)
 		connList.l.Unlock()
-		fmt.Printf("Serving receiver %s\n", c.RemoteAddr().String())
+		log.Printf("Serving receiver %s\n", c.RemoteAddr().String())
 	}
 }
