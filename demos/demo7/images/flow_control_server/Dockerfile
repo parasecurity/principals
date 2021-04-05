@@ -1,4 +1,4 @@
-FROM golang:alpine3.13
+FROM golang
 
 WORKDIR "/home"
 COPY tcp_server.go .
