@@ -1,8 +1,8 @@
-FROM golang
+FROM centos:8
+
+COPY flow_client.py /home/
+
+RUN yum install -y python3
 
 WORKDIR "/home"
-COPY tcp_in_client.go tcp_out_client.go /home/
-RUN go build tcp_in_client.go
-RUN go build tcp_out_client.go
-
-CMD ["./tcp_server"]
+CMD ["python3 forward.py"]

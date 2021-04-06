@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Demo 7: 2 nodes communication
+#  Demo 7: 2 Nodes DGA detection
 #
 set -euo pipefail
 
@@ -24,6 +24,17 @@ waitUntilAllPodsRun()
 	done
 
 	echo ""
+}
+
+setupDgaImage()
+{
+	local exists=$(curl -s http://localhost:5000/v2/tsi-dga/tags/list | grep v1.7.0)
+
+	docker build images/dga -t tsi-dga:v1.7.0
+	docker tag tsi-dga:v1.7.0 localhost:5000/tsi-dga:v1.7.0 
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-dga:v1.7.0 
+
+	readonly DGA_IMAGE_ID=$(docker inspect tsi-dga:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
 
 setupFlowServerImage()
@@ -62,8 +73,11 @@ then
 	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
 
 	msg "Starting local docker registry"
-	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
+	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 
 fi
+
+msg "Creating dga docker image"
+setupDgaImage
 
 msg "Creating flow server docker image"
 setupFlowServerImage
@@ -94,9 +108,12 @@ waitUntilAllPodsRun
 msg "Adding 2port network configuration"
 kubectl apply -f yamls/2_port.yaml > /dev/null
 
-readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
-readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
-readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent -- "
+readonly ANTREA_AGENT_1=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}' | head -1)
+readonly ANTREA_AGENT_2=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}' | tail -1)
+readonly ANTREA_POD_1="kubectl -n kube-system exec -it $ANTREA_AGENT_1 -c antrea-agent -- "
+readonly ANTREA_EXEC_1="kubectl -n kube-system exec $ANTREA_AGENT_1 -c antrea-agent -- "
+readonly ANTREA_POD_2="kubectl -n kube-system exec -it $ANTREA_AGENT_2 -c antrea-agent -- "
+readonly ANTREA_EXEC_2="kubectl -n kube-system exec $ANTREA_AGENT_2 -c antrea-agent -- "
 
 msg "Adding second node to kubernetes cluster"
 minikube node add
@@ -107,31 +124,58 @@ waitUntilAllPodsRun
 msg "Adding pods"
 kubectl apply -f yamls/pods > /dev/null
 
+msg "Copying service code to antrea agent"
+kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT_1:home/ 
+kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT_2:home/ 
+
 waitUntilAllPodsRun
 
 # Setup pods names and ip addresses
 readonly FLOW_CLIENT_1=$(kubectl get -A po | grep "flow-client" | awk '{print $2}' | head -1)
 readonly FLOW_CLIENT_2=$(kubectl get -A po | grep "flow-client" | awk '{print $2}' | tail -1)
+readonly DGA_1=$(kubectl get -A po | grep "dga" | awk '{print $2}' | head -1)
+readonly DGA_2=$(kubectl get -A po | grep "dga" | awk '{print $2}' | tail -1)
+readonly DGA_PORT_1=$($ANTREA_POD_1 ovs-vsctl show | grep -oE "dga-.{11}" | head -1)
+readonly DGA_PORT_2=$($ANTREA_POD_2 ovs-vsctl show | grep -oE "dga-.{11}" | head -1)
 readonly FLOW_SERVER=$(kubectl get -A po | grep "flow-server" | awk '{print $2}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep "antrea-agent" | awk '{print $7}')
 readonly FLOW_SERVER_IP=$(kubectl get -A po -o wide | grep "flow-server" | awk '{print $7}')
+readonly FLOW_CLIENT_IP_1=$(kubectl exec -it $FLOW_CLIENT_1 -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
+readonly FLOW_CLIENT_IP_2=$(kubectl exec -it $FLOW_CLIENT_2 -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
 
 msg "Starting flow-control server"
 kubectl exec $FLOW_SERVER -n kube-system -- bash -c "nohup go run tcp_server.go &"
-
-msg "Listening on flow-client 1"
-kubectl exec $FLOW_CLIENT_1 -- bash -c "nohup go run tcp_out_client.go -ip $FLOW_SERVER_IP &"
-
-msg "Listening on flow-client 2"
-kubectl exec $FLOW_CLIENT_2 -- bash -c "nohup go run tcp_out_client.go -ip $FLOW_SERVER_IP &"
-
-msg "Sending a message from flow-client 1"
-kubectl exec $FLOW_CLIENT_1 -- ./tcp_in_client -ip $FLOW_SERVER_IP -msg "Hey from client 1"
-
-msg "Message should be in flow-client 2"
-kubectl exec $FLOW_CLIENT_2 -- cat out_client.log
-
 sleep 2
+
+msg "Connecting both antrea-agents to flow-control server"
+$ANTREA_EXEC_1 bash -c "nohup python3 home/agent_server.py -i $FLOW_SERVER_IP -p 23456 &"
+$ANTREA_EXEC_2 bash -c "nohup python3 home/agent_server.py -i $FLOW_SERVER_IP -p 23456 &"
+sleep 2
+
+msg "Starting flow-control services"
+kubectl exec "$FLOW_CLIENT_1" -- bash -c "nohup python3 flow_client.py -i '{\"action\": \"block\", \"send_ip\": \"$FLOW_SERVER_IP\", \"listen_ip\": \"$FLOW_CLIENT_IP_1\"}' &" 
+kubectl exec "$FLOW_CLIENT_2" -- bash -c "nohup python3 flow_client.py -i '{\"action\": \"block\", \"send_ip\": \"$FLOW_SERVER_IP\", \"listen_ip\": \"$FLOW_CLIENT_IP_2\"}' &" 
+sleep 5
+
+echo "$DGA_PORT_1, $DGA_PORT_2"
+msg "Starting mirroring on dga ports on both nodes"
+$ANTREA_POD_1 ovs-vsctl \
+  -- --id=@p get port $DGA_PORT_1 \
+  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
+  -- set bridge br-int mirrors=@m 
+$ANTREA_POD_2 ovs-vsctl \
+  -- --id=@p get port $DGA_PORT_2 \
+  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
+  -- set bridge br-int mirrors=@m 
+
+msg "Starting dga services"
+kubectl exec $DGA_1 -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CLIENT_IP_1 &"  
+kubectl exec $DGA_2 -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CLIENT_IP_2  &"  
+sleep 5
+
+msg "Starting Demo"
+sleep 5
+
 
 echo -e "\n\n"
 msg "End of demo7!"
@@ -141,4 +185,4 @@ docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
-echo -e "\tUse 'docker rmi -f $FLOW_SERVER_IMAGE_ID $FLOW_CLIENT_IMAGE_ID' to clean the demo image"
+echo -e "\tUse 'docker rmi -f $DGA_IMAGE_ID $FLOW_SERVER_IMAGE_ID $FLOW_CLIENT_IMAGE_ID' to clean the demo image"
