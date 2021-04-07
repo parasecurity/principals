@@ -33,6 +33,6 @@ When all prerequisites are satisfied, you can start the demo with:
 
 ## Pods created
 
-`Analyser` pod accepts as input a file containing the list of names we want to record requests to. Runs a service that uses scapy python module to analyse incoming traffic to the mirrored port. When the domain of the packet exists in the predifient list, specific info about the packet gets forwarded to the `logger` pod. 
+`Analyser` pod accepts as input a file containing the list of names we want to record requests to. Runs a service that uses scapy python module to analyse incoming traffic to the mirrored port. When the domain of the packet exists in the predefined list, specific info about the packet gets forwarded to the `logger` pod. 
 
 `Logger` pod runs a service that listens for info packaged as a json from the `analyser` pod. When a json arrives from the analyser the data are recorded to a `data.log` file in order to accessible by admin in the future. When admin wants to access the logs in the future he can access them both inside and outside of the cluster with the provided client app.
