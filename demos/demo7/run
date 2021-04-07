@@ -170,7 +170,7 @@ $ANTREA_POD_2 ovs-vsctl \
 
 msg "Starting dga services"
 kubectl exec $DGA_1 -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CLIENT_IP_1 &"  
-kubectl exec $DGA_2 -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CLIENT_IP_2  &"  
+kubectl exec $DGA_2 -- bash -c "nohup python3 monitor.py -m dga.model -a $FLOW_CLIENT_IP_2 &"  
 sleep 5
 
 msg "Starting Demo"
