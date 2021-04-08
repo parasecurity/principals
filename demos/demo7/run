@@ -20,7 +20,7 @@ waitUntilAllPodsRun()
 	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
 	do
 		echo -n "."
-		sleep 10
+		sleep 5
 	done
 
 	echo ""
@@ -30,9 +30,9 @@ setupDgaImage()
 {
 	local exists=$(curl -s http://localhost:5000/v2/tsi-dga/tags/list | grep v1.7.0)
 
-	docker build images/dga -t tsi-dga:v1.7.0
-	docker tag tsi-dga:v1.7.0 localhost:5000/tsi-dga:v1.7.0 
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-dga:v1.7.0 
+	docker build images/dga -t tsi-dga:v1.7.0 &> /dev/null
+	docker tag tsi-dga:v1.7.0 localhost:5000/tsi-dga:v1.7.0 &> /dev/null
+	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-dga:v1.7.0 &> /dev/null
 
 	readonly DGA_IMAGE_ID=$(docker inspect tsi-dga:v1.7.0 | grep Id | cut -d':' -f3 | cut -c1-15)
 }
@@ -99,6 +99,8 @@ setVariables()
 	for t in ${FLOW_CLIENTS[@]}; do
 	FLOW_CLIENT_SECONDARY_IPS+=( $(kubectl exec -it $t -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}'))
 	done
+
+	readarray -t MALICE_PODS < <(kubectl get po | grep "malice" | awk '{print $1}')
 }
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
@@ -121,44 +123,26 @@ setupFlowServerImage
 msg "Creating flow client docker image"
 setupFlowClientImage
 
-NODES=()
-ANTREA_AGENTS=()
-ANTREA_AGENT_IPS=()
-DGAS=()
-ANTREA_DGA_PORTS=()
-FLOW_CLIENTS=()
-FLOW_CLIENT_IPS=()
-FLOW_CLIENT_SECONDARY_IPS=()
+minikube stop && minikube delete
+msg "Starting minikube cluster"
+minikube start \
+	--vm-driver=docker \
+	--network-plugin=cni \
+	--cni=images/antrea.yml \
+	--insecure-registry="192.168.49.1:5000" \
+	--nodes 4
 
-while [ ${#NODES[@]} -eq 0 ] || [ ${#NODES[@]} -ne ${#FLOW_CLIENT_SECONDARY_IPS[@]} ]; do
-	minikube stop && minikube delete
-	msg "Starting minikube cluster with one node"
-	minikube start \
-		--vm-driver=docker \
-		--network-plugin=cni \
-		--cni=images/antrea.yml \
-		--insecure-registry="192.168.49.1:5000" \
-		--nodes 1
+waitUntilAllPodsRun
 
-	msg "Adding Multus CNI"
-	kubectl apply \
-		-f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml \
-		> /dev/null
+msg "Adding 2port network configuration"
+kubectl apply -f yamls/2_port.yaml > /dev/null
 
-	waitUntilAllPodsRun
+msg "Adding pods"
+kubectl apply -f yamls/pods > /dev/null
 
-	msg "Adding 2port network configuration"
-	kubectl apply -f yamls/2_port.yaml > /dev/null
+waitUntilAllPodsRun
 
-	waitUntilAllPodsRun
-
-	msg "Adding pods"
-	kubectl apply -f yamls/pods > /dev/null
-
-	waitUntilAllPodsRun
-
-	setVariables
-done
+setVariables
 
 readonly FLOW_SERVER=$(kubectl get -A po | grep "flow-server" | awk '{print $2}')
 readonly FLOW_SERVER_IP=$(kubectl get -A po -o wide | grep "flow-server" | awk '{print $7}')
@@ -183,16 +167,16 @@ msg "Starting flow-control server"
 kubectl exec $FLOW_SERVER -n kube-system -- bash -c "nohup go run tcp_server.go &"
 sleep 2
 
-msg "Connecting both antrea-agents to flow-control server"
+msg "Connecting all antrea-agents to flow-control server"
 for t in ${ANTREA_AGENTS[@]}; do
-  xterm -e kubectl -n kube-system exec -it $t -c antrea-agent -- bash -c "python3 home/agent_server.py -i $FLOW_SERVER_IP -p 23456" &
+  kubectl -n kube-system exec $t -c antrea-agent -- bash -c "nohup python3 home/agent_server.py -i $FLOW_SERVER_IP -p 23456 &"
 done
 sleep 2
 
-msg "Starting flow-control services"
+msg "Starting flow-control clients"
 
 for i in ${!FLOW_CLIENTS[@]}; do
-  xterm -e kubectl exec -it ${FLOW_CLIENTS[i]} -- bash -c "python3 flow_client.py -i '{\"action\": \"block\", \"send_ip\": \"$FLOW_SERVER_IP\", \"listen_ip\": \"${FLOW_CLIENT_SECONDARY_IPS[i]}\"}' " &
+  kubectl exec ${FLOW_CLIENTS[i]} -- bash -c "nohup python3 flow_client.py -i '{\"action\": \"block\", \"send_ip\": \"$FLOW_SERVER_IP\", \"listen_ip\": \"${FLOW_CLIENT_SECONDARY_IPS[i]}\"}' &"
 done
 sleep 5
 
@@ -206,19 +190,43 @@ done
 
 msg "Starting dga services"
 for i in ${!DGAS[@]}; do
-  xterm -e kubectl exec -it ${DGAS[i]} -- bash -c "python3 monitor.py -m dga.model -a ${FLOW_CLIENT_SECONDARY_IPS[i]}" &
+  kubectl exec ${DGAS[i]} -- bash -c "nohup python3 monitor.py -m dga.model -a ${FLOW_CLIENT_SECONDARY_IPS[i]} &"
 done
 sleep 5
 
+echo -e "\n\n"
 msg "Starting Demo"
 sleep 5
 
+MALICIOUS_IP=$(getent hosts gqoppwnan.com | awk '{ print $1 }')
+
+echo -e "\n"
+msg "Trying to ping malicious IP address, it should succeed"
+kubectl exec -it "${MALICE_PODS[1]}" -- ping -c3 -W1 $MALICIOUS_IP && true
+
+echo -e "\n"
+msg "Trying to ping malicious site, connection should be blocked by DGA"
+kubectl exec -it "${MALICE_PODS[1]}" -- ping -c3 -W1 gqoppwnan.com && true
+
+echo -e "\n"
+msg "Trying to ping malicious IP address again, it should fail now"
+kubectl exec -it "${MALICE_PODS[1]}" -- ping -c3 -W1 $MALICIOUS_IP && true
+
+echo -e "\n"
+msg "Let's inspect each node's applied flows for the malicious IP address"
+for i in ${!NODES[@]}; do
+	echo "Node ${NODES[i]} - Agent ${ANTREA_AGENTS[i]}:"
+	kubectl exec -n kube-system ${ANTREA_AGENTS[i]} -c antrea-agent -- bash -c "ovs-ofctl dump-flows br-int | grep $MALICIOUS_IP "
+	echo -e "\n"
+done
+
 echo -e "\n\n"
 msg "End of demo7!"
-msg "Bringing local registry down"
-docker stop minikube_registry &> /dev/null
-docker rm minikube_registry &> /dev/null
+# docker stop minikube_registry &> /dev/null
+# docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
+echo -e "\tUse 'docker stop minikube_registry' to stop kubernetes registry"
+echo -e "\tUse 'docker rm minikube_registry' to delete kubernetes registry"
 echo -e "\tUse 'docker rmi -f $DGA_IMAGE_ID $FLOW_SERVER_IMAGE_ID $FLOW_CLIENT_IMAGE_ID' to clean the demo image"
