@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"log"
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 )
 
@@ -55,17 +55,17 @@ func init() {
 
 func handleConnection(c net.Conn, connList *connections) {
 	log.Printf("Serving sender %s\n", c.RemoteAddr().String())
+	reader := bufio.NewReader(c)
 	for {
-		netData, err := bufio.NewReader(c).ReadString('\n')
+		netData := make([]byte, 4096)
+		_, err := reader.Read(netData)
 		if err != nil {
 			log.Println(err)
 			break
 		}
+		netData = bytes.Trim(netData, "\x00")
+		log.Print("from " + c.RemoteAddr().String() + ": " + string(netData))
 
-		temp := strings.TrimSpace(string(netData))
-		if temp == "STOP" {
-			break
-		}
 		// whenever a flow controller sends data we forward the data to all agent servers
 		connList.l.RLock()
 		for idx, conn := range connList.c {
