@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-#  Demo 7: 2 Nodes DGA detection
+#  Demo 7: Multinode scalable DGA detection
 #
 set -euo pipefail
 
@@ -61,7 +61,6 @@ setupFlowClientImage()
 
 setVariables()
 {
-	# readarray -t NODES < <(kubectl get nodes | grep "minikube" | awk '{print $1}')
 	NODES=()
 	NODES+=( $(kubectl get nodes | grep "minikube" | awk '{print $1}') )
 
@@ -111,7 +110,7 @@ then
 	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
 
 	msg "Starting local docker registry"
-	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 
+	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2
 fi
 
 msg "Creating dga docker image"
@@ -130,7 +129,7 @@ minikube start \
 	--network-plugin=cni \
 	--cni=images/antrea.yml \
 	--insecure-registry="192.168.49.1:5000" \
-	--nodes 4
+	--nodes 2
 
 waitUntilAllPodsRun
 
@@ -146,17 +145,6 @@ setVariables
 
 readonly FLOW_SERVER=$(kubectl get -A po | grep "flow-server" | awk '{print $2}')
 readonly FLOW_SERVER_IP=$(kubectl get -A po -o wide | grep "flow-server" | awk '{print $7}')
-
-declare -p NODES
-declare -p ANTREA_AGENTS
-declare -p ANTREA_AGENT_IPS
-declare -p DGAS 
-declare -p ANTREA_DGA_PORTS 
-declare -p FLOW_CLIENTS
-declare -p FLOW_CLIENT_IPS
-declare -p FLOW_CLIENT_SECONDARY_IPS
-declare -p FLOW_SERVER
-declare -p FLOW_SERVER_IP
 
 msg "Copying service code to antrea agent"
 for t in ${ANTREA_AGENTS[@]}; do
@@ -222,8 +210,8 @@ done
 
 echo -e "\n\n"
 msg "End of demo7!"
-# docker stop minikube_registry &> /dev/null
-# docker rm minikube_registry &> /dev/null
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
