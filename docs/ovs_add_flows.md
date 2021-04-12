@@ -60,3 +60,16 @@ ovs-ofctl add-flow \<bridge\> dl_dst=\<mac\>,actions=drop
 ovs-ofctl del-flows --strict \<bridge\> dl_dst=\<mac\>
 ```
 
+## Create a TCP controller on a different pod than antrea-agent
+
+Set controller inside antrea agent
+```sh
+kubectl exec -n kube-system -it <antrea-agent> -- bash
+ovs-vsctl set-controller br-int ptcp:6633:<IP address of antrea-agent>
+```
+
+Create a docker image that has installed ovs 
+```sh
+kubectl exec -it flow-client
+ovs-ofctl add-flow tcp:<IP address of antrea-agent>:6633 <flow>
+```
