@@ -2,24 +2,24 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
-    app: flow-client
-  name: flow-client
+    app: dga
+  name: dga
   annotations:
     k8s.v1.cni.cncf.io/networks: macvlan-conf
 spec:
   selector:
     matchLabels:
-      app: flow-client
+      app: dga
   template:
     metadata:
       labels:
-        app: flow-client
+        app: dga
       annotations:
         k8s.v1.cni.cncf.io/networks: macvlan-conf
     spec:
       containers:
-      - name: flow-client
-        image: 192.168.49.1:5000/tsi-flow-client:v1.7.0
+      - name: dga
+        image: 192.168.49.1:5000/tsi-dga:v1.7.0
         command:
           - sleep
           - infinity
