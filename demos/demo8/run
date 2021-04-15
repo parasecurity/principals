@@ -58,15 +58,20 @@ kubectl apply -f yamls/pods > /dev/null
 
 waitUntilAllPodsRun
 
+msg "Copy alert rules and send script to snort pod"
+kubectl cp utils/local.rules default/snort:etc/snort/rules/
+kubectl cp utils/tail-send.sh default/snort:var/log/snort/
+
 # Setup pods names and ip addresses
 readonly ALICE_POD_1=alice1
 readonly ALICE_POD_2=alice2
 readonly ALICE_POD_3=alice3
 readonly MALICE_POD=malice1
-readonly SYSLOG_POD=syslog
+readonly SYSLOG_POD=$(kubectl get -A po | grep "syslog" | awk '{print $2}')
 readonly SNORT_POD=snort
 readonly SNORT_PORT=$($ANTREA_POD ovs-vsctl show | grep -oE "snort-.{6}" | head -1)
-readonly SYSLOG_IP=$(kubectl exec -it syslog -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
+readonly SNORT_IP=$(kubectl exec -it $SNORT_POD -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
+readonly SYSLOG_IP=$(kubectl exec -it $SYSLOG_POD -- ip a | grep inet | awk '{print $2}' | sed '3!d' |  awk -F/ '{print $1}')
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
 
 msg "Starting mirroring on snort port"
@@ -75,9 +80,25 @@ $ANTREA_POD ovs-vsctl \
   -- --id=@m create mirror name=m0 select-all=true output-port=@p \
   -- set bridge br-int mirrors=@m &> /dev/null
 
+msg "Run snort as deamon"
+kubectl exec $SNORT_POD -- bash -c "snort -D -i eth0 -c /etc/snort/snort.conf -A Fast &> /dev/null"
+sleep 3
+
+msg "Pinging google from a alice"
+kubectl exec $ALICE_POD_1 -- bash -c "ping -c3 google.com"
+
+msg "Start snort logging script"
+kubectl exec $SNORT_POD -- bash -c "nohup sh var/log/snort/tail-send.sh $SYSLOG_IP 514 0<&- &>/dev/null &"
+
+msg "Print log files"
+readonly SYSLOG_LOG=$(kubectl exec $SYSLOG_POD -- ls var/log)
+kubectl exec $SYSLOG_POD -- cat var/log/$SYSLOG_LOG
+
 echo -e "\n\n"
 
 msg "End of demo8!"
+docker stop minikube_registry &> /dev/null
+docker rm minikube_registry &> /dev/null
 
 echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
 echo -e "\tUse 'minikube delete' to clean kubernetes cluster"

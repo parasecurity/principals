@@ -41,7 +41,7 @@ kind: ConfigMap
 metadata:
   name: rsyslog-d
   labels:
-    app: rsyslog-server
+    app: syslog
 data:
   filelog.conf: |
     # http://www.rsyslog.com/doc/
@@ -63,12 +63,29 @@ kind: Service
 metadata:
   name: rsyslog-server-service
   labels:
-    app: rsyslog-server
+    app: syslog
 spec:
   ports:
   - name: upd
     port: 514
     protocol: UDP
   selector:
-    app: rsyslog-server
+    app: syslog
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rsyslog-server-service-2nd
+  annotations:
+    k8s.v1.cni.cncf.io/networks: macvlan-conf
+  labels:
+    app: syslog
+spec:
+  ports:
+  - name: upd
+    port: 514
+    protocol: UDP
+  selector:
+    app: syslog
   type: NodePort
