@@ -4,127 +4,56 @@
 #
 set -euo pipefail
 
-msg()
-{
-	local message="$1"
-	local bold=$(tput bold)
-	local normal=$(tput sgr0)
-
-	echo "${bold}${message}${normal}"
-}
-
-waitUntilAllPodsRun()
-{
-	echo -en "\tWaiting for all pods to be deployed. This might take several minutes."
-
-	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
-	do
-		echo -n "."
-		sleep 10
-	done
-
-	echo ""
-}
-
-setupFlowControlImage()
-{
-	local exists=$(curl -s http://localhost:5000/v2/_catalog | grep tsi-flow-control)
-
-	docker build images/flow-control -t tsi-flow-control:v1.0.0 &> /dev/null
-	docker tag tsi-flow-control:v1.0.0 localhost:5000/tsi-flow-control:v1.0.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-flow-control:v1.0.0
-
-	readonly FLOW_IMAGE_ID=$(docker inspect tsi-flow-control:v1.0.0 | grep Id | cut -d':' -f3 | cut -c1-15)
-}
+source ../common/scripts/funcs.sh
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
-readonly REGISTRY_STATUS=$(docker ps -q -f "name=minikube_registry")
 
-if [[ "$MINIKUBE_STATUS" == "Running" ]];
+if [[ "$MINIKUBE_STATUS" == "" ]];
 then
-	echo "Please first stop/clean minikube before running the demo"
+	echo "Please run '../deploy.sh' first to start the cluster"
 	exit 0
 fi
 
-if [[ "$REGISTRY_STATUS" == "" ]];
-then
-	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
-
-	msg "Starting local docker registry"
-	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
-fi
-
-msg "Creating flow-control docker image"
-setupFlowControlImage
-
-msg "Starting minikube cluster"
-minikube start \
-    --vm-driver=docker \
-    --network-plugin=cni \
-    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
-    --extra-config=kubelet.network-plugin=cni \
-    --insecure-registry="192.168.49.1:5000"
-
-msg "Adding Antrea CNI"
-
-kubectl apply \
-    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
-    > /dev/null
+msg "Adding tsi daemonsets"
+kubectl apply -f yamls/daemonsets
 
 waitUntilAllPodsRun
-
-# Setup Antrea Agent alias
-readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
-readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
-readonly ANTREA_EXEC="kubectl -n kube-system exec $ANTREA_AGENT -c antrea-agent -- "
 
 msg "Adding demo pods"
-kubectl apply -f yamls/pods > /dev/null
+kubectl apply -f yamls/pods
 
 waitUntilAllPodsRun
 
-msg "Copying tcp server code to antrea agent"
-kubectl cp utils/agent_server.py kube-system/$ANTREA_AGENT:home/ > /dev/null
-
-# Setup pods names and ip addresses
+readonly AGENT_SERVER=$(kubectl get -A po | grep "agent-server" | awk '{print $2}')
 readonly ALICE_POD=alice
 readonly MALICE_POD="malice$(($RANDOM % 10))"
 readonly FLOW_CONTROL_POD=flow-control
 readonly ALICE_IP=$(kubectl get -A po -o wide | grep -w "$ALICE_POD" | awk '{print $7}')
 readonly MALICE_IP=$(kubectl get -A po -o wide | grep -w "$MALICE_POD" | awk '{print $7}')
-readonly ANTREA_IP=$(kubectl get -A po -o wide | grep -w "$ANTREA_AGENT" | awk '{print $7}')
-
-msg "Starting antrea-agent server"
-$ANTREA_EXEC bash -c "nohup python3 home/agent_server.py &"
-sleep 5 
+readonly AGENT_IP=$(kubectl get -A po -o wide | grep -w "$AGENT_SERVER" | awk '{print $7}')
 
 msg "Starting Demo"
-sleep 5 
 
 msg "Verify connectivity between $ALICE_POD and $MALICE_POD" 
 kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP"
 
 msg "Block malice ip through flow-control service"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 forward.py -i '{\"action\": \"block\", \"argument\": \"$MALICE_IP\", \"server_ip\": \"$ANTREA_IP\"}'" &> /dev/null
-sleep 10
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -s=$AGENT_IP -sp=12345 -i='{\"action\": \"block\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+sleep 1
 
 msg "Verify that there is no connectivity between $ALICE_POD and $MALICE_POD" 
 kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 "$ALICE_IP" && true
-sleep 5
 
 msg "Removing OpenFlow rule to block traffic from $MALICE_POD"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 forward.py -i '{\"action\": \"unblock\", \"argument\": \"$MALICE_IP\", \"server_ip\": \"$ANTREA_IP\"}'" &> /dev/null
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -s=$AGENT_IP -sp=12345 -i='{\"action\": \"unblock\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+sleep 1
 
 msg "Verify connectivity between $ALICE_POD and $MALICE_POD is back" 
-kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP"
+kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP" && true
 
-echo -e "\n\n"
+msg "Cleaning cluster"
+
+kubectl delete -f yamls/daemonsets/
+kubectl delete -f yamls/pods
 
 msg "End of demo1!"
-msg "Bringing local registry down"
-docker stop minikube_registry &> /dev/null
-docker rm minikube_registry &> /dev/null
-
-echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
-echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
-echo -e "\tUse 'docker rmi -f $FLOW_IMAGE_ID' to clean the demo image"

@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: security
+  name: agent-server
+  namespace: security
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: agent-server
+  name: agent-server
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: agent-server
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: agent-server
+      labels:
+        app: security
+        component: agent-server
+    spec:
+      containers:
+        - command:
+            - /usr/bin/python3
+          args:
+            - /home/agent_server.py
+            - -i=192.168.49.2
+            - -p=12345
+            - -l=True
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          imagePullPolicy: IfNotPresent
+          name: agent-server
+          ports:
+            - containerPort: 12345
+              hostPort: 12345
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /var/run/antrea
+              name: host-var-run-antrea
+            - mountPath: /var/run/openvswitch
+              name: host-var-run-antrea
+              subPath: openvswitch
+            - mountPath: /var/lib/cni
+              name: host-var-run-antrea
+              subPath: cni
+            - mountPath: /var/log/antrea
+              name: host-var-log-antrea
+            - mountPath: /host/proc
+              name: host-proc
+              readOnly: true
+            - mountPath: /host/var/run/netns
+              mountPropagation: HostToContainer
+              name: host-var-run-netns
+              readOnly: true
+            - mountPath: /run/xtables.lock
+              name: xtables-lock
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      serviceAccountName: agent-server
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      volumes:
+        - configMap:
+            name: antrea-config-5ct9ktdt77
+          name: antrea-config
+        - hostPath:
+            path: /etc/cni/net.d
+          name: host-cni-conf
+        - hostPath:
+            path: /opt/cni/bin
+          name: host-cni-bin
+        - hostPath:
+            path: /proc
+          name: host-proc
+        - hostPath:
+            path: /var/run/netns
+          name: host-var-run-netns
+        - hostPath:
+            path: /var/run/antrea
+            type: DirectoryOrCreate
+          name: host-var-run-antrea
+        - hostPath:
+            path: /var/log/antrea
+            type: DirectoryOrCreate
+          name: host-var-log-antrea
+        - hostPath:
+            path: /lib/modules
+          name: host-lib-modules
+        - hostPath:
+            path: /run/xtables.lock
+            type: FileOrCreate
+          name: xtables-lock
+  updateStrategy:
+    type: RollingUpdate

@@ -26,6 +26,22 @@ touch .kube/config
 chmod 600 .kube/config
 ```
 
+To build the images needed for the demo, run:
+
+```
+cd ..
+./init.sh
+cd demo1
+```
+
+To start the cluster, run:
+
+```
+cd ..
+./deploy.sh
+cd demo1
+```
+
 When all prerequisites are satisfied, you can start the demo with:
 
 ```
@@ -40,12 +56,18 @@ The json fields are:
 ```
 json = {
     action: <action>,
-    argument: <ip address>,
-    server_ip: <ip address of ovs-controller>
+    argument: <json>
 }
 ```
 
-The possible actions are:
+The argument is a json with all the arguments needed by the action
 
-- Block: You block a given ip address 
+The possible actions with their arguments are:
+
+- Block: You block a given ip address
+  - malicious_ip: the ip to be blocked
 - Unblock: You unblock a given ip address
+  - ip: the ip to be blocked
+
+
+Demo Main Contribution: Agent server daemonset that gives us the ability to apply our own flows to the system

@@ -4,10 +4,9 @@ metadata:
   name: alice
 spec:
   containers:
-  - name: alice
-    image: praqma/network-multitool
-    command:
-      - sleep
-      - infinity
-    imagePullPolicy: IfNotPresent
-
+    - name: alice
+      image: praqma/network-multitool
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
