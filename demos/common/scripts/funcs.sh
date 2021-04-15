@@ -48,7 +48,7 @@ waitUntilAllPodsRun()
 	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
 	do
 		wrnmsg "."
-		sleep 10
+		sleep 2
 	done
 
 	echo ""

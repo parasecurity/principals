@@ -4,12 +4,12 @@ metadata:
   name: host
 spec:
   containers:
-  - name: host
-    image: paultiplady/netperf 
-    command:
-      - sleep
-      - infinity
-    imagePullPolicy: IfNotPresent
+    - name: host
+      image: paultiplady/netperf
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
 kind: Pod
@@ -17,12 +17,12 @@ metadata:
   name: client1
 spec:
   containers:
-  - name: client1
-    image: paultiplady/netperf 
-    command:
-      - sleep
-      - infinity
-    imagePullPolicy: IfNotPresent
+    - name: client1
+      image: paultiplady/netperf
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
 ---
 apiVersion: v1
 kind: Pod
@@ -30,10 +30,9 @@ metadata:
   name: client2
 spec:
   containers:
-  - name: client2
-    image: paultiplady/netperf 
-    command:
-      - sleep
-      - infinity
-    imagePullPolicy: IfNotPresent
-
+    - name: client2
+      image: paultiplady/netperf
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent

@@ -25,12 +25,12 @@ kubectl apply -f yamls/pods
 waitUntilAllPodsRun
 
 readonly AGENT_SERVER=$(kubectl get -A po | grep "agent-server" | awk '{print $2}')
+readonly AGENT_IP=$(kubectl get -A po -o wide | grep -w "$AGENT_SERVER" | awk '{print $7}')
 readonly ALICE_POD=alice
 readonly MALICE_POD="malice$(($RANDOM % 10))"
 readonly FLOW_CONTROL_POD=flow-control
 readonly ALICE_IP=$(kubectl get -A po -o wide | grep -w "$ALICE_POD" | awk '{print $7}')
 readonly MALICE_IP=$(kubectl get -A po -o wide | grep -w "$MALICE_POD" | awk '{print $7}')
-readonly AGENT_IP=$(kubectl get -A po -o wide | grep -w "$AGENT_SERVER" | awk '{print $7}')
 
 msg "Starting Demo"
 

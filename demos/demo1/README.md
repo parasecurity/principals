@@ -1,7 +1,6 @@
 # Demo 1: Block/Unblock traffic
 
-This demo shows that by adding/removing OpenFlow rules we can control the
-traffic between pods.
+This demo shows that by adding/removing OpenFlow rules we can control the traffic between pods.
 
 We assume that the following software is already installed:
 
@@ -77,3 +76,4 @@ The possible actions with their arguments are:
 
 ## Demo Main Contribution:
  - Agent server daemonset
+ - Flow controller pod with actions Block, Unblock
