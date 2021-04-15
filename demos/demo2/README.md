@@ -25,6 +25,23 @@ touch .kube/config
 chmod 600 .kube/config
 ```
 
+To build the images needed for the demo, run:
+
+
+```
+cd ..
+./init.sh
+cd demo2
+```
+
+To start the cluster, run:
+
+```
+cd ..
+./deploy.sh
+cd demo2
+```
+
 When all prerequisites are satisfied, you can start the demo with:
 
 ```sh
@@ -33,8 +50,12 @@ When all prerequisites are satisfied, you can start the demo with:
 
 ## Pods created
 
-`DGA detector` pod runs a service that uses a machine learning model to detects requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resorved IP address is forwarded to the Flow controller.
+`Agent server` daemonset runs a service that listens for ovs commands. When a command arrives it gets applied to the Open vSwitch bridge.
 
-`Flow controller` pod runs a service that listens for  requests from DGA detector. When a request arrives it is forwared to OVS controller.
+`Flow controller` daemonset runs a service that listens for requests from DGA detector. When a request arrives it is forwarded to Agent server.
 
-`OVS controller` pod runs a service on the same pod with the Open vSwitch bridge. It listens for commands from Flow controller. When a command arrives it gets applied to the Open vSwitch bridge.
+`DGA detector` daemonset runs a service that uses a machine learning model to detect requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resorved IP address is forwarded to the Flow controller.
+
+## Demo Main Contribution:
+  - Flow controller daemonset
+  - DGA daemonset 

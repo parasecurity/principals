@@ -75,6 +75,7 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flow controller")
     parser.add_argument("-l", "--listen", help="Ip address to listen incoming packets", required=True)
+    parser.add_argument("-lp", "--listenport", help="Port to listen incoming packets", required=True)
     parser.add_argument("-s", "--send", help="Ip address of antrea-agent to send packet", required=True)
     parser.add_argument("-sp", "--sendport", help="Port of antrea-agent to send packet", required=True)
     parser.add_argument("-i", "--input", help="Input commands in JSON format", required=False)
@@ -83,6 +84,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     raw_data = args.input
     local_ip = args.listen
+    local_port = int(args.listenport)
     remote_ip = args.send
     remote_port = int(args.sendport)
 
@@ -100,4 +102,4 @@ if __name__ == "__main__":
         except KeyError:
             print("Wrong command format")
     else:
-        client(remote_ip, local_ip, remote_port)
+        client(remote_ip, local_ip, remote_port, local_port)

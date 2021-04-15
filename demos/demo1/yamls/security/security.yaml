@@ -33,11 +33,16 @@ spec:
         component: agent-server
     spec:
       containers:
-        - command:
+        - env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          command:
             - /usr/bin/python3
           args:
             - /home/agent_server.py
-            - -i=192.168.49.2
+            - -i=$(MY_POD_IP)
             - -p=12345
             - -l=True
           image: 192.168.49.1:5000/antrea-tsi:v1.0.0

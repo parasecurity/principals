@@ -14,8 +14,8 @@ then
 	exit 0
 fi
 
-msg "Adding tsi daemonsets"
-kubectl apply -f yamls/daemonsets
+msg "Adding tsi yaml"
+kubectl apply -f yamls/security
 
 waitUntilAllPodsRun
 
@@ -38,14 +38,14 @@ msg "Verify connectivity between $ALICE_POD and $MALICE_POD"
 kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP"
 
 msg "Block malice ip through flow-control service"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -s=$AGENT_IP -sp=12345 -i='{\"action\": \"block\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"block\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
 sleep 1
 
 msg "Verify that there is no connectivity between $ALICE_POD and $MALICE_POD" 
 kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 "$ALICE_IP" && true
 
 msg "Removing OpenFlow rule to block traffic from $MALICE_POD"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -s=$AGENT_IP -sp=12345 -i='{\"action\": \"unblock\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"unblock\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
 sleep 1
 
 msg "Verify connectivity between $ALICE_POD and $MALICE_POD is back" 
@@ -53,7 +53,7 @@ kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP" && true
 
 msg "Cleaning cluster"
 
-kubectl delete -f yamls/daemonsets/
+kubectl delete -f yamls/security/
 kubectl delete -f yamls/pods
 
 msg "End of demo1!"

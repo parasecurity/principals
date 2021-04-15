@@ -48,6 +48,12 @@ When all prerequisites are satisfied, you can start the demo with:
 ./run
 ```
 
+## Pods created
+
+`Agent server` daemonset runs a service that listens for ovs commands. When a command arrives it gets applied to the Open vSwitch bridge.
+
+`Flow controller` pod provides an interface to send commands to Agent server.
+
 ## Current interface
 
 Flow controller supports input through a `.json` file.
@@ -69,5 +75,5 @@ The possible actions with their arguments are:
 - Unblock: You unblock a given ip address
   - ip: the ip to be blocked
 
-
-Demo Main Contribution: Agent server daemonset that gives us the ability to apply our own flows to the system
+## Demo Main Contribution:
+ - Agent server daemonset

@@ -4,11 +4,9 @@ metadata:
   name: malice
 spec:
   containers:
-  - name: malice
-    image: mkrishnamurthy/nslookup
-    command:
-      - sleep
-      - infinity
-    imagePullPolicy: IfNotPresent
-
-
+    - name: malice
+      image: mkrishnamurthy/nslookup
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
