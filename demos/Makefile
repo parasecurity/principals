@@ -1,4 +1,4 @@
-all: demo1 demo2 demo3 demo4 demo5 demo6 demo7
+all: demo1 demo2 demo3 demo4 demo5 demo6 demo7 demo8
 
 demo1:
 	tar zcf demo1.tar.gz demo1/
@@ -21,7 +21,10 @@ demo6:
 demo7:	
 	tar zcf demo7.tar.gz demo7/
 
+demo8:	
+	tar zcf demo8.tar.gz demo8/
+
 clean:
 	rm -f *.tar.gz
 
-.PHONY: all demo1 demo2 demo3 demo4 demo5 demo6 demo7 clean
+.PHONY: all demo1 demo2 demo3 demo4 demo5 demo6 demo7 demo8 clean
