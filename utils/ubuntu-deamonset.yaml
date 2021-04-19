@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: test
+spec:
+  selector:
+    matchLabels:
+      name: test
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: test
+      labels:
+        name: test
+    spec:
+      containers:
+        - command:
+            - sleep
+            - infinity
+          image: ubuntu
+          imagePullPolicy: IfNotPresent
+          name: test
