@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+#  Demo 2 - DGA
+#
+set -euo pipefail
+
+source ../common/scripts/funcs.sh
+
+msg "Adding tsi security"
+kubectl apply -f yamls/security
+
+msg "Adding demo pods"
+kubectl apply -f yamls/pods
+
+waitUntilAllPodsRun
+
+readonly AGENT_POD=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $2}')
+readonly AGENT_IP=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $7}')
+readonly FLOW_CONTROL_POD=$(kubectl get -A po | grep "flow-control" | awk '{print $2}')
+
+readonly ALICE_POD_1=alice1
+readonly ALICE_POD_2=alice2
+readonly ALICE_POD_3=alice3
+readonly MALICE_POD=malice
+
+readonly MALICIOUS_URL=gqoppwnan.com
+readonly MALICIOUS_IP=$(getent hosts $MALICIOUS_URL | awk '{ print $1 }')
+
+msg "Starting Demo"
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_1" 
+kubectl exec -it "$ALICE_POD_1" -- nslookup google.com
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_2" 
+kubectl exec -it "$ALICE_POD_2" -- nslookup amazon.com 
+
+msg "Send a non-malicius nslookup request from $ALICE_POD_3" 
+kubectl exec -it "$ALICE_POD_3" -- nslookup netflix.com 
+
+msg "Send a malicius nslookup request from $MALICE_POD" 
+kubectl exec -it "$MALICE_POD" -- nslookup $MALICIOUS_URL && true
+
+msg "Connectivity from $MALICE_POD to $MALICIOUS_URL should now be blocked"
+kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 $MALICIOUS_URL && true
+
+msg "Actually connectivity from any pod to $MALICIOUS_URL should now be blocked"
+
+msg "Pod $ALICE_POD_1 ping to $MALICIOUS_URL"
+kubectl exec -it "$ALICE_POD_1" -- ping -c3 -W1 $MALICIOUS_URL && true
+
+msg "Pod $ALICE_POD_2 ping to $MALICIOUS_IP ($MALICIOUS_URL IP)"
+kubectl exec -it "$ALICE_POD_2" -- ping -c3 -W1 $MALICIOUS_IP && true
+
+msg "Pod $MALICE_POD still has network access" 
+kubectl exec -it "$MALICE_POD" -- ping -c3 google.com && true
+
+msg "Aplied ovs rules"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0"
+
+msg "Cleaning cluster"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
+sleep 1
+kubectl delete -f yamls/security
+kubectl delete -f yamls/pods
+
+msg "End of demo2!"
