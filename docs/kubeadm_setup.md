@@ -118,7 +118,19 @@ To get pods from a specific node: just add `--field-selector spec.nodeName=k8-wo
 
 - Run join with sudo
 - mv /etc/kubernetes/kubelet.conf /etc/kubernetes/admin.conf
+- Add insecure registry to docker config
+- Change ip to local regisrty
+- Set multus master network to VMs master network
 
+## Fix docker registry error
+
+```sh
+sudo cat >>/etc/docker/daemon.json<<EOF
+{ "insecure-registries" : ["192.168.122.1:5000"] }
+EOF
+sudo systemctl restart docker.service
+sudo systemctl restart docker.socket
+```
 
 ## References
 - Source Article: [Github link](https://github.com/justmeandopensource/kubernetes/blob/master/docs/install-cluster-ubuntu-20.md)
