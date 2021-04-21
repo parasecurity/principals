@@ -14,21 +14,20 @@ then
 	exit 0
 fi
 
-msg "Adding tsi yaml"
+msg "Adding tsi security"
 kubectl apply -f yamls/security
-
-waitUntilAllPodsRun
 
 msg "Adding demo pods"
 kubectl apply -f yamls/pods
 
 waitUntilAllPodsRun
 
-readonly AGENT_SERVER=$(kubectl get -A po | grep "agent-server" | awk '{print $2}')
-readonly AGENT_IP=$(kubectl get -A po -o wide | grep -w "$AGENT_SERVER" | awk '{print $7}')
+readonly AGENT_POD=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $2}')
+readonly AGENT_IP=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $7}')
+readonly FLOW_CONTROL_POD=$(kubectl get -A po | grep "flow-control" | awk '{print $2}')
+
 readonly ALICE_POD=alice
 readonly MALICE_POD="malice$(($RANDOM % 10))"
-readonly FLOW_CONTROL_POD=flow-control
 readonly ALICE_IP=$(kubectl get -A po -o wide | grep -w "$ALICE_POD" | awk '{print $7}')
 readonly MALICE_IP=$(kubectl get -A po -o wide | grep -w "$MALICE_POD" | awk '{print $7}')
 
@@ -38,22 +37,30 @@ msg "Verify connectivity between $ALICE_POD and $MALICE_POD"
 kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP"
 
 msg "Block malice ip through flow-control service"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"block\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=block -i='{\"ip\": \"$MALICE_IP\"}'"
 sleep 1
 
 msg "Verify that there is no connectivity between $ALICE_POD and $MALICE_POD" 
-kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 "$ALICE_IP" && true
+kubectl exec -it "$MALICE_POD" -- ping -c3 -W1 "$ALICE_IP" || true
+
+msg "Aplied ovs rules"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0"
 
 msg "Removing OpenFlow rule to block traffic from $MALICE_POD"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"unblock\", \"argument\": {\"ip\": \"$MALICE_IP\"}}'"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=unblock -i='{\"ip\": \"$MALICE_IP\"}'"
 sleep 1
 
 msg "Verify connectivity between $ALICE_POD and $MALICE_POD is back" 
-kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP" && true
+kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP" || true
+
+msg "Aplied ovs rules (there should be none, should see 'exit code 1')"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0" || true
 
 msg "Cleaning cluster"
 
-kubectl delete -f yamls/security/
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
+sleep 1
+kubectl delete -f yamls/security
 kubectl delete -f yamls/pods
 
 msg "End of demo1!"

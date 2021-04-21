@@ -150,7 +150,7 @@ spec:
             - -lp=8080
             - -s=$(MY_HOST_IP)
             - -sp=12345
-            - -a=block
+            - -a=tarpit
           image: 192.168.49.1:5000/tsi-flow-control:common
           imagePullPolicy: IfNotPresent
           name: flow-control

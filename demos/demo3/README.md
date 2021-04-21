@@ -58,8 +58,6 @@ When all prerequisites are satisfied, you can start the demo with:
 
 ## Current interface
 
-## Current interface
-
 Flow controller supports input through a `.json` file.
 
 The json fields are:
@@ -75,12 +73,12 @@ The argument is a json with all the arguments needed by the action
 The possible actions with their arguments are:
 
 - Block: You block a given ip address
-  - malicious_ip: the ip to be blocked
-- Unblock: You unblock a given ip address
   - ip: the ip to be blocked
+- Unblock: You unblock a given ip address
+  - ip: the ip to be unblocked
 - Throttle: You rate-limit traffic of a given interface
   - port: the ovs port to be throttled
   - limit: the limit to be applied to the ovs port
 
 ## Demo Main Contribution:
- - Added action Throttle to Flow controller pod
+ - Added action Throttle

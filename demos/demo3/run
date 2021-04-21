@@ -14,32 +14,39 @@ then
 	exit 0
 fi
 
-msg "Adding tsi yaml"
+msg "Adding tsi security"
 kubectl apply -f yamls/security
-
-waitUntilAllPodsRun
 
 msg "Adding demo pods"
 kubectl apply -f yamls/pods
 
 waitUntilAllPodsRun
 
-readonly AGENT_SERVER=$(kubectl get -A po | grep "agent-server" | awk '{print $2}')
-readonly AGENT_IP=$(kubectl get -A po -o wide | grep -w "$AGENT_SERVER" | awk '{print $7}')
-readonly AGENT_EXEC="kubectl -n security exec $AGENT_SERVER -- "
+readonly AGENT_POD=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $2}')
+readonly AGENT_IP=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $7}')
+readonly AGENT_EXEC="kubectl -n security exec $AGENT_POD -- "
+
+readonly FLOW_CONTROL_POD=$(kubectl get -A po | grep "flow-control" | awk '{print $2}')
 
 readonly NETPERF_SERVER_POD=host
 readonly NETPERF_CLIENT1_POD=client1
 readonly NETPERF_CLIENT2_POD=client2
-readonly FLOW_CONTROL_POD=flow-control
 readonly NETPERF_SERVER_IP=$(kubectl get -A po -o wide | grep -w "$NETPERF_SERVER_POD" | awk '{print $7}')
 readonly NETPERF_CLIENT1_PORT=$($AGENT_EXEC ovs-vsctl show | grep $NETPERF_CLIENT1_POD | awk '{print $2}' | head -1)
 readonly NETPERF_CLIENT2_PORT=$($AGENT_EXEC ovs-vsctl show | grep $NETPERF_CLIENT2_POD | awk '{print $2}' | head -1)
 
 msg "Starting Demo"
 
+msg "Aplied ovs rules for $NETPERF_CLIENT1_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT1_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT1_PORT" || true
+
+msg "Aplied ovs rules for $NETPERF_CLIENT2_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT2_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT2_PORT" || true
+
 msg "Starting netperf server on the measurement"
-kubectl exec "$NETPERF_SERVER_POD" -- netserver
+kubectl exec "$NETPERF_SERVER_POD" -- netserver || true
 
 msg "Verify throughput value for $NETPERF_CLIENT1_POD"
 kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP 
@@ -48,10 +55,11 @@ msg "Verify throughput value for $NETPERF_CLIENT2_POD"
 kubectl exec -it "$NETPERF_CLIENT2_POD" -- netperf -H $NETPERF_SERVER_IP 
 
 msg "Limiting rate of $NETPERF_CLIENT1_POD to 1 Mbps"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"throttle\", \"argument\": {\"port\": \"$NETPERF_CLIENT1_PORT\", \"limit\": \"1\"}}'"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=throttle -i='{\"port\": \"$NETPERF_CLIENT1_PORT\", \"limit\": \"1\"}'"
 
 msg "Limiting rate of $NETPERF_CLIENT2_POD to 10 Mbps"
-kubectl exec "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -l=$AGENT_IP -lp=8080 -s=$AGENT_IP -sp=12345 -i='{\"action\": \"throttle\", \"argument\": {\"port\": \"$NETPERF_CLIENT2_PORT\", \"limit\": \"10\"}}'"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=throttle -i='{\"port\": \"$NETPERF_CLIENT2_PORT\", \"limit\": \"10\"}'"
+sleep 1
 
 msg "Verify throughput value for $NETPERF_CLIENT1_POD"
 kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP 
@@ -59,8 +67,36 @@ kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP
 msg "Verify throughput value for $NETPERF_CLIENT2_POD"
 kubectl exec -it "$NETPERF_CLIENT2_POD" -- netperf -H $NETPERF_SERVER_IP 
 
-msg "Cleaning cluster"
+msg "Aplied ovs rules for $NETPERF_CLIENT1_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT1_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT1_PORT" || true
 
+msg "Aplied ovs rules for $NETPERF_CLIENT2_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT2_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT2_PORT" || true
+
+msg "Removing rate limit from $NETPERF_CLIENT1_POD"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=throttle -i='{\"port\": \"$NETPERF_CLIENT1_PORT\", \"limit\": \"0\"}'"
+
+msg "Removing rate limit from $NETPERF_CLIENT2_POD"
+kubectl exec -n security "$FLOW_CONTROL_POD" -- bash -c "python3 home/forward.py -s=$AGENT_IP -sp=12345 -a=throttle -i='{\"port\": \"$NETPERF_CLIENT2_PORT\", \"limit\": \"0\"}'"
+sleep 1
+
+msg "Verify throughput value for $NETPERF_CLIENT1_POD"
+kubectl exec -it "$NETPERF_CLIENT1_POD" -- netperf -H $NETPERF_SERVER_IP 
+
+msg "Verify throughput value for $NETPERF_CLIENT2_POD"
+kubectl exec -it "$NETPERF_CLIENT2_POD" -- netperf -H $NETPERF_SERVER_IP 
+
+msg "Aplied ovs rules for $NETPERF_CLIENT1_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT1_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT1_PORT" || true
+
+msg "Aplied ovs rules for $NETPERF_CLIENT2_POD"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_burst list interface $NETPERF_CLIENT2_PORT" || true
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-vsctl --columns=ingress_policing_rate list interface $NETPERF_CLIENT2_PORT" || true
+
+msg "Cleaning cluster"
 kubectl delete -f yamls/security/
 kubectl delete -f yamls/pods
 

@@ -38,6 +38,10 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: MY_HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
           command:
             - /usr/bin/python3
           args:
@@ -110,6 +114,64 @@ kind: DaemonSet
 metadata:
   labels:
     app: security
+    component: dionaea
+  name: dionaea
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: dionaea
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: dionaea
+      labels:
+        app: security
+        component: dionaea
+    spec:
+      containers:
+        - command:
+            - bash
+          args:
+            - -c
+            - "cp /sys/class/net/eth0/address /home/net/dionaea_mac && hostname -i > /home/net/dionaea_ip && /opt/dionaea/bin/dionaea -D -l all,-debug -L '*' && sleep infinity"
+          image: stingar/dionaea
+          imagePullPolicy: IfNotPresent
+          name: dionaea
+          resources:
+            requests:
+              cpu: 200m
+          securityContext:
+            capabilities:
+              add: ["NET_ADMIN"]
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: dionaea
+              mountPath: /home/net
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      volumes:
+        - name: dionaea
+          hostPath:
+            path: "/mnt/data/security_vol"
+  updateStrategy:
+    type: RollingUpdate
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
     component: flow-control
   name: flow-control
   namespace: security
@@ -143,20 +205,30 @@ spec:
                 fieldRef:
                   fieldPath: status.hostIP
           command:
-            - /usr/bin/python3
+            - bash
           args:
-            - /home/forward.py
-            - -l=10.1.1.101
-            - -lp=8080
-            - -s=$(MY_HOST_IP)
-            - -sp=12345
-            - -a=block
+            - -c
+            - 'export HONEYPOT_MAC=$(cat /home/dionaea/dionaea_mac) && export HONEYPOT_IP=$(cat /home/dionaea/dionaea_ip) && /usr/bin/python3 /home/forward.py -l=10.1.1.101 -lp=8080 -s=$(MY_HOST_IP) -sp=12345 -a=forward -i="{\"honeypot_ip\": \"$HONEYPOT_IP\", \"honeypot_mac\": \"$HONEYPOT_MAC\"}"'
           image: 192.168.49.1:5000/tsi-flow-control:common
           imagePullPolicy: IfNotPresent
           name: flow-control
           resources:
             requests:
               cpu: 200m
+          volumeMounts:
+            - name: dionaea
+              mountPath: /home/dionaea
+      initContainers:
+        - name: init-addr
+          image: 192.168.49.1:5000/tsi-flow-control:common
+          command:
+            - bash
+          args:
+            - -c
+            - "while [ ! -f /home/dionaea/dionaea_mac ];do sleep 2;done && while [ ! -f /home/dionaea/dionaea_ip ];do sleep 2;done"
+          volumeMounts:
+            - name: dionaea
+              mountPath: /home/dionaea
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -167,6 +239,10 @@ spec:
           operator: Exists
         - effect: NoExecute
           operator: Exists
+      volumes:
+        - name: dionaea
+          hostPath:
+            path: "/mnt/data/security_vol"
   updateStrategy:
     type: RollingUpdate
 ---
@@ -219,6 +295,16 @@ spec:
             - mountPath: /var/run/openvswitch
               name: host-var-run-antrea
               subPath: openvswitch
+        - name: init-addr
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          command:
+            - bash
+          args:
+            - -c
+            - "while [ ! -f /home/dionaea/dionaea_mac ];do sleep 2;done && while [ ! -f /home/dionaea/dionaea_ip ];do sleep 2;done"
+          volumeMounts:
+            - name: dionaea
+              mountPath: /home/dionaea
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -234,5 +320,8 @@ spec:
             path: /var/run/antrea
             type: DirectoryOrCreate
           name: host-var-run-antrea
+        - name: dionaea
+          hostPath:
+            path: "/mnt/data/security_vol"
   updateStrategy:
     type: RollingUpdate

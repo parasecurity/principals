@@ -25,16 +25,22 @@ touch .kube/config
 chmod 600 .kube/config
 ```
 
-Before each run of the demo you must clean the previous minikube configuration and delete previous created DGA, flow control images. To do that, run:
+To build the images needed for the demo, run:
 
-```sh
-minikube stop
-minikube delete
-docker images 
-# Find tsi-flow-control, tsi-dga images id
-docker rmi -f \<tsi-flow-control image id\>, \<tsi-dga image id\>
+
+```
+cd ..
+./init.sh
+cd demo2
 ```
 
+To start the cluster, run:
+
+```
+cd ..
+./deploy.sh
+cd demo2
+```
 When all prerequisites are satisfied, you can start the demo with:
 
 ```sh
@@ -43,20 +49,42 @@ When all prerequisites are satisfied, you can start the demo with:
 
 ## Pods created
 
-`DGA detector` pod runs a service that uses a machine learning model to detects requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resolved IP address is forwarded to the Flow controller.
+`Agent server` daemonset runs a service that listens for ovs commands. When a command arrives it gets applied to the Open vSwitch bridge.
 
-`Flow controller` pod runs a service that listens for  requests  from a DGA detector. When a request arrives it is forwarded to the OVS controller.
+`Flow controller` daemonset runs a service that listens for requests from DGA detector. When a request arrives it is forwarded to Agent server.
 
-`OVS controller` pod runs a service on the same pod with the Open vSwitch bridge. It listens for commands from the Flow controller. When a command arrives it gets applied to the Open vSwitch bridge.
+`DGA detector` daemonset runs a service that uses a machine learning model to detect requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resorved IP address is forwarded to the Flow controller.
 
-`Honeypot` pod runs a daemon that executes a low interaction honeypot. It is responsible to react to malicious tcp requests on port 80 from other pods on the cluster.
 
-## Possible commands 
+`Honeypot` daemonset runs a daemon that executes a low interaction honeypot. It is responsible to react to malicious tcp requests on port 80 from other pods on the cluster.
 
-- Block \<ip\>: Blocks all traffic with a specific ip address on the cluster.
-- Unblock \<ip\>: Unblock all traffic with a specific ip address on the cluster.
-- Throttle \<port\> \<limit\>: Throttles traffic to a specific limit on a port on the ovs-bridge.
-- Forward \<ip\> \<honeypot ip\> \<honeypot mac\>: Forwards all outgoing tcp requests (on port 80) on a malicious ip to honeypot pod. All other requests to malicious ip are dropped.
+## Current interface
+
+Flow controller supports input through a `.json` file.
+
+The json fields are:
+```
+json = {
+    action: <action>,
+    argument: <json>
+}
+```
+
+The argument is a json with all the arguments needed by the action
+
+The possible actions with their arguments are:
+
+- Block: You block a given ip address
+  - ip: the ip to be blocked
+- Unblock: You unblock a given ip address
+  - ip: the ip to be unblocked
+- Throttle: You rate-limit traffic of a given interface
+  - port: the ovs port to be throttled
+  - limit: the limit to be applied to the ovs port
+- Forward: You forward all outgoing tcp requests (on port 80)
+  - ip: the ip whose traffic will be forwarded
+  - honeypot_ip: the honeypot ip
+  - honeypot_mac: the honeypot mac
 
 ## Forward command rules
 
@@ -64,17 +92,19 @@ For this demo we use the forward to honeypot capability. In order to a create th
 
 - Drop all packets to malicious ip.
 ```sh
-os.system('ovs-ofctl add-flow br-int table=70,ip,nw_dst='<malicious ip>',priority=300,actions=drop')
+ovs-ofctl add-flow br-int table=70,ip,nw_dst='<malicious ip>',priority=300,actions=drop
 ```
 
 - Change all tcp requests (to port 80) on a malicious ip to honeypot ip/mac address. This rule is applied to table 70.
 ```sh
-os.system('ovs-ofctl add-flow br-int table=70,tcp,tcp_dst=80,nw_dst='<malicious ip>',actions=mod_nw_dst:'<honeypot ip>',mod_dl_dst:'<honeypot mac>',goto_table:71')
+ovs-ofctl add-flow br-int table=70,tcp,tcp_dst=80,nw_dst='<malicious ip>',actions=mod_nw_dst:'<honeypot ip>',mod_dl_dst:'<honeypot mac>',goto_table:71
 ```
 
 - Change honeypots response packet ip to original malicious ip address. This rule is applied to table 29.
 ```sh
-os.system('ovs-ofctl add-flow br-int table=10,ip,dl_src='<honeypot mac>',nw_src='<honeypot ip>',actions=mod_nw_src:'<malicious ip>',goto_table:29')
+ovs-ofctl add-flow br-int table=10,ip,dl_src='<honeypot mac>',nw_src='<honeypot ip>',actions=mod_nw_src:'<malicious ip>',goto_table:29
 ```
 
-For more info about OVS tables existing on the current antrea configuration [visit](https://github.com/vmware-tanzu/antrea/blob/main/docs/design/ovs-pipeline.md).
+## Demo Main Contribution:
+  - Added action Forward
+  - Added honeypot deployment

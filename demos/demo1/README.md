@@ -70,10 +70,10 @@ The argument is a json with all the arguments needed by the action
 The possible actions with their arguments are:
 
 - Block: You block a given ip address
-  - malicious_ip: the ip to be blocked
-- Unblock: You unblock a given ip address
   - ip: the ip to be blocked
+- Unblock: You unblock a given ip address
+  - ip: the ip to be unblocked
 
 ## Demo Main Contribution:
  - Agent server daemonset
- - Flow controller pod with actions Block, Unblock
+ - Flow controller daemonset with actions Block, Unblock

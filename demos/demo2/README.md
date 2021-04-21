@@ -57,5 +57,5 @@ When all prerequisites are satisfied, you can start the demo with:
 `DGA detector` daemonset runs a service that uses a machine learning model to detect requests to domains created by domain generation algorithms. When a malicious request arrives from the bridge, through the mirrored port, the resorved IP address is forwarded to the Flow controller.
 
 ## Demo Main Contribution:
-  - Flow controller daemonset
+  - Flow controller daemonset automation
   - DGA daemonset 

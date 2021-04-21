@@ -4,92 +4,15 @@
 #
 set -euo pipefail
 
-msg()
-{
-	local message="$1"
-	local bold=$(tput bold)
-	local normal=$(tput sgr0)
-
-	echo "${bold}${message}${normal}"
-}
-
-waitUntilAllPodsRun()
-{
-	echo -en "\tWaiting for all pods to be deployed. This might take several minutes."
-
-	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
-	do
-		echo -n "."
-		sleep 10
-	done
-
-	echo ""
-}
-
-setupLoggerImage()
-{
-	local exists=$(curl -s http://localhost:5000/v2/tsi-logger/tags/list | grep v1.6.0)
-
-	docker build images/logger -t tsi-logger:v1.6.0 &> /dev/null
-	docker tag tsi-logger:v1.6.0 localhost:5000/tsi-logger:v1.6.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-logger:v1.6.0 &> /dev/null
-
-	readonly LOGGER_IMAGE_ID=$(docker inspect tsi-logger:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
-}
-
-setupAnalyserImage()
-{
-	local exists=$(curl -s http://localhost:5000/v2/tsi-analyser/tags/list | grep v1.6.0)
-
-	docker build images/analyser -t tsi-analyser:v1.6.0 &> /dev/null
-	docker tag tsi-analyser:v1.6.0 localhost:5000/tsi-analyser:v1.6.0 &> /dev/null
-	[[ "$exists" == "" ]] && docker push localhost:5000/tsi-analyser:v1.6.0 &> /dev/null
-
-	readonly ANALYSER_IMAGE_ID=$(docker inspect tsi-analyser:v1.6.0 | grep Id | cut -d':' -f3 | cut -c1-15)
-}
+source ../common/scripts/funcs.sh
 
 readonly MINIKUBE_STATUS=$(minikube status | grep host | awk '{print $2}')
-readonly REGISTRY_STATUS=$(docker ps -q -f "name=minikube_registry")
 
-if [[ "$MINIKUBE_STATUS" == "Running" ]];
+if [[ "$MINIKUBE_STATUS" == "" ]];
 then
-	echo "Please first stop/clean minikube before running the demo"
+	echo "Please run '../deploy.sh' first to start the cluster"
 	exit 0
 fi
-
-if [[ "$REGISTRY_STATUS" == "" ]];
-then
-	[[ "$(docker ps -aq -f "name=minikube_registry")" != "" ]] && docker rm minikube_registry
-
-	msg "Starting local docker registry"
-	docker run -d -p 5000:5000 --restart=always --name minikube_registry registry:2 &> /dev/null
-fi
-
-msg "Creating analyser docker image"
-setupAnalyserImage
-
-msg "Creating logger docker image"
-setupLoggerImage
-
-msg "Starting minikube cluster"
-minikube start \
-    --vm-driver=docker \
-    --network-plugin=cni \
-    --extra-config=kubeadm.pod-network-cidr=172.16.0.0/16 \
-    --extra-config=kubelet.network-plugin=cni \
-    --insecure-registry="192.168.49.1:5000"
-
-msg "Adding Antrea CNI"
-kubectl apply \
-    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
-    > /dev/null
-
-msg "Adding Multus CNI"
-kubectl apply \
-    -f https://raw.githubusercontent.com/intel/multus-cni/master/images/multus-daemonset.yml \
-    > /dev/null
-
-waitUntilAllPodsRun
 
 msg "Adding 2port network configuration"
 kubectl apply -f yamls/2_port.yaml > /dev/null
@@ -118,23 +41,12 @@ readonly LOGGER_IP=$(kubectl exec -it logger -- ip a | grep inet | awk '{print $
 readonly ANTREA_IP=$(kubectl get -A po -o wide | grep antrea-agent | awk '{print $7}')
 readonly SERVICES_IP=$(minikube ip)
 
-msg "Starting logger service"
-kubectl exec "$LOGGER_POD" -- bash -c "nohup python3 logger.py -i '{\"listen_ip\": \"$LOGGER_IP\"}' &" &> /dev/null
-sleep 5
 
 msg "Starting logger server"
 kubectl exec "$LOGGER_POD" -- bash -c "nohup python3 logger_server.py &"
 sleep 5
 
-msg "Starting mirroring on dga port"
-$ANTREA_POD ovs-vsctl \
-  -- --id=@p get port $ANALYSER_PORT \
-  -- --id=@m create mirror name=m0 select-all=true output-port=@p \
-  -- set bridge br-int mirrors=@m &> /dev/null
 
-msg "Starting dga service"
-kubectl exec $ANALYSER_POD -- bash -c "nohup python3 monitor.py -d domains.txt -a $LOGGER_IP &>/dev/null &"  
-sleep 5
 
 msg "Sending a request to google.com"
 kubectl exec $ALICE_POD_1 -- ping -c3 google.com
@@ -147,12 +59,13 @@ sleep 2
 msg "Fetch data from cluster using local program"
 python3 utils/logger_client.py -i "{\"send_ip\":\"$SERVICES_IP\", \"send_port\":\"30062\"}"
 
-echo -e "\n\n"
-msg "End of demo6!"
-msg "Bringing local registry down"
-docker stop minikube_registry &> /dev/null
-docker rm minikube_registry &> /dev/null
 
-echo -e "\tUse 'minikube stop' to bring kubernetes cluster down"
-echo -e "\tUse 'minikube delete' to clean kubernetes cluster"
-echo -e "\tUse 'docker rmi -f $LOGGER_IMAGE_ID $ANALYSER_IMAGE_ID' to clean the demo image"
+
+msg "Aplied ovs rules"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0"
+
+msg "Cleaning cluster"
+kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
+sleep 1
+kubectl delete -f yamls/security
+kubectl delete -f yamls/pods

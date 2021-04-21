@@ -24,7 +24,7 @@ def request(action, argument, server="192.168.49.2", port=2378):
         sock.sendall(send_obj.encode("utf-8"))
 
 
-def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=8080, action="block"):
+def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=8080, action="block", argument={}):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
         # Port to listen incomming tcp packets
@@ -52,13 +52,7 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
                 address = request.decode("utf-8")
                 print("[+] Received", repr(address))
 
-                argument = {}
-                if action == "block":
-                    argument["ip"] = address
-                elif action == "unblock":
-                    argument["ip"] = address
-                elif action == "tarpit":
-                    argument["ip"] = address
+                argument["ip"] = address
 
                 obj = {
                     "action": action,
@@ -74,32 +68,39 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flow controller")
-    parser.add_argument("-l", "--listen", help="Ip address to listen incoming packets", required=True)
-    parser.add_argument("-lp", "--listenport", help="Port to listen incoming packets", required=True)
+    parser.add_argument("-l", "--listen", help="Ip address to listen incoming packets", required=False)
+    parser.add_argument("-lp", "--listenport", help="Port to listen incoming packets", required=False)
     parser.add_argument("-s", "--send", help="Ip address of antrea-agent to send packet", required=True)
     parser.add_argument("-sp", "--sendport", help="Port of antrea-agent to send packet", required=True)
-    parser.add_argument("-i", "--input", help="Input commands in JSON format", required=False)
+    parser.add_argument("-a", "--action", help="The action we want to repeat to the ovs bridge", required=True)
+    parser.add_argument("-i", "--arguments", help="Input arguments in JSON format", required=False)
 
     # Parse the arguments
     args = parser.parse_args()
-    raw_data = args.input
+
     local_ip = args.listen
-    local_port = int(args.listenport)
+    if args.listenport == None:
+        local_port = int(0)
+    else:
+        local_port = int(args.listenport)
+
     remote_ip = args.send
     remote_port = int(args.sendport)
 
-    if raw_data != None and raw_data != "":
-        try:
-            data = json.loads(raw_data)
-
-            action = data["action"]
-            argument = data["argument"]
-
-            request(action, argument, remote_ip, remote_port)
-
-        except ValueError:
-            print("Decoding JSON has failed")
-        except KeyError:
-            print("Wrong command format")
+    action = args.action
+    if args.arguments == None:
+        arguments_json = "\{\}"
     else:
-        client(remote_ip, local_ip, remote_port, local_port)
+        arguments_json = args.arguments
+
+    try:
+        arguments = json.loads(arguments_json)
+    except ValueError:
+        print("Decoding JSON has failed")
+        arguments = {}
+        pass
+
+    if local_ip == None:
+        request(action, arguments, remote_ip, remote_port)
+    else:
+        client(remote_ip, local_ip, remote_port, local_port, action, arguments)
