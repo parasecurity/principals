@@ -14,8 +14,8 @@ kubectl apply -f yamls/pods
 
 waitUntilAllPodsRun
 
-readonly AGENT_POD=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $2}')
-readonly AGENT_IP=$(kubectl get -A po -o wide | grep "agent-server" | awk '{print $7}')
+readonly AGENT_POD=$(kubectl get -A po -o wide --field-selector spec.nodeName=k8-worker | grep "agent-server" | awk '{print $2}')
+readonly AGENT_IP=$(kubectl get -A po -o wide --field-selector spec.nodeName=k8-worker | grep "agent-server" | awk '{print $7}')
 readonly FLOW_CONTROL_POD=$(kubectl get -A po | grep "flow-control" | awk '{print $2}')
 
 readonly ALICE_POD_1=alice1
