@@ -1,6 +1,17 @@
 - hosts: all
   become: yes
   tasks:
+  - name: Installing Prerequisites for Kubernetes
+    apt: 
+      name:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - vim
+        - software-properties-common
+      state: present
+  
   - name: Add Docker’s official GPG key
     apt_key:
       url: https://download.docker.com/linux/ubuntu/gpg
