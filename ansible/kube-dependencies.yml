@@ -12,7 +12,15 @@
       state: present
       filename: docker
       mode: 0600
-   
+  
+  - name: Install Docker Engine.
+    apt: 
+      name:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+      state: present
+  
   - name: Start Docker
     service:
       name: docker
@@ -64,4 +72,3 @@
       name: kubelet
       enabled: yes
       state: started
-
