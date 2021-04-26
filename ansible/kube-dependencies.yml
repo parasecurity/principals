@@ -1,0 +1,61 @@
+- hosts: all
+  become: yes
+  tasks:
+   - name: Install Docker
+     yum:
+       name: docker
+       state: present
+       update_cache: true
+
+   - name: Start Docker
+     service:
+       name: docker
+       state: started
+
+   - name: Disable system swap
+     shell: "swapoff -a"
+
+   - name: Remove current swaps from fstab
+     lineinfile:
+       dest: /etc/fstab
+       regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+       line: '# \1'
+       backrefs: yes
+       state: present
+
+   - name: Ensure net.bridge.bridge-nf-call-ip6tables is set to 1
+     sysctl:
+       name: net.bridge.bridge-nf-call-ip6tables
+       value: 1
+       state: present
+
+   - name: Ensure net.bridge.bridge-nf-call-iptables is set to 1
+     sysctl:
+       name: net.bridge.bridge-nf-call-iptables
+       value: 1
+       state: present
+
+   - name: Add Kubernetes APT GPG key
+     apt_key:
+       url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+       state: present
+
+   - name: Add Kubernetes APT repository
+     apt_repository:
+       repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+       state: present
+       filename: 'kubernetes'
+
+   - name: Installing kubernetes cluster packages
+     apt: 
+       name:
+         - kubeadm
+         - kubectl
+         - kubelet
+
+   - name: Start kubelet
+     service:
+       name: kubelet
+       enabled: yes
+       state: started
+
