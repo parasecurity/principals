@@ -1,7 +1,7 @@
 --- 
 
 - name: Intilizing Kubernetes Cluster
-  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.122.138
+  command: kubeadm init --pod-network-cidr={{ pod_network_cidr }} --apiserver-advertise-address={{ master_ip }}
   run_once: true
     
 - name: Create .kube directory

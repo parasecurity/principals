@@ -1,6 +1,10 @@
-# Ansible
-# ansible_user: gntousakis 
+# Ansible user
+ansible_user: gntousakis 
 
+# Networks for kubernetes deployment
+pod_network_cidr: "10.244.0.0/16"
+
+# Extra variables
 systemd_dir: /lib/systemd/system
 system_env_dir: /etc/sysconfig
 network_dir: /etc/kubernetes/network
