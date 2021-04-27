@@ -1,5 +1,0 @@
-[master]
-master ansible_host=192.168.122.138 ansible_user=gntousakis
-
-[workers]
-worker1 ansible_host=192.168.122.45 ansible_user=gntousakis

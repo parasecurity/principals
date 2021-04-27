@@ -1,0 +1,28 @@
+--- 
+
+- name: Intilizing Kubernetes Cluster
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=192.168.122.138
+  run_once: true
+    
+- name: Create .kube directory
+  become: yes
+  become_user: "{{ ansible_user }}"   
+  file: 
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+    
+- name: Check admin.conf file exists.
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_conf
+    
+- name: Copy admin.conf to user's kube conf
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/gntousakis/.kube/config
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0644
+  when: k8s_conf.stat.exists

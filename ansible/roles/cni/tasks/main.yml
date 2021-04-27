@@ -1,0 +1,7 @@
+---
+
+- name: Install Antrea CNI
+  become: yes
+  become_user: "{{ ansible_user }}" 
+  shell: kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/antrea/main/build/yamls/antrea.yml
+

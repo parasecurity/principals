@@ -1,0 +1,4 @@
+---
+
+- name: Join cluster
+  shell: "{{ hostvars[groups.master.0].join_command }} --ignore-preflight-errors all"
