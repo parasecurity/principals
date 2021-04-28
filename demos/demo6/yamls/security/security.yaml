@@ -52,6 +52,9 @@ spec:
             - containerPort: 12345
               hostPort: 12345
               protocol: TCP
+            - containerPort: 8006 
+              hostPort: 8006
+              protocol: TCP
           resources:
             requests:
               cpu: 200m
@@ -150,7 +153,7 @@ spec:
             - -lp=8080
             - -s=$(MY_HOST_IP)
             - -sp=12345
-            - -a=tarpit
+            - -a=log
           image: 192.168.49.1:5000/tsi-flow-control:common
           imagePullPolicy: IfNotPresent
           name: flow-control
@@ -175,18 +178,18 @@ kind: DaemonSet
 metadata:
   labels:
     app: security
-    component: dga
-  name: dga
+    component: analyser
+  name: analyser
   namespace: security
 spec:
   selector:
     matchLabels:
       app: security
-      component: dga
+      component: analyser
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: dga
+        kubectl.kubernetes.io/default-container: analyser
         k8s.v1.cni.cncf.io/networks: '[
           { "name": "macvlan-conf",
           "ips": [ "10.1.1.102/24" ],
@@ -195,25 +198,28 @@ spec:
           }]'
       labels:
         app: security
-        component: dga
+        component: analyser
     spec:
       containers:
         - command:
             - /usr/bin/python3
           args:
             - /tmp/monitor.py
-            - -m=/tmp/dga.model
+            - -d=/tmp/domains.txt
             - -a=10.1.1.101
             - -p=8080
-          image: 192.168.49.1:5000/tsi-dga:common
+          image: 192.168.49.1:5000/tsi-analyser:common
           imagePullPolicy: IfNotPresent
-          name: dga
+          name: analyser
           resources:
             requests:
               cpu: 200m
       initContainers:
         - name: init-mirror
           image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          env:
+            - name: NAME 
+              value: "analyser"
           command: ["sh", "-c", "/home/mirror-port.sh"]
           volumeMounts:
             - mountPath: /var/run/openvswitch
@@ -236,3 +242,16 @@ spec:
           name: host-var-run-antrea
   updateStrategy:
     type: RollingUpdate
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: agent-server-srv
+spec:
+  ports:
+    - name: agent-server
+      port: 8006
+      nodePort: 30062
+  selector:
+    component: agent-server 
+  type: LoadBalancer
