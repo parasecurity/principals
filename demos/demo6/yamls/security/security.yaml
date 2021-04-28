@@ -53,8 +53,6 @@ spec:
               hostPort: 12345
               protocol: TCP
             - containerPort: 8006 
-              hostPort: 8006
-              protocol: TCP
           resources:
             requests:
               cpu: 200m
@@ -246,12 +244,13 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: agent-server-srv
+  name: agent-server
 spec:
   ports:
     - name: agent-server
       port: 8006
       nodePort: 30062
   selector:
+    app: security
     component: agent-server 
   type: LoadBalancer

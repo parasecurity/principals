@@ -36,13 +36,3 @@ kubectl exec $ALICE_POD_1 -- ping -c3 google.com
 
 msg "Sending a request to amazon.com"
 kubectl exec $ALICE_POD_2 -- ping -c3 amazon.com
-
-msg "Aplied ovs rules"
-kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0"
-
-msg "Cleaning cluster"
-kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
-sleep 1
-
-kubectl delete -f yamls/security
-kubectl delete -f yamls/pods
