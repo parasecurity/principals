@@ -1,0 +1,21 @@
+---
+- hosts: master
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: Remove antrea
+      become_user: "{{ ansible_user }}"
+      shell: kubectl delete -f https://raw.githubusercontent.com/vmware-tanzu/antrea/main/build/yamls/antrea.yml  
+
+- hosts: kube_cluster 
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: Reset Kubernetes component
+      shell: "kubeadm reset --force"
+      ignore_errors: True
+
+    - name: Remove .kube folder
+      file:
+        state: absent
+        path: /home/{{ ansible_user }}/.kube
