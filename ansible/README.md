@@ -1,4 +1,32 @@
-## Allow passwordless sudo
+# Add a new node 
+
+Create the same username across all machines.
+Install openssh-server on all nodes.
+
+## Setup Passwordless SSH Login
+ssh to ansible control machine
+```sh
+ssh-copy-id remote_username@server_ip_address
+```
+
+You will be asked if you are sure you want to continue connecting. Type yes and hit ‘Enter’
+```sh
+The authenticity of host '173.82.2.236 (173.82.2.236)' can't be established.
+ECDSA key fingerprint is SHA256:U4aOk0p30sFjv1rzgh73uhGilwJ2xtG205QFqzB9sns.
+Are you sure you want to continue connecting (yes/no)? yes
+```
+
+Next, you will be prompted for the remote system’s password. Type the password and hit ‘Enter’
+```sh
+root@173.82.2.236's password:
+
+Number of key(s) added: 1
+
+Now try logging into the machine, with:   "ssh 'root@173.82.2.236'"
+and check to make sure that only the key(s) you wanted were added.
+```
+
+## Setup passwordless sudo
 ssh to the remote user
 ```sh
 ssh <user>@<ip address>
@@ -19,3 +47,6 @@ Log-out and log in again to test the passwordless sudo
 
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
+- https://linuxize.com/post/how-to-add-and-delete-users-on-ubuntu-18-04/
+- https://linuxize.com/post/how-to-enable-ssh-on-ubuntu-18-04/
+- https://www.journaldev.com/30301/passwordless-ssh-login
