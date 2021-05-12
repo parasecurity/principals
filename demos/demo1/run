@@ -53,7 +53,7 @@ sleep 1
 msg "Verify connectivity between $ALICE_POD and $MALICE_POD is back" 
 kubectl exec -it "$MALICE_POD" -- ping -c3 "$ALICE_IP" || true
 
-msg "Aplied ovs rules (there should be none, should see 'exit code 1')"
+msg "Applied ovs rules (there should be none, should see 'exit code 1')"
 kubectl exec -n security "$AGENT_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0" || true
 
 msg "Cleaning cluster"

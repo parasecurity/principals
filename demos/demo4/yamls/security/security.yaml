@@ -290,6 +290,9 @@ spec:
       initContainers:
         - name: init-mirror
           image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          env:
+            - name: NAME 
+              value: "dga"
           command: ["sh", "-c", "/home/mirror-port.sh"]
           volumeMounts:
             - mountPath: /var/run/openvswitch

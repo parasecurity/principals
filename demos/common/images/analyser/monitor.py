@@ -113,10 +113,10 @@ class PacketMonitor:
             # sniff with default interface
             sniff(filter="port 53", prn=self.process_packet, store=False)
 
-    def __init__(self, iface, domains, address):
+    def __init__(self, iface, domains, address, port):
         self.iface = iface
         self.domains = domains
-        self.establish_connection(address)
+        self.establish_connection(address, port)
         pass
 
 if __name__ == "__main__":
@@ -124,6 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--iface", help="Interface to use, default is scapy's default interface")
     parser.add_argument("-d", "--domains", help="Domain list to track")
     parser.add_argument("-a", "--address", help="Ip address of flow controller")
+    parser.add_argument("-p", "--port", help="Port of flow controller")
     args = parser.parse_args()
 
     domains_file = args.domains
@@ -131,6 +132,8 @@ if __name__ == "__main__":
 
     iface = args.iface
     address = args.address
-    packet_monitor = PacketMonitor(iface, domains, address)
+    port = int(args.port)
+
+    packet_monitor = PacketMonitor(iface, domains, address, port)
     packet_monitor.sniff_packets()
     packet_monitor.socket.close()

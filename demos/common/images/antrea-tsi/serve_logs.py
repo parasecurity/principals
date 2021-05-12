@@ -7,7 +7,7 @@ class Log:
         return self.log_file.read()
 
     def __init__(self):
-        self.log_file = open('data.log', 'r')
+        self.log_file = open('../agent-server.log', 'r')
         
 def client():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:

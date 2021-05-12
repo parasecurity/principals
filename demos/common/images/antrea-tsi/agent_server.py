@@ -76,6 +76,9 @@ def execute_command(action, argument):
             os.system(comand_2)
             logging.info("[+] Executing {0}".format(comand_1))
             logging.info("[+] Executing {0}".format(comand_2))
+        elif action == "log":
+            logging.info(argument)
+
     except KeyError:
         logging.warning("Wrong Arguments")
         pass
