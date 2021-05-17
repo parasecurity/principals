@@ -1,0 +1,14 @@
+2021/05/13 17:09:14 listening on [::]:3000
+2021/05/13 17:10:55 RECEIVED SIGNAL: interrupt
+2021/05/13 17:11:01 max connections set to 2
+2021/05/13 17:11:01 listening on [::]:3000
+2021/05/13 17:25:23 RECEIVED SIGNAL: interrupt
+2021/05/13 17:25:32 max connections set to 100
+2021/05/13 17:25:32 listening on [::]:3000
+2021/05/13 17:31:23 RECEIVED SIGNAL: interrupt
+2021/05/17 11:09:47 listening on [::]:3000
+2021/05/17 11:17:55 RECEIVED SIGNAL: interrupt
+2021/05/17 11:18:31 listening on [::]:3000
+2021/05/17 11:21:40 RECEIVED SIGNAL: interrupt
+2021/05/17 11:21:44 listening on [::]:3000
+2021/05/17 11:24:13 RECEIVED SIGNAL: interrupt
