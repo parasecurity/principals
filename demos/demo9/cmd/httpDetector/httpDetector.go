@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"flag"
 	"log"
 	"net"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -169,16 +166,9 @@ func checkConnection(conn chan gopacket.Packet, warn chan IPFlowTuplet, pinfo IP
 			if applicationLayer != nil {
 
 				// Search for a string inside the payload
-				if strings.Contains(string(applicationLayer.Payload()), "HTTP") {
-					reader := bufio.NewReader(bytes.NewReader(applicationLayer.Payload()))
-					httpReq, err := http.ReadRequest(reader)
-					if err != nil {
-						break
-					}
-					if httpReq.Method == http.MethodGet {
-						count++
-						log.Println("Count: ", count)
-					}
+				if strings.Contains(string(applicationLayer.Payload()), "HTTP") && strings.Contains(string(applicationLayer.Payload()), "GET") {
+					count++
+					log.Println("Count: ", count)
 				}
 			}
 
