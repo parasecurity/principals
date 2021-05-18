@@ -13,19 +13,12 @@ import (
 	"golang.org/x/net/netutil"
 )
 
-const (
-	defaultBindAddr = ":8080"
-
-	// defaultMaxConn is the default number of max connections the
-	// server will handle. 0 means no limits will be set, so the
-	// server will be bound by system resources.
-	defaultMaxConn = 0
-)
-
 var (
-	bindAddr string
-	maxConn  uint64
-	logPath  string
+	args struct {
+		bindPort string
+		maxConn  uint64
+		logPath  string
+	}
 )
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
@@ -33,13 +26,13 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func init() {
-	flag.StringVar(&bindAddr, "b", defaultBindAddr, "TCP address the server will bind to")
-	flag.Uint64Var(&maxConn, "c", defaultMaxConn, "maximum number of client connections the server will accept, 0 means unlimited")
-	flag.StringVar(&logPath, "lp", "./server.log", "The path to the log file")
+	flag.StringVar(&args.bindPort, "b", "8080", "TCP port the server will bind to (default 8080)")
+	flag.Uint64Var(&args.maxConn, "c", 0, "maximum number of client connections the server will accept, 0 means unlimited  (default 0)")
+	flag.StringVar(&args.logPath, "lp", "./server.log", "The path to the log file (default ./server.log)")
 	flag.Parse()
 
 	// open log file
-	logFile, err := os.OpenFile(logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile(args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -72,15 +65,15 @@ func main() {
 		Handler:           router,
 	}
 
-	listener, err := net.Listen("tcp", ":3000")
+	listener, err := net.Listen("tcp", ":"+args.bindPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if maxConn > 0 {
-		listener = netutil.LimitListener(listener, int(maxConn))
+	if args.maxConn > 0 {
+		listener = netutil.LimitListener(listener, int(args.maxConn))
 
-		log.Printf("max connections set to %d\n", maxConn)
+		log.Printf("max connections set to %d\n", args.maxConn)
 	}
 	defer listener.Close()
 

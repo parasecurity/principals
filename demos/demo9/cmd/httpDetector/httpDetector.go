@@ -17,11 +17,6 @@ import (
 	"github.com/google/gopacket/pcap"
 )
 
-type IPFlowTuplet struct {
-	SrcIP net.IP
-	DstIP net.IP
-}
-
 var (
 	args struct {
 		iface     *string
@@ -31,6 +26,7 @@ var (
 		monitorIp *string
 		threshold *int
 		logPath   *string
+		flowCtrl  *string
 	}
 	activeConns     map[uint32]chan gopacket.Packet
 	activeConnsLock sync.RWMutex
@@ -43,6 +39,7 @@ func init() {
 	args.monitorIp = flag.String("ip", "", "Set monitor ip, if empty monitor all")
 	args.threshold = flag.Int("t", 100, "Set the packet threshold, the value is packets per second")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
+	args.flowCtrl = flag.String("fc", "192.168.1.1:12345", "The flow controller connection in format ip:port e.g. 192.168.1.1:12345")
 	flag.Parse()
 
 	// open log file
@@ -69,6 +66,9 @@ func init() {
 }
 
 func ip2int(ip net.IP) uint32 {
+	if len(ip) < 16 {
+		return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
+	}
 	if len(ip) == 16 {
 		return binary.BigEndian.Uint32(ip[12:16])
 	}
@@ -96,38 +96,26 @@ func deviceExists(name string) bool {
 	return false
 }
 
-func getPacketInfo(packet gopacket.Packet, warn chan IPFlowTuplet) {
-	// we can get the MAC Addr, but it's not very usefull
-	// ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
-	// if ethernetLayer != nil {
-	// 	ethernetPacket, _ := ethernetLayer.(*layers.Ethernet)
-	// 	pinfo.SrcMAC = ethernetPacket.SrcMAC
-	// 	pinfo.DstMAC = ethernetPacket.DstMAC
-	// }
-	//get IP Addr
-	var srcIPuint uint32
-	var ipTuplet IPFlowTuplet
+func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
+
+	var srcIP net.IP
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
-		srcIPuint = ip2int(ip.SrcIP)
-		ipTuplet = IPFlowTuplet{ip.SrcIP, ip.DstIP}
+		srcIP = ip.SrcIP
 	}
 
-	// log.Println("Packet: ", pinfo.Proto, " - ", pinfo.SrcMAC, "/", pinfo.DstMAC, " - ", pinfo.SrcIP, "/", pinfo.DstIP, " - ", pinfo.SrcPort, "/", pinfo.DstPort)
-	// log.Println("Hash: ", pinfo.hashV4Flow())
-
 	activeConnsLock.RLock()
-	conn, ok := activeConns[srcIPuint]
+	conn, ok := activeConns[ip2int(srcIP)]
 	activeConnsLock.RUnlock()
 
 	if !ok {
-		log.Println("new connection: ", ipTuplet.SrcIP, "/", ipTuplet.DstIP)
+		log.Println("new connection: ", srcIP, " -> ", *args.monitorIp)
 		newconn := make(chan gopacket.Packet)
-		go checkConnection(newconn, warn, ipTuplet)
+		go checkConnection(newconn, warn, srcIP)
 
 		activeConnsLock.Lock()
-		activeConns[srcIPuint] = newconn
+		activeConns[ip2int(srcIP)] = newconn
 		activeConnsLock.Unlock()
 
 		newconn <- packet
@@ -136,7 +124,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan IPFlowTuplet) {
 	}
 }
 
-func checkConnection(conn chan gopacket.Packet, warn chan IPFlowTuplet, pinfo IPFlowTuplet) {
+func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) {
 	checkTimer := time.NewTicker(time.Second)
 	defer checkTimer.Stop()
 
@@ -147,7 +135,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan IPFlowTuplet, pinfo IP
 
 	defer func() {
 		activeConnsLock.Lock()
-		delete(activeConns, ip2int(pinfo.SrcIP))
+		delete(activeConns, ip2int(srcIP))
 		activeConnsLock.Unlock()
 	}()
 
@@ -165,21 +153,23 @@ func checkConnection(conn chan gopacket.Packet, warn chan IPFlowTuplet, pinfo IP
 			applicationLayer := p.ApplicationLayer()
 			if applicationLayer != nil {
 
+				payloadStr := string(applicationLayer.Payload())
 				// Search for a string inside the payload
-				if strings.Contains(string(applicationLayer.Payload()), "HTTP") && strings.Contains(string(applicationLayer.Payload()), "GET") {
+				if strings.Contains(payloadStr, "HTTP") && strings.Contains(payloadStr, "GET") {
 					count++
-					log.Println("Count: ", count)
 				}
 			}
 
 		case <-checkTimer.C:
 			if count > *args.threshold {
-				warn <- pinfo
+				log.Println("Warning: ", srcIP, " -> ", *args.monitorIp, " count: ", count)
+				warn <- srcIP
 			}
+			log.Println("count: ", srcIP, " -> ", *args.monitorIp, " count: ", count)
 			count = 0
 		case <-timeoutTimer.C:
 			if !used {
-				log.Println("Connection Timeout, closing: ", pinfo.SrcIP, "/", pinfo.DstIP)
+				log.Println("Connection Timeout, closing: ", srcIP, " -> ", *args.monitorIp)
 				break
 			}
 			used = false
@@ -187,9 +177,20 @@ func checkConnection(conn chan gopacket.Packet, warn chan IPFlowTuplet, pinfo IP
 	}
 }
 
-func flowClient(warn chan IPFlowTuplet) {
-	for pinfo := range warn {
-		log.Println("Warning: ", pinfo.SrcIP, "/", pinfo.DstIP)
+func flowClient(warn chan net.IP) {
+	conn, err := net.Dial("tcp", *args.flowCtrl)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer conn.Close()
+
+	for srcIP := range warn {
+		_, err := conn.Write([]byte(srcIP.String()))
+		if err != nil {
+			log.Println(err)
+			return
+		}
 	}
 }
 
@@ -197,7 +198,7 @@ func main() {
 	flag.Parse()
 	activeConns = make(map[uint32]chan gopacket.Packet)
 	//open flow client to send warnings
-	warn := make(chan IPFlowTuplet)
+	warn := make(chan net.IP)
 	go flowClient(warn)
 
 	//open pcap to get packets
@@ -226,7 +227,7 @@ func main() {
 		if ip == nil {
 			log.Fatal("monitor ip has wrong format: ", *args.monitorIp)
 		}
-		bpffilter = "tcp dst net " + *args.monitorIp
+		bpffilter = "tcp and dst host " + *args.monitorIp
 	} else {
 		bpffilter = "tcp"
 	}

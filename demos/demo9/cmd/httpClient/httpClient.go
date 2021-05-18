@@ -23,7 +23,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&args.server, "conn", "http://localhost:3000/", "The server connection in format ip:port (default http://localhost:3000/)")
+	flag.StringVar(&args.server, "conn", "http://localhost:8080/", "The server connection in format ip:port (default http://localhost:8080/)")
 	flag.IntVar(&args.sleep, "s", 1000, "sleep in ms (default 1000)")
 	flag.IntVar(&args.timeout, "t", 1000, "timeout in ms (default 1000)")
 	flag.IntVar(&args.clients, "c", 1, "number of concurrent clients (default 1)")

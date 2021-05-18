@@ -25,12 +25,17 @@ func timeGet(url string) {
 	t.MaxIdleConnsPerHost = 100
 
 	for {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("Canary connection timeout")
+			}
+		}()
 		httpClient := &http.Client{
-			Timeout:   10 * time.Second,
+			Timeout:   1 * time.Second,
 			Transport: t,
 		}
 		start := time.Now()
-		r, err := httpClient.Get("http://127.0.0.1:3000/health/")
+		r, err := httpClient.Get(*args.server)
 		r.Body.Close()
 		interval := time.Since(start)
 		log.Println("Response in :", interval)
@@ -48,7 +53,7 @@ func timeGet(url string) {
 }
 
 func init() {
-	args.server = flag.String("conn", "http://127.0.0.1:3000/health/", "The server url e.g. http://127.0.0.1:3000/health/")
+	args.server = flag.String("conn", "http://127.0.0.1:8080/health/", "The server url e.g. http://127.0.0.1:3000/health/")
 	args.threshold = flag.Int("t", 1000, "The time threshold in μs")
 	args.logPath = flag.String("lp", "./canary.log", "The path to the log file")
 	flag.Parse()
@@ -76,5 +81,7 @@ func init() {
 }
 
 func main() {
-	timeGet(*args.server)
+	for {
+		timeGet(*args.server)
+	}
 }
