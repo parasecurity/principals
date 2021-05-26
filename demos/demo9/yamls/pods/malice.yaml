@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice
+spec:
+  containers:
+    - name: malice
+      image: 192.168.122.1:5000/tsi-tools:1.0.7
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
