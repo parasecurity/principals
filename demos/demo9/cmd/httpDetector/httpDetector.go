@@ -103,6 +103,9 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
 		srcIP = ip.SrcIP
+	} else {
+		log.Println("Not an IPv4 packet")
+		return
 	}
 
 	activeConnsLock.RLock()
@@ -170,7 +173,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", srcIP, " -> ", *args.monitorIp)
-				break
+				return
 			}
 			used = false
 		}
