@@ -32,6 +32,8 @@ kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl list-ports br-int 
 msg "Adding tsi security"
 kubectl apply -f yamls/security
 
+waitUntilAllPodsRun
+
 msg "Starting Demo"
 
 # msg "Start $ALICE_POD_1 client on site" 

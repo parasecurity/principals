@@ -242,7 +242,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         name: api
-        image: 192.168.122.1:5000/tsi-api:1.0.18
+        image: 192.168.122.1:5000/tsi-api:1.0.23
         volumeMounts:
           - mountPath: /home/.kube/
             name: kubeconfig
