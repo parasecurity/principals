@@ -8,8 +8,9 @@ RUN apt-get update && apt-get -y install \
 
 WORKDIR /home
 
-COPY httpCanary.go httpDetector.go /home/
+COPY httpCanary.go httpDetector.go httpClient.go /home/
 RUN go get -d github.com/google/gopacket && \
     go build httpCanary.go && \
     go build httpDetector.go && \
-    rm -rf httpCanary.go httpDetector.go
+    go build httpClient.go && \
+    rm -rf httpCanary.go httpDetector.go httpClient.go

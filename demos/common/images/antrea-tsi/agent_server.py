@@ -98,11 +98,8 @@ def server(host="192.168.49.2", port=2378, listen=True):
         while True:
             if listen == True:
                 conn, addr = sock.accept()
-            else:
-                sock.connect((host, port))
-                conn = sock
+            
             with conn as c:
-
                 while True:
                     request = c.recv(4096)
                     if not request:
@@ -141,7 +138,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Agent Server")
     parser.add_argument("-i", "--ip", help="Server ip address", required=True)
     parser.add_argument("-p", "--port", help="Server port address", required=True)
-    parser.add_argument("-l", "--listen", help="Server port address", required=True)
+    parser.add_argument("-l", "--listen", help="Server port address", required=True, type=lambda x: (str(x).lower() == 'true'))
 
     args = parser.parse_args()
     server_ip = args.ip

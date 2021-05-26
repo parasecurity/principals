@@ -1,8 +1,6 @@
 package yamls
 
 import (
-	"api/pkg/utils"
-
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,10 +10,11 @@ func CreateCanaryDepl() appsv1.Deployment {
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "canary",
+			Name:      "canary",
+			Namespace: "security",
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: utils.Int32Ptr(1),
+			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "canary",
@@ -31,7 +30,7 @@ func CreateCanaryDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.0",
+							Image: "192.168.122.1:5000/tsi-tools:1.0.7",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -41,6 +40,9 @@ func CreateCanaryDepl() appsv1.Deployment {
 							},
 							Command: []string{
 								"./httpCanary",
+							},
+							Args: []string{
+								"-api=10.104.54.11:8001",
 							},
 						},
 					},

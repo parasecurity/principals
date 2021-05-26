@@ -17,7 +17,8 @@ RUN curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packa
     echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list && \
     apt-get update && apt-get -y install kubectl
 
-COPY go/api /home/api
-COPY api-client/ /home/api-client
+COPY api/server /home/
+COPY api-client/client /home/
+COPY api/internal /home/internal/
 
 WORKDIR /home

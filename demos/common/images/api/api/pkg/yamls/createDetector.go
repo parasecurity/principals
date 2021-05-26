@@ -1,8 +1,6 @@
 package yamls
 
 import (
-	"api/pkg/utils"
-
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,10 +11,11 @@ func CreateDetectorDepl() appsv1.Deployment {
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "detector",
+			Name:      "detector",
+			Namespace: "security",
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: utils.Int32Ptr(1),
+			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "detector",
@@ -25,9 +24,10 @@ func CreateDetectorDepl() appsv1.Deployment {
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
+						"kubectl.kubernetes.io/default-container": "detector",
 						"k8s.v1.cni.cncf.io/networks": `[
 							{ "name": "macvlan-conf",
-								"ips": [ "10.1.1.101/24" ],
+								"ips": [ "10.1.1.102/24" ],
 								"mac": "c2:b0:57:49:47:f1",
 								"gateway": [ "10.1.1.1" ]
 						}]`,
@@ -40,7 +40,7 @@ func CreateDetectorDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.0",
+							Image: "192.168.122.1:5000/tsi-tools:1.0.7",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",

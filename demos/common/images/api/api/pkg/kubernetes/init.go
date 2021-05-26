@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"log"
 
-	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	"k8s.io/client-go/rest"
@@ -31,6 +30,6 @@ func loadDeployment() (result bool, err error) {
 		return false, err
 	}
 
-	DeploymentsClient = clientset.AppsV1().Deployments(apiv1.NamespaceDefault)
+	DeploymentsClient = clientset.AppsV1().Deployments("security")
 	return true, err
 }

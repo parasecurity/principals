@@ -39,7 +39,7 @@ func init() {
 	args.monitorIp = flag.String("ip", "", "Set monitor ip, if empty monitor all")
 	args.threshold = flag.Int("t", 100, "Set the packet threshold, the value is packets per second")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
-	args.flowCtrl = flag.String("fc", "192.168.1.1:12345", "The flow controller connection in format ip:port e.g. 192.168.1.1:12345")
+	args.flowCtrl = flag.String("fc", "10.1.1.101:8080", "The flow controller connection in format ip:port e.g. 10.1.1.101:8080")
 	flag.Parse()
 
 	// open log file

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,12 +12,36 @@ import (
 )
 
 var (
-	args struct {
-		server    *string
-		threshold *int
-		logPath   *string
-	}
+	server    *string
+	api       *string
+	ca        *string
+	crt       *string
+	key       *string
+	threshold *int
+	logPath   *string
 )
+
+func connectTCP() net.Conn {
+	addr := *api
+
+	// Connect to the tls server
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		log.Println("Failed to connect: %s", err.Error())
+	}
+	return conn
+}
+
+func createDetector() {
+	conn := connectTCP()
+	defer conn.Close()
+
+	command := "create detector"
+	_, err := conn.Write([]byte(command))
+	if err != nil {
+		log.Println(err)
+	}
+}
 
 func timeGet(url string) {
 	t := http.DefaultTransport.(*http.Transport).Clone()
@@ -35,17 +60,18 @@ func timeGet(url string) {
 			Transport: t,
 		}
 		start := time.Now()
-		r, err := httpClient.Get(*args.server)
+		r, err := httpClient.Get(*server)
 		r.Body.Close()
 		interval := time.Since(start)
 		log.Println("Response in :", interval)
 
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 
-		if interval > time.Duration(*args.threshold)*time.Microsecond {
+		if interval > time.Duration(*threshold)*time.Microsecond {
 			log.Println("Threshold passed:", interval)
+			createDetector()
 		}
 		time.Sleep(time.Second)
 		httpClient.CloseIdleConnections()
@@ -53,13 +79,14 @@ func timeGet(url string) {
 }
 
 func init() {
-	args.server = flag.String("conn", "http://147.27.39.116:8080/health/", "The server url e.g. http://147.27.39.116:8080/health/")
-	args.threshold = flag.Int("t", 1000, "The time threshold in μs")
-	args.logPath = flag.String("lp", "./canary.log", "The path to the log file")
+	server = flag.String("conn", "http://147.27.39.116:8080/health/", "The server url e.g. http://147.27.39.116:8080/health/")
+	api = flag.String("api", "10.244.0.9:8001", "The API server url e.g. 10.244.0.9:8001")
+	threshold = flag.Int("t", 1000, "The time threshold in μs")
+	logPath = flag.String("lp", "./canary.log", "The path to the log file")
 	flag.Parse()
 
 	// open log file
-	logFile, err := os.OpenFile(*args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile(*logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -75,13 +102,13 @@ func init() {
 	// method invoked upon seeing signal
 	go func() {
 		s := <-sigs
-		log.Printf("RECEIVED SIGNAL: %s", s)
+		log.Println("RECEIVED SIGNAL:", s)
 		os.Exit(1)
 	}()
 }
 
 func main() {
 	for {
-		timeGet(*args.server)
+		timeGet(*server)
 	}
 }
