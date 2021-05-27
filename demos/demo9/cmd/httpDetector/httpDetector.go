@@ -66,12 +66,12 @@ func init() {
 }
 
 func ip2int(ip net.IP) uint32 {
-	if len(ip) < 16 {
-		return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
-	}
-	if len(ip) == 16 {
-		return binary.BigEndian.Uint32(ip[12:16])
-	}
+	// if len(ip) < 16 {
+	// 	return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
+	// }
+	// if len(ip) == 16 {
+	// 	return binary.BigEndian.Uint32(ip[12:16])
+	// }
 	return binary.BigEndian.Uint32(ip)
 }
 
@@ -104,6 +104,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
 		activeConnsLock.RLock()
 		conn, ok := activeConns[ip2int(ip.SrcIP)]
+		log.Println(ip.SrcIP, " == ", ip2int(ip.SrcIP))
 		activeConnsLock.RUnlock()
 
 		if !ok {
