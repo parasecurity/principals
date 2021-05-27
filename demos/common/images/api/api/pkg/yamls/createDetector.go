@@ -40,7 +40,7 @@ func CreateDetectorDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.7",
+							Image: "192.168.122.1:5000/tsi-tools:1.0.13",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -50,6 +50,10 @@ func CreateDetectorDepl() appsv1.Deployment {
 							},
 							Command: []string{
 								"./httpDetector",
+							},
+							Args: []string{
+								"-ip=147.27.39.116",
+								"-t=1000",
 							},
 						},
 					},

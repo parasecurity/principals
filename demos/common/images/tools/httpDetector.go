@@ -37,7 +37,7 @@ func init() {
 	args.fname = flag.String("r", "", "Filename to read from, overrides -i")
 	args.snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 	args.monitorIp = flag.String("ip", "", "Set monitor ip, if empty monitor all")
-	args.threshold = flag.Int("t", 100, "Set the packet threshold, the value is packets per second")
+	args.threshold = flag.Int("t", 1000, "Set the packet threshold, the value is packets per second")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
 	args.flowCtrl = flag.String("fc", "10.1.1.101:8080", "The flow controller connection in format ip:port e.g. 10.1.1.101:8080")
 	flag.Parse()
@@ -66,12 +66,6 @@ func init() {
 }
 
 func ip2int(ip net.IP) uint32 {
-	// if len(ip) < 16 {
-	// 	return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
-	// }
-	// if len(ip) == 16 {
-	// 	return binary.BigEndian.Uint32(ip[12:16])
-	// }
 	return binary.BigEndian.Uint32(ip)
 }
 
@@ -104,7 +98,6 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
 		activeConnsLock.RLock()
 		conn, ok := activeConns[ip2int(ip.SrcIP)]
-		log.Println(ip.SrcIP, " == ", ip2int(ip.SrcIP))
 		activeConnsLock.RUnlock()
 
 		if !ok {
@@ -123,7 +116,6 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
 	}
 
-	log.Println("Not an IPv4 packet")
 	return
 }
 
@@ -168,7 +160,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 			if ipLayer != nil {
 				ip, _ := ipLayer.(*layers.IPv4)
 				if !ip.SrcIP.Equal(srcIP) {
-					log.Println("inside checkconnection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
+					log.Println("inside check connection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
 				}
 			}
 

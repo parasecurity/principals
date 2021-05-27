@@ -12,13 +12,14 @@ import (
 )
 
 var (
-	server    *string
-	api       *string
-	ca        *string
-	crt       *string
-	key       *string
-	threshold *int
-	logPath   *string
+	server     *string
+	api        *string
+	ca         *string
+	crt        *string
+	key        *string
+	threshold  *int
+	logPath    *string
+	detectorUp bool = false
 )
 
 func connectTCP() net.Conn {
@@ -33,6 +34,10 @@ func connectTCP() net.Conn {
 }
 
 func createDetector() {
+	if detectorUp == true {
+		return
+	}
+
 	conn := connectTCP()
 	defer conn.Close()
 
@@ -53,6 +58,7 @@ func timeGet(url string) {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
+				createDetector()
 			}
 		}()
 		httpClient := &http.Client{
@@ -69,7 +75,7 @@ func timeGet(url string) {
 			log.Println(err)
 		}
 
-		if interval > time.Duration(*threshold)*time.Microsecond {
+		if interval > time.Duration(*threshold)*time.Millisecond {
 			log.Println("Threshold passed:", interval)
 			createDetector()
 		}
@@ -81,7 +87,7 @@ func timeGet(url string) {
 func init() {
 	server = flag.String("conn", "http://147.27.39.116:8080/health/", "The server url e.g. http://147.27.39.116:8080/health/")
 	api = flag.String("api", "10.244.0.9:8001", "The API server url e.g. 10.244.0.9:8001")
-	threshold = flag.Int("t", 1000, "The time threshold in μs")
+	threshold = flag.Int("t", 1000, "The time threshold in ms")
 	logPath = flag.String("lp", "./canary.log", "The path to the log file")
 	flag.Parse()
 
