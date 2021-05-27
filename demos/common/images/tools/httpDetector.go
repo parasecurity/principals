@@ -66,12 +66,12 @@ func init() {
 }
 
 func ip2int(ip net.IP) uint32 {
-	if len(ip) < 16 {
-		return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
-	}
-	if len(ip) == 16 {
-		return binary.BigEndian.Uint32(ip[12:16])
-	}
+	// if len(ip) < 16 {
+	// 	return binary.BigEndian.Uint32([]byte{0, 0, 0, 0})
+	// }
+	// if len(ip) == 16 {
+	// 	return binary.BigEndian.Uint32(ip[12:16])
+	// }
 	return binary.BigEndian.Uint32(ip)
 }
 
@@ -98,30 +98,33 @@ func deviceExists(name string) bool {
 
 func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
-	var srcIP net.IP
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
-		srcIP = ip.SrcIP
+
+		activeConnsLock.RLock()
+		conn, ok := activeConns[ip2int(ip.SrcIP)]
+		log.Println(ip.SrcIP, " == ", ip2int(ip.SrcIP))
+		activeConnsLock.RUnlock()
+
+		if !ok {
+			log.Println("new connection: ", ip.SrcIP, " -> ", *args.monitorIp)
+			newconn := make(chan gopacket.Packet)
+			go checkConnection(newconn, warn, ip.SrcIP)
+
+			activeConnsLock.Lock()
+			activeConns[ip2int(ip.SrcIP)] = newconn
+			activeConnsLock.Unlock()
+
+			newconn <- packet
+		} else {
+			conn <- packet
+		}
+
 	}
 
-	activeConnsLock.RLock()
-	conn, ok := activeConns[ip2int(srcIP)]
-	activeConnsLock.RUnlock()
-
-	if !ok {
-		log.Println("new connection: ", srcIP, " -> ", *args.monitorIp)
-		newconn := make(chan gopacket.Packet)
-		go checkConnection(newconn, warn, srcIP)
-
-		activeConnsLock.Lock()
-		activeConns[ip2int(srcIP)] = newconn
-		activeConnsLock.Unlock()
-
-		newconn <- packet
-	} else {
-		conn <- packet
-	}
+	log.Println("Not an IPv4 packet")
+	return
 }
 
 func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) {
@@ -159,6 +162,15 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 					count++
 				}
 			}
+			//debug
+
+			ipLayer := p.Layer(layers.LayerTypeIPv4)
+			if ipLayer != nil {
+				ip, _ := ipLayer.(*layers.IPv4)
+				if !ip.SrcIP.Equal(srcIP) {
+					log.Println("inside checkconnection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
+				}
+			}
 
 		case <-checkTimer.C:
 			if count > *args.threshold {
@@ -170,7 +182,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", srcIP, " -> ", *args.monitorIp)
-				break
+				return
 			}
 			used = false
 		}
