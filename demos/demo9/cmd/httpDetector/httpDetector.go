@@ -98,33 +98,32 @@ func deviceExists(name string) bool {
 
 func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
-	var srcIP net.IP
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
-		srcIP = ip.SrcIP
-	} else {
-		log.Println("Not an IPv4 packet")
-		return
+
+		activeConnsLock.RLock()
+		conn, ok := activeConns[ip2int(ip.SrcIP)]
+		activeConnsLock.RUnlock()
+
+		if !ok {
+			log.Println("new connection: ", ip.SrcIP, " -> ", *args.monitorIp)
+			newconn := make(chan gopacket.Packet)
+			go checkConnection(newconn, warn, ip.SrcIP)
+
+			activeConnsLock.Lock()
+			activeConns[ip2int(ip.SrcIP)] = newconn
+			activeConnsLock.Unlock()
+
+			newconn <- packet
+		} else {
+			conn <- packet
+		}
+
 	}
 
-	activeConnsLock.RLock()
-	conn, ok := activeConns[ip2int(srcIP)]
-	activeConnsLock.RUnlock()
-
-	if !ok {
-		log.Println("new connection: ", srcIP, " -> ", *args.monitorIp)
-		newconn := make(chan gopacket.Packet)
-		go checkConnection(newconn, warn, srcIP)
-
-		activeConnsLock.Lock()
-		activeConns[ip2int(srcIP)] = newconn
-		activeConnsLock.Unlock()
-
-		newconn <- packet
-	} else {
-		conn <- packet
-	}
+	log.Println("Not an IPv4 packet")
+	return
 }
 
 func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) {
@@ -160,6 +159,15 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 				// Search for a string inside the payload
 				if strings.Contains(payloadStr, "HTTP") && strings.Contains(payloadStr, "GET") {
 					count++
+				}
+			}
+			//debug
+
+			ipLayer := p.Layer(layers.LayerTypeIPv4)
+			if ipLayer != nil {
+				ip, _ := ipLayer.(*layers.IPv4)
+				if !ip.SrcIP.Equal(srcIP) {
+					log.Println("inside checkconnection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
 				}
 			}
 
