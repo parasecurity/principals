@@ -59,12 +59,13 @@ kubectl exec "$MALICE_POD_5" -- bash -c "nohup ./httpClient -conn=http://147.27.
 kubectl exec "$MALICE_POD_6" -- bash -c "nohup ./httpClient -conn=http://147.27.39.116:8080/ -c 100 -s 0 &"
 
 msg "All the malicious pods should be limited and the canary log restored to normal" 
+read -p "Press enter to continue"
 
 echo -e "\n\n"
 
 msg "Cleaning cluster"
 sleep 1
-# kubectl delete -f yamls/security
-# kubectl delete -f yamls/pods
+kubectl delete -f yamls/security
+kubectl delete -f yamls/pods
 
 msg "End of demo9!"
