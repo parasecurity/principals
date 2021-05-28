@@ -46,10 +46,15 @@ waitUntilAllPodsRun()
 	wrnmsg "\tWaiting for all pods to be deployed. This might take a while."
 
 	while [[ "$(kubectl get -A pods --field-selector status.phase!=Running -o name)" != "" ]];
-	do
-		wrnmsg "."
-		sleep 2
-	done
-
+		do
+			wrnmsg "."
+			sleep 2
+		done
+	
+	while [[ "$(kubectl get -A pods | grep 'Error\|CrashLoopBackOff' )" != "" ]];
+        do
+                wrnmsg "."
+                sleep 2
+        done
 	echo ""
 }

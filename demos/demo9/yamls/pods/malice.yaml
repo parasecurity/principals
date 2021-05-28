@@ -64,7 +64,7 @@ spec:
         - infinity
       imagePullPolicy: IfNotPresent
 ---
-apiVersion: v1s
+apiVersion: v1
 kind: Pod
 metadata:
   name: malice6
