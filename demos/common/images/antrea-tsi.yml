@@ -2715,7 +2715,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
-          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             failureThreshold: 5
@@ -2943,7 +2943,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -3004,7 +3004,7 @@ spec:
             - --log_file_max_num=4
           command:
             - start_ovs
-          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             exec:
@@ -3039,7 +3039,7 @@ spec:
       initContainers:
         - command:
             - install_cni
-          image: 192.168.49.1:5000/antrea-tsi:v1.0.0
+          image: 192.168.49.1:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           name: install-cni
           resources:

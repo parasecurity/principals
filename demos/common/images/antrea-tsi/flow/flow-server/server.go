@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"time"
 )
 
 type command struct {
@@ -49,7 +50,7 @@ func init() {
 		return
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
 	// setup signal catching
@@ -178,7 +179,7 @@ func execCommand(netData []byte, toBroadcaster chan []byte, broadcastEnabled boo
 
 func connectionReader(c net.Conn, toBroadcaster chan []byte, broadcastEnabled bool) {
 	defer func() {
-		log.Printf("Connection closed %s\n", c.RemoteAddr().String())
+		log.Printf("Reader Connection closed %s\n", c.RemoteAddr().String())
 		c.Close()
 	}()
 
@@ -200,13 +201,18 @@ func connectionReader(c net.Conn, toBroadcaster chan []byte, broadcastEnabled bo
 }
 
 func connectionWriter(c net.Conn, toBroadcaster chan []byte) {
+	defer func() {
+		log.Printf("Writer Connection closed %s\n", c.RemoteAddr().String())
+		c.Close()
+	}()
+
 	log.Printf("Serving writer %s\n", c.RemoteAddr().String())
 	for {
 		message := <-toBroadcaster
 		_, err := c.Write(message)
 		if err != nil {
 			log.Println(err)
-			return
+			os.Exit(1)
 		}
 	}
 }
@@ -221,10 +227,23 @@ func main() {
 	}
 	log.Println("Local subnet:", subnet)
 
-	connBroadcaster, err := net.Dial("tcp4", *args.broadcaster)
-	if err != nil {
+	var retries int = 0
+	var connBroadcaster net.Conn
+
+	for retries < 10 {
+		connBroadcaster, err = net.Dial("tcp4", *args.broadcaster)
+		if err == nil {
+			break
+		}
+
 		log.Println(err)
-		return
+		retries++
+		if retries < 10 {
+			log.Println("Retrying")
+		} else {
+			log.Println("Failed to connect to broadcaster")
+		}
+		time.Sleep(5 * time.Second)
 	}
 
 	toBroadcaster := make(chan []byte)

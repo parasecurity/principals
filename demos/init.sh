@@ -9,10 +9,16 @@ source common/scripts/funcs.sh
 setupCommonImages()
 {
 	#antrea-tsi
-	docker build common/images/antrea-tsi -t antrea-tsi:v1.0.0 &> /dev/null
-	docker tag antrea-tsi:v1.0.0 localhost:5000/antrea-tsi:v1.0.0 &> /dev/null
-	docker push localhost:5000/antrea-tsi:v1.0.0 &> /dev/null
-	docker rmi localhost:5000/antrea-tsi:v1.0.0 &> /dev/null
+	cd common/images/antrea-tsi
+	make
+	make push
+	cd ../../../
+
+	#tsi-tools
+	cd common/images/tsi-tools
+	make
+	make push
+	cd ../../../
 
 	#dga
 	docker build common/images/dga -t tsi-dga:common &> /dev/null

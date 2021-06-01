@@ -31,7 +31,8 @@ minikube start \
     --vm-driver=docker \
     --network-plugin=cni \
 	--cni=common/images/antrea-tsi.yml \
-    --insecure-registry="192.168.49.1:5000"
+    --insecure-registry="192.168.49.1:5000" \
+	--nodes=2
 	
 waitUntilAllPodsRun
 

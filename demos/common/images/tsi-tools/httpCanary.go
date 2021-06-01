@@ -98,7 +98,7 @@ func init() {
 		return
 	}
 
-	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
 	// setup signal catching

@@ -8,13 +8,13 @@ kind: ServiceAccount
 metadata:
   labels:
     app: security
-  name: agent-server
+  name: flow-server
   namespace: security
 ---
 apiVersion: "k8s.cni.cncf.io/v1"
 kind: NetworkAttachmentDefinition
 metadata:
-  name: macvlan-conf
+  name: security-net
   namespace: security
 spec:
   config: '{
@@ -39,30 +39,42 @@ kind: Deployment
 metadata:
   labels:
     app: security
-    component: flow-server
-  name: flow-server
+    component: flow-broadcaster
+  name: flow-broadcaster
   namespace: security
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: security
-      component: flow-server
+      component: flow-broadcaster
   template:
     metadata:
       labels:
         app: security
-        component: flow-server
+        component: flow-broadcaster
     spec:
       containers:
-      - name: flow-server
-        image: 192.168.122.1:5000/tsi-flow-server:1.0.0
+      - name: flow-broadcaster
+        image: 192.168.49.1:5000/antrea-tsi:v1.0.1
         command:
-          - ./tcp_server
+          # - sleep
+          # - infinity
+          - /home/tsi/bin/flow-broadcaster
+        args:
+          - -c
+          - $(IP):30000
+          - -ac
+          - $(IP):30001
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         imagePullPolicy: Always
         ports:
-          - containerPort: 12345
-          - containerPort: 23456
+          - containerPort: 30000
+          - containerPort: 30001
         resources:
           limits:
             memory: "128Mi"
@@ -71,67 +83,58 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: flow-server-service
+  name: flow-broadcaster
   namespace: security
 spec:
   type: ClusterIP
   selector:
     app: security
-    component: flow-server
-  clusterIP: 10.104.54.10
+    component: flow-broadcaster
   ports:
-    - port: 12345
-      targetPort: 12345
-      protocol: TCP
-      name: server-in
-    - port: 23456
-      targetPort: 23456
-      protocol: TCP
-      name: server-out
+    - port: 30000
+      targetPort: 30000
+      name: flow
+    - port: 30001
+      targetPort: 30001
+      name: api
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   labels:
     app: security
-    component: agent-server
-  name: agent-server
+    component: flow-server
+  name: flow-server
   namespace: security
 spec:
   selector:
     matchLabels:
       app: security
-      component: agent-server
+      component: flow-server
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: agent-server
+        kubectl.kubernetes.io/default-container: flow-server
       labels:
         app: security
-        component: agent-server
+        component: flow-server
     spec:
       containers:
-      - command:
-          - /usr/bin/python3
-        args:
-          - /home/agent_server.py
-          - -i=10.104.54.10
-          - -p=23456
-          - -l=False
-        image: 192.168.122.1:5000/antrea-tsi:1.0.1
-        imagePullPolicy: IfNotPresent
-        name: agent-server
+      - name: flow-server
+        image: 192.168.49.1:5000/antrea-tsi:v1.0.1
+        command: ['sh', '-c', "/home/tsi/bin/flow-server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c $(IP):30002 -s $(ip -br address show dev antrea-gw0 | awk '{print $3}')"]
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
         ports:
-          - containerPort: 12345
-            hostPort: 12345
-            protocol: TCP
-          - containerPort: 23456 
-            hostPort: 23456
-            protocol: TCP
-          - containerPort: 8006 
+          - containerPort: 30002
         resources:
-          requests:
-            cpu: 200m
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
         securityContext:
           privileged: true
         volumeMounts:
@@ -143,7 +146,7 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
-      serviceAccountName: agent-server
+      serviceAccountName: flow-server
       tolerations:
         - key: CriticalAddonsOnly
           operator: Exists
@@ -177,7 +180,7 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-container: flow-control
         k8s.v1.cni.cncf.io/networks: '[
-          { "name": "macvlan-conf",
+          { "name": "security-net",
           "ips": [ "10.1.1.101/24" ],
           "mac": "c2:b0:57:49:47:f1",
           "gateway": [ "10.1.1.1" ]
@@ -193,10 +196,15 @@ spec:
             - /home/forward.py
             - -l=10.1.1.101
             - -lp=8080
-            - -s=10.104.54.10
-            - -sp=12345
+            - -s=$(HOST_IP)
+            - -sp=30002
             - -a=tarpit
-          image: 192.168.122.1:5000/antrea-tsi:1.0.1
+          env:
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          image: 192.168.49.1:5000/antrea-tsi:1.0.1
           imagePullPolicy: IfNotPresent
           name: flow-control
           resources:
@@ -215,65 +223,65 @@ spec:
   updateStrategy:
     type: RollingUpdate
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-  namespace: security
-  labels:
-    app: security
-    component: api
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: security
-      component: api
-  template:
-    metadata:
-      labels:
-        app: security
-        component: api
-    spec:
-      containers:
-      - env:
-        - name: MY_POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        name: api
-        image: 192.168.122.1:5000/tsi-api:1.0.30
-        volumeMounts:
-          - mountPath: /home/.kube/
-            name: kubeconfig
-        command:
-          - ./server
-        args:
-          - -ll=$(MY_POD_IP):8001
-        ports:
-        - containerPort: 8000
-        - containerPort: 8001
-      nodeSelector:
-        dedicated: master
-      volumes:
-      - hostPath:
-          path: /home/gntousakis/.kube/
-          type: DirectoryOrCreate
-        name: kubeconfig
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: api-service
-  namespace: security
-spec:
-  type: ClusterIP
-  selector:
-    app: security
-    component: api
-  clusterIP: 10.104.54.11
-  ports:
-    - port: 8001
-      targetPort: 8001
-      protocol: TCP
-      name: local-api
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: api
+#   namespace: security
+#   labels:
+#     app: security
+#     component: api
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: security
+#       component: api
+#   template:
+#     metadata:
+#       labels:
+#         app: security
+#         component: api
+#     spec:
+#       containers:
+#       - env:
+#         - name: MY_POD_IP
+#           valueFrom:
+#             fieldRef:
+#               fieldPath: status.podIP
+#         name: api
+#         image: 192.168.49.1:5000/tsi-api:1.0.30
+#         volumeMounts:
+#           - mountPath: /home/.kube/
+#             name: kubeconfig
+#         command:
+#           - ./server
+#         args:
+#           - -ll=$(MY_POD_IP):8001
+#         ports:
+#         - containerPort: 8000
+#         - containerPort: 8001
+#       nodeSelector:
+#         dedicated: master
+#       volumes:
+#       - hostPath:
+#           path: /home/gntousakis/.kube/
+#           type: DirectoryOrCreate
+#         name: kubeconfig
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: api-service
+#   namespace: security
+# spec:
+#   type: ClusterIP
+#   selector:
+#     app: security
+#     component: api
+#   clusterIP: 10.104.54.11
+#   ports:
+#     - port: 8001
+#       targetPort: 8001
+#       protocol: TCP
+#       name: local-api
