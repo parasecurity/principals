@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -56,7 +58,7 @@ func init() {
 	// setup signal catching
 	sigs := make(chan os.Signal, 1)
 	// catch all signals since not explicitly listing
-	signal.Notify(sigs)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	// method invoked upon seeing signal
 	go func() {
 		s := <-sigs
@@ -72,40 +74,56 @@ func execCommand(netData []byte, toBroadcaster chan []byte, broadcastEnabled boo
 		log.Println(err)
 		return
 	}
-
+	var out bytes.Buffer
+	var stderr bytes.Buffer
 	if cmd.Action == "block" {
-		cmd1 := exec.Command("ovs-ofctl add-flow br-int ip,nw_dst=" + cmd.Argument.Ip + ",actions=drop")
-		cmd2 := exec.Command("ovs-ofctl add-flow br-int ip,nw_src=" + cmd.Argument.Ip + ",actions=drop")
+		cmd1 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "ip,nw_dst="+cmd.Argument.Ip+",actions=drop")
+		cmd2 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "ip,nw_src="+cmd.Argument.Ip+",actions=drop")
+		cmd1.Stdout = &out
+		cmd1.Stderr = &stderr
+		cmd2.Stdout = &out
+		cmd2.Stderr = &stderr
 		log.Println("Executing ", cmd1)
 		err = cmd1.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
 		log.Println("Executing ", cmd2)
 		err = cmd2.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
 
 		ip := net.ParseIP(cmd.Argument.Ip)
 		if !subnet.Contains(ip) && broadcastEnabled {
 			toBroadcaster <- netData
 		}
 	} else if cmd.Action == "unblock" {
-		cmd1 := exec.Command("ovs-ofctl del-flows --strict br-int ip,nw_src=" + cmd.Argument.Ip)
-		cmd2 := exec.Command("ovs-ofctl del-flows --strict br-int ip,nw_dst=" + cmd.Argument.Ip)
+		cmd1 := exec.Command("/usr/bin/ovs-ofctl", "del-flows", "--strict", "br-int", "ip,nw_src="+cmd.Argument.Ip)
+		cmd2 := exec.Command("/usr/bin/ovs-ofctl", "del-flows", "--strict", "br-int", "ip,nw_dst="+cmd.Argument.Ip)
+		cmd1.Stdout = &out
+		cmd1.Stderr = &stderr
+		cmd2.Stdout = &out
+		cmd2.Stderr = &stderr
+		log.Println("Executing ", cmd1)
 		err = cmd1.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
+		log.Println("Executing ", cmd2)
 		err = cmd2.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
+
 		ip := net.ParseIP(cmd.Argument.Ip)
 		if !subnet.Contains(ip) && broadcastEnabled {
 			toBroadcaster <- netData
@@ -118,56 +136,83 @@ func execCommand(netData []byte, toBroadcaster chan []byte, broadcastEnabled boo
 		}
 		barrier := limit * 100
 		limit = limit * 1000
-		cmd1 := exec.Command("ovs-vsctl set interface " + cmd.Argument.Port + " ingress_policing_rate=" + strconv.Itoa(limit))
-		cmd2 := exec.Command("ovs-vsctl set interface " + cmd.Argument.Port + " ingress_policing_burst=" + strconv.Itoa(barrier))
+		cmd1 := exec.Command("/usr/bin/ovs-vsctl", "set", "interface", cmd.Argument.Port, "ingress_policing_rate="+strconv.Itoa(limit))
+		cmd2 := exec.Command("/usr/bin/ovs-vsctl", "set", "interface", cmd.Argument.Port, "ingress_policing_burst="+strconv.Itoa(barrier))
+		cmd1.Stdout = &out
+		cmd1.Stderr = &stderr
+		cmd2.Stdout = &out
+		cmd2.Stderr = &stderr
+		log.Println("Executing ", cmd1)
 		err = cmd1.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
+		log.Println("Executing ", cmd2)
 		err = cmd2.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
 
 		if broadcastEnabled {
 			toBroadcaster <- netData
 		}
 	} else if cmd.Action == "forward" {
-		cmd1 := exec.Command("ovs-ofctl add-flow br-int table=70,ip,nw_dst=" + cmd.Argument.Ip + ",priority=300,actions=drop")
-		cmd2 := exec.Command("ovs-ofctl add-flow br-int table=70,tcp,tcp_dst=80,nw_dst=" + cmd.Argument.Ip + ",actions=mod_nw_dst:" + cmd.Argument.Honeypot_ip + ",mod_dl_dst:" + cmd.Argument.Honeypot_mac + ",goto_table:71")
-		cmd3 := exec.Command("ovs-ofctl add-flow br-int table=10,ip,dl_src=" + cmd.Argument.Honeypot_mac + ",nw_src=" + cmd.Argument.Honeypot_ip + ",actions=mod_nw_src:" + cmd.Argument.Ip + ",goto_table:29")
-		err = cmd1.Run()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		err = cmd2.Run()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		err = cmd3.Run()
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	} else if cmd.Action == "tarpit" {
-		cmd1 := exec.Command("ovs-ofctl add-flow br-int ip,nw_dst=" + cmd.Argument.Ip + ",action=set_queue:100,goto_table:10")
-		cmd2 := exec.Command("ovs-ofctl add-flow br-int ip,nw_src=" + cmd.Argument.Ip + ",action=set_queue:100,goto_table:10")
+		cmd1 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "table=70,ip,nw_dst="+cmd.Argument.Ip+",priority=300,actions=drop")
+		cmd2 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "table=70,tcp,tcp_dst=80,nw_dst="+cmd.Argument.Ip+",actions=mod_nw_dst:"+cmd.Argument.Honeypot_ip+",mod_dl_dst:"+cmd.Argument.Honeypot_mac+",goto_table:71")
+		cmd3 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "table=10,ip,dl_src="+cmd.Argument.Honeypot_mac+",nw_src="+cmd.Argument.Honeypot_ip+",actions=mod_nw_src:"+cmd.Argument.Ip+",goto_table:29")
+		cmd1.Stdout = &out
+		cmd1.Stderr = &stderr
+		cmd2.Stdout = &out
+		cmd2.Stderr = &stderr
+		cmd3.Stdout = &out
+		cmd3.Stderr = &stderr
 		log.Println("Executing ", cmd1)
 		err = cmd1.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
 		log.Println("Executing ", cmd2)
 		err = cmd2.Run()
 		if err != nil {
-			log.Println(err)
+			log.Println(err, ": ", stderr.String())
 			return
 		}
+		log.Println("Result: " + out.String())
+		log.Println("Executing ", cmd3)
+		err = cmd3.Run()
+		if err != nil {
+			log.Println(err, ": ", stderr.String())
+			return
+		}
+		log.Println("Result: " + out.String())
+	} else if cmd.Action == "tarpit" {
+		cmd1 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "ip,nw_dst="+cmd.Argument.Ip+",action=set_queue:100,goto_table:10")
+		cmd2 := exec.Command("/usr/bin/ovs-ofctl", "add-flow", "br-int", "ip,nw_src="+cmd.Argument.Ip+",action=set_queue:100,goto_table:10")
+		cmd1.Stdout = &out
+		cmd1.Stderr = &stderr
+		cmd2.Stdout = &out
+		cmd2.Stderr = &stderr
+		log.Println("Executing ", cmd1)
+		err = cmd1.Run()
+		if err != nil {
+			log.Println(err, ": ", stderr.String())
+			return
+		}
+		log.Println("Result: " + out.String())
+		log.Println("Executing ", cmd2)
+		err = cmd2.Run()
+		if err != nil {
+			log.Println(err, ": ", stderr.String())
+			return
+		}
+		log.Println("Result: " + out.String())
+
 		ip := net.ParseIP(cmd.Argument.Ip)
 		if !subnet.Contains(ip) && broadcastEnabled {
 			toBroadcaster <- netData
