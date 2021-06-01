@@ -56,10 +56,8 @@ spec:
     spec:
       containers:
       - name: flow-broadcaster
-        image: 192.168.49.1:5000/antrea-tsi:v1.0.1
+        image: 192.168.122.1:5000/antrea-tsi:v1.0.1
         command:
-          # - sleep
-          # - infinity
           - /home/tsi/bin/flow-broadcaster
         args:
           - -c
@@ -75,10 +73,6 @@ spec:
         ports:
           - containerPort: 30000
           - containerPort: 30001
-        resources:
-          limits:
-            memory: "128Mi"
-            cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -121,7 +115,7 @@ spec:
     spec:
       containers:
       - name: flow-server
-        image: 192.168.49.1:5000/antrea-tsi:v1.0.1
+        image: 192.168.122.1:5000/antrea-tsi:v1.0.1
         command: ['sh', '-c', "/home/tsi/bin/flow-server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c $(IP):30002 -s $(ip -br address show dev antrea-gw0 | awk '{print $3}')"]
         env:
         - name: IP
@@ -193,7 +187,7 @@ spec:
         - command:
             - /usr/bin/python3
           args:
-            - /home/forward.py
+            - /home/tsi/bin/forward.py
             - -l=10.1.1.101
             - -lp=8080
             - -s=$(HOST_IP)
@@ -204,84 +198,69 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
-          image: 192.168.49.1:5000/antrea-tsi:1.0.1
+          image: 192.168.122.1:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           name: flow-control
-          resources:
-            requests:
-              cpu: 200m
-      nodeSelector:
-        kubernetes.io/os: linux
-      priorityClassName: system-node-critical
-      tolerations:
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - effect: NoSchedule
-          operator: Exists
-        - effect: NoExecute
-          operator: Exists
-  updateStrategy:
-    type: RollingUpdate
 ---
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: api
-#   namespace: security
-#   labels:
-#     app: security
-#     component: api
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: security
-#       component: api
-#   template:
-#     metadata:
-#       labels:
-#         app: security
-#         component: api
-#     spec:
-#       containers:
-#       - env:
-#         - name: MY_POD_IP
-#           valueFrom:
-#             fieldRef:
-#               fieldPath: status.podIP
-#         name: api
-#         image: 192.168.49.1:5000/tsi-api:1.0.30
-#         volumeMounts:
-#           - mountPath: /home/.kube/
-#             name: kubeconfig
-#         command:
-#           - ./server
-#         args:
-#           - -ll=$(MY_POD_IP):8001
-#         ports:
-#         - containerPort: 8000
-#         - containerPort: 8001
-#       nodeSelector:
-#         dedicated: master
-#       volumes:
-#       - hostPath:
-#           path: /home/gntousakis/.kube/
-#           type: DirectoryOrCreate
-#         name: kubeconfig
-# ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   name: api-service
-#   namespace: security
-# spec:
-#   type: ClusterIP
-#   selector:
-#     app: security
-#     component: api
-#   clusterIP: 10.104.54.11
-#   ports:
-#     - port: 8001
-#       targetPort: 8001
-#       protocol: TCP
-#       name: local-api
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: security
+  labels:
+    app: security
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: api
+  template:
+    metadata:
+      labels:
+        app: security
+        component: api
+    spec:
+      containers:
+      - env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        name: api
+        image: 192.168.122.1:5000/tsi-api:1.0.30
+        volumeMounts:
+          - mountPath: /home/.kube/
+            name: kubeconfig
+        command:
+          - ./server
+        args:
+          - -ll=$(IP):8001
+        ports:
+        - containerPort: 8000
+        - containerPort: 8001
+      nodeSelector:
+        dedicated: master
+      volumes:
+      - hostPath:
+          path: /home/gntousakis/.kube/
+          type: DirectoryOrCreate
+        name: kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: api
+  clusterIP: 10.104.54.11
+  ports:
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+      name: local-api
