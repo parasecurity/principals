@@ -30,7 +30,7 @@ func CreateCanaryDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.13",
+							Image: "192.168.122.1:5000/tsi-tools:1.0.22",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -39,7 +39,7 @@ func CreateCanaryDepl() appsv1.Deployment {
 								},
 							},
 							Command: []string{
-								"./httpCanary",
+								"./home/httpCanary",
 							},
 							Args: []string{
 								"-api=10.104.54.11:8001",

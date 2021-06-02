@@ -20,7 +20,9 @@ func deleteDeployment(name string) {
 
 func Delete(command Command) {
 	if command.Name == "canary" ||
-		command.Name == "detector" {
+		command.Name == "detector" ||
+		command.Name == "canary-link" ||
+		command.Name == "detector-link" {
 		_, err := loadDeployment()
 		if err != nil {
 			return

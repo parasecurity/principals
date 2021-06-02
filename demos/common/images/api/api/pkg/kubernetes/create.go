@@ -16,6 +16,10 @@ func getDeployment(name string) appsv1.Deployment {
 		deployment = yamls.CreateCanaryDepl()
 	} else if name == "detector" {
 		deployment = yamls.CreateDetectorDepl()
+	} else if name == "canary-link" {
+		deployment = yamls.CreateCanaryLinkDepl()
+	} else if name == "detector-link" {
+		deployment = yamls.CreateDetectorLinkDepl()
 	}
 	return deployment
 }
@@ -33,7 +37,9 @@ func createDeployment(command Command) {
 
 func Create(command Command) {
 	if command.Name == "canary" ||
-		command.Name == "detector" {
+		command.Name == "detector" ||
+		command.Name == "canary-link" ||
+		command.Name == "detector-link" {
 		_, err := loadDeployment()
 		if err != nil {
 			return
