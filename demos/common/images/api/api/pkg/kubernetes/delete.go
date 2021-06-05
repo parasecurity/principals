@@ -8,26 +8,44 @@ import (
 )
 
 func deleteDeployment(name string) {
-	log.Println("Deleting primitive...")
+	log.Println("Deleting deployment...")
 	deletePolicy := metav1.DeletePropagationForeground
 	if err := DeploymentsClient.Delete(context.TODO(), name, metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	}); err != nil {
 		log.Println("Error on deletion:", err)
+		return
 	}
-	log.Println("Deleted primitive.")
+	log.Println("Deleted Deployment", name)
+}
+
+func deleteDaemonset(name string) {
+	log.Println("Deleting DaemonSet...")
+	deletePolicy := metav1.DeletePropagationForeground
+	if err := DaemonSetClient.Delete(context.TODO(), name, metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	}); err != nil {
+		log.Println("Error on deletion:", err)
+		return
+	}
+	log.Println("Deleted DeamonSet", name)
 }
 
 func Delete(command Command) {
 	if command.Name == "canary" ||
-		command.Name == "detector" ||
-		command.Name == "canary-link" ||
-		command.Name == "detector-link" {
+		command.Name == "detector" {
 		_, err := loadDeployment()
 		if err != nil {
 			return
 		}
 		deleteDeployment(command.Name)
+	} else if command.Name == "canary-link" ||
+		command.Name == "detector-link" {
+		_, err := loadDaemonSet()
+		if err != nil {
+			return
+		}
+		deleteDaemonset(command.Name)
 	}
 
 }

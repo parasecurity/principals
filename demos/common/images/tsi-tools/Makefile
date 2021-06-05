@@ -36,6 +36,5 @@ image: canary client detector server canary-link detector-link
 	docker build . -t tsi-tools:v1.0.0
 
 push: 
-	docker tag tsi-tools:v1.0.0 localhost:5000/tsi-tools:v1.0.0
-	docker push localhost:5000/tsi-tools:v1.0.0
-	docker rmi localhost:5000/tsi-tools:v1.0.0
+	docker tag tsi-tools:v1.0.0 localhost:5000/tsi-tools:1.0.22
+	docker push localhost:5000/tsi-tools:1.0.22

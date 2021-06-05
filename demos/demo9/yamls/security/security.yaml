@@ -21,7 +21,7 @@ spec:
     "cniVersion": "0.3.1",
     "type": "macvlan",
     "capabilities": { "ips": true },
-    "master": "enp1s0",
+    "master": "enp81s0f0",
     "mode": "bridge",
     "ipam": {
     "type": "static",
@@ -56,7 +56,7 @@ spec:
     spec:
       containers:
       - name: flow-broadcaster
-        image: 192.168.122.1:5000/antrea-tsi:v1.0.1
+        image: 130.207.224.36:5000/antrea-tsi:v1.0.1
         command:
           - /home/tsi/bin/flow-broadcaster
         args:
@@ -115,7 +115,7 @@ spec:
     spec:
       containers:
       - name: flow-server
-        image: 192.168.122.1:5000/antrea-tsi:v1.0.1
+        image: 130.207.224.36:5000/antrea-tsi:v1.0.1
         command: ['bash', '-c', "/home/tsi/bin/flow-server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c $(IP):30002 -s $(ip -br address show dev antrea-gw0 | awk '{print $3}')"]
         env:
         - name: IP
@@ -194,7 +194,7 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.hostIP
-          image: 192.168.122.1:5000/antrea-tsi:v1.0.1
+          image: 130.207.224.36:5000/antrea-tsi:v1.0.1
           imagePullPolicy: IfNotPresent
           name: flow-control
 ---
@@ -225,7 +225,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         name: api
-        image: 192.168.122.1:5000/tsi-api:1.0.30
+        image: 130.207.224.36:5000/tsi-api:1.0.32
         volumeMounts:
           - mountPath: /home/.kube/
             name: kubeconfig

@@ -15,10 +15,10 @@ setupCommonImages()
 	cd ../../../
 
 	#tsi-tools
-	cd common/images/tsi-tools
-	make
-	make push
-	cd ../../../
+	#cd common/images/tsi-tools
+	#make
+	#make push
+	#cd ../../../
 
 	#dga
 	docker build common/images/dga -t tsi-dga:common &> /dev/null

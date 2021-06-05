@@ -40,7 +40,7 @@ func CreateDetectorLinkDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector-link",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.22",
+							Image: "130.207.224.36:5000/tsi-tools:1.0.22",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -52,15 +52,16 @@ func CreateDetectorLinkDepl() appsv1.Deployment {
 								"./home/httpDetectorLink",
 							},
 							Args: []string{
-								"-ip=147.27.39.116",
+								"-ip=147.27.39.33",
 								"-t=1000",
 							},
+							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
 					InitContainers: []apiv1.Container{
 						{
 							Name:  "init-mirror",
-							Image: "192.168.122.1:5000/antrea-tsi:v1.0.0",
+							Image: "130.207.224.36:5000/antrea-tsi:v1.0.1",
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "NAME",
@@ -70,7 +71,7 @@ func CreateDetectorLinkDepl() appsv1.Deployment {
 							Command: []string{
 								"sh",
 								"-c",
-								"/home/mirror-port.sh",
+								"/home/tsi/scripts/mirror-port.sh",
 							},
 							VolumeMounts: []apiv1.VolumeMount{
 								{

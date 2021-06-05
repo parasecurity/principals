@@ -30,7 +30,7 @@ func CreateCanaryDepl() appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "192.168.122.1:5000/tsi-tools:1.0.22",
+							Image: "130.207.224.36:5000/tsi-tools:1.0.22",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -43,9 +43,10 @@ func CreateCanaryDepl() appsv1.Deployment {
 							},
 							Args: []string{
 								"-api=10.104.54.11:8001",
-								"-conn=http://147.27.39.116:8080/health/",
-								"-t=1000",
+								"-conn=http://kronos.mhl.tuc.gr:30001/health/",
+								"-t=350",
 							},
+							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
 				},

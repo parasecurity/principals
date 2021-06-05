@@ -96,9 +96,9 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
 
-		var connIp net.IP
+		var connIP net.IP
 		if !ip.SrcIP.Equal(monitorIp) {
-			connIp = ip.SrcIP
+			connIP = ip.SrcIP
 		} else {
 			connIP = ip.DstIP
 		}
@@ -156,6 +156,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, connIP net.IP)
 			applicationLayer := p.ApplicationLayer()
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
 			if applicationLayer != nil && ipLayer != nil {
+				ip, _ := ipLayer.(*layers.IPv4)
+
 				if ip.SrcIP.Equal(connIP) {
 					countSrc++
 				} else {
@@ -168,7 +170,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, connIP net.IP)
 				warn <- connIP
 			}
 			log.Println("count: ", connIP, " -> ", *args.monitorIp, " countSrc: ", countSrc, " countDst: ", countDst)
-			count = 0
+			countSrc = 0
+			countDst = 0
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", connIP, " -> ", *args.monitorIp)

@@ -75,7 +75,7 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
                     "argument": argument,
                 }
 
-                send_obj = json.dumps(obj)
+                send_obj = json.dumps(obj) + "\n"
 
                 # We pass to be blocked the ip through data
                 print("[+] Forwarding to {}:{}".format(host, port))

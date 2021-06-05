@@ -24,4 +24,3 @@ image: broadcaster server control
 push: 
 	docker tag antrea-tsi:v1.0.1 localhost:5000/antrea-tsi:v1.0.1
 	docker push localhost:5000/antrea-tsi:v1.0.1
-	docker rmi localhost:5000/antrea-tsi:v1.0.1
