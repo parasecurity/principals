@@ -190,7 +190,7 @@ func flowClient(warn chan net.IP) {
 	defer conn.Close()
 
 	for srcIP := range warn {
-		_, err := conn.Write([]byte(srcIP.String()))
+		_, err := conn.Write([]byte(srcIP.String() + "\n"))
 		if err != nil {
 			log.Println(err)
 			return

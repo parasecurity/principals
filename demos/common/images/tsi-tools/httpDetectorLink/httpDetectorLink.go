@@ -91,21 +91,29 @@ func deviceExists(name string) bool {
 
 func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 
+	monitorIp := net.ParseIP(*args.monitorIp)
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
 
+		var connIp net.IP
+		if !ip.SrcIP.Equal(monitorIp) {
+			connIp = ip.SrcIP
+		} else {
+			connIP = ip.DstIP
+		}
+
 		activeConnsLock.RLock()
-		conn, ok := activeConns[ip2int(ip.SrcIP)]
+		conn, ok := activeConns[ip2int(connIP)]
 		activeConnsLock.RUnlock()
 
 		if !ok {
-			log.Println("new connection: ", ip.SrcIP, " -> ", *args.monitorIp)
+			log.Println("new connection: ", connIP, " -> ", *args.monitorIp)
 			newconn := make(chan gopacket.Packet)
-			go checkConnection(newconn, warn, ip.SrcIP)
+			go checkConnection(newconn, warn, connIP)
 
 			activeConnsLock.Lock()
-			activeConns[ip2int(ip.SrcIP)] = newconn
+			activeConns[ip2int(connIP)] = newconn
 			activeConnsLock.Unlock()
 
 			newconn <- packet
@@ -118,7 +126,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 	return
 }
 
-func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) {
+func checkConnection(conn chan gopacket.Packet, warn chan net.IP, connIP net.IP) {
 	checkTimer := time.NewTicker(time.Second)
 	defer checkTimer.Stop()
 
@@ -129,13 +137,14 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 
 	defer func() {
 		activeConnsLock.Lock()
-		delete(activeConns, ip2int(srcIP))
+		delete(activeConns, ip2int(connIP))
 		activeConnsLock.Unlock()
 	}()
 
-	var count int
+	var countSrc, countDst int
 	var used = false
-	count = 0
+	countSrc = 0
+	countDst = 0
 
 	for {
 		select {
@@ -145,28 +154,24 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 			}
 			used = true
 			applicationLayer := p.ApplicationLayer()
-			if applicationLayer != nil {
-				count++
-			}
-
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
-			if ipLayer != nil {
-				ip, _ := ipLayer.(*layers.IPv4)
-				if !ip.SrcIP.Equal(srcIP) {
-					log.Println("inside check connection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
+			if applicationLayer != nil && ipLayer != nil {
+				if ip.SrcIP.Equal(connIP) {
+					countSrc++
+				} else {
+					countDst++
 				}
 			}
-
 		case <-checkTimer.C:
-			if count > *args.threshold {
-				log.Println("Warning: ", srcIP, " -> ", *args.monitorIp, " count: ", count)
-				warn <- srcIP
+			if countSrc > *args.threshold || countDst > *args.threshold {
+				log.Println("Warning: ", connIP, " -> ", *args.monitorIp, " countSrc: ", countSrc, " countDst: ", countDst)
+				warn <- connIP
 			}
-			log.Println("count: ", srcIP, " -> ", *args.monitorIp, " count: ", count)
+			log.Println("count: ", connIP, " -> ", *args.monitorIp, " countSrc: ", countSrc, " countDst: ", countDst)
 			count = 0
 		case <-timeoutTimer.C:
 			if !used {
-				log.Println("Connection Timeout, closing: ", srcIP, " -> ", *args.monitorIp)
+				log.Println("Connection Timeout, closing: ", connIP, " -> ", *args.monitorIp)
 				return
 			}
 			used = false
@@ -183,7 +188,7 @@ func flowClient(warn chan net.IP) {
 	defer conn.Close()
 
 	for srcIP := range warn {
-		_, err := conn.Write([]byte(srcIP.String()))
+		_, err := conn.Write([]byte(srcIP.String() + "\n"))
 		if err != nil {
 			log.Println(err)
 			return
@@ -224,7 +229,7 @@ func main() {
 		if ip == nil {
 			log.Fatal("monitor ip has wrong format: ", *args.monitorIp)
 		}
-		bpffilter = "tcp and dst host " + *args.monitorIp
+		bpffilter = "tcp and host " + *args.monitorIp
 	} else {
 		bpffilter = "tcp"
 	}

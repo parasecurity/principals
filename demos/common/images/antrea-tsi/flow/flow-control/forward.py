@@ -3,6 +3,21 @@ import argparse
 import json
 
 
+class Buffer:
+    def __init__(self, sock):
+        self.sock = sock
+        self.buffer = b""
+
+    def get_line(self):
+        while b"\n" not in self.buffer:
+            data = self.sock.recv(1024)
+            if not data:  # socket closed
+                return None
+            self.buffer += data
+        line, sep, self.buffer = self.buffer.partition(b"\n")
+        return line.decode()
+
+
 def request(action, argument, server="192.168.49.2", port=2378):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
 
@@ -16,7 +31,7 @@ def request(action, argument, server="192.168.49.2", port=2378):
             "action": action,
             "argument": argument,
         }
-        send_obj = json.dumps(obj)
+        send_obj = json.dumps(obj) + "\n"
 
         print(send_obj)
         # We pass to be blocked the ip through data
@@ -42,14 +57,15 @@ def client(host="192.168.49.2", hostlocal="192.168.1.201", port=2378, portlocal=
         conn, addr = sock.accept()
 
         with conn as c:
+            b = Buffer(c)
 
             while True:
 
                 # We receive the ip from dga
-                request = c.recv(4096)
-                if not request:
+                address = b.get_line()
+                if address is None:
                     break
-                address = request.decode("utf-8")
+
                 print("[+] Received", repr(address))
 
                 argument["ip"] = address

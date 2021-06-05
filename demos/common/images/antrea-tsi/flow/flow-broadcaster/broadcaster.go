@@ -56,18 +56,17 @@ func handleAPIConnection(c net.Conn, connList *connections) {
 	log.Printf("Serving API %s\n", c.RemoteAddr())
 	reader := bufio.NewReader(c)
 	for {
-		netData := make([]byte, 4096)
-		n, err := reader.Read(netData)
+		netData, err := reader.ReadBytes('\n')
 		if err != nil {
 			log.Println(err)
 			break
 		}
-		log.Println("from API ", c.RemoteAddr(), ": ", string(netData[:n]))
+		log.Println("from API ", c.RemoteAddr(), ": ", string(netData))
 
 		// whenever the API server sends data we forward the data to all flow servers
 		connList.l.RLock()
 		for idx, conn := range connList.c {
-			_, err := conn.Write([]byte(netData[:n]))
+			_, err := conn.Write([]byte(netData))
 			if err != nil {
 				connList.l.RUnlock()
 				connList.l.Lock()

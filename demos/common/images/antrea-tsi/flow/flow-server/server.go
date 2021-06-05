@@ -230,16 +230,15 @@ func connectionReader(c net.Conn, toBroadcaster chan []byte, broadcastEnabled bo
 
 	log.Printf("Serving reader %s\n", c.RemoteAddr().String())
 	reader := bufio.NewReader(c)
-	netData := make([]byte, 4096)
 	for {
-		n, err := reader.Read(netData)
+		netData, err := reader.ReadBytes('\n')
 		if err != nil {
 			log.Println(err)
 			break
 		}
 
 		log.Println("received command from ", c.RemoteAddr().String(), ": ", string(netData))
-		execCommand(netData[:n], toBroadcaster, broadcastEnabled)
+		execCommand(netData, toBroadcaster, broadcastEnabled)
 		log.Println("executed command from ", c.RemoteAddr().String(), ": ", string(netData))
 	}
 	// if a flow controller connection is closed we let the handler terminate
