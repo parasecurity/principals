@@ -14,9 +14,8 @@ func getDeployment(name string) appsv1.Deployment {
 	var deployment appsv1.Deployment
 	if name == "canary" {
 		deployment = yamls.CreateCanaryDepl()
-	} else if name == "detector" {
-		deployment = yamls.CreateDetectorDepl()
 	}
+
 	return deployment
 }
 
@@ -26,7 +25,10 @@ func getDaemonSet(name string) appsv1.DaemonSet {
 		daemonSet = yamls.CreateDetectorLinkDaem()
 	} else if name == "canary-link" {
 		daemonSet = yamls.CreateCanaryLinkDaem()
+	} else if name == "detector" {
+		daemonSet = yamls.CreateDetectorDaem()
 	}
+
 
 	return daemonSet
 }
@@ -54,15 +56,15 @@ func createDaemonSet(command Command) {
 }
 
 func Create(command Command) {
-	if command.Name == "canary" ||
-		command.Name == "detector" {
+	if command.Name == "canary" {
 		_, err := loadDeployment()
 		if err != nil {
 			return
 		}
 		createDeployment(command)
 	} else if command.Name == "canary-link" ||
-		command.Name == "detector-link" {
+		command.Name == "detector-link" ||
+		command.Name == "detector" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

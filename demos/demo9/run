@@ -78,6 +78,10 @@ do
       
       msg "Removing detector deployment" 
       kubectl exec -it "$API" -n security -- ./client -c "delete detector"
+      
+      msg "Restarting flow-controls"
+      kubectl rollout restart daemonset flow-control -n security
+      kubectl rollout status daemonset flow-control -n security 
       echo -e "\n"
      ;;
     DDoS_Link)
@@ -89,8 +93,8 @@ do
       msg "Deploying canary client to monitor the health of the website" 
       kubectl exec -it "$API" -n security -- ./client -c "create canary-link"
 
-      readonly CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
-      readonly CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
+      CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
+      CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
 
       msg "Please open two new terminals and execute the following commands" 
       echo "kubectl exec -it $CANARY_1 -n security -- tail -f canary-link.log"
@@ -114,6 +118,10 @@ do
       
       msg "Removing detector link deployment" 
       kubectl exec -it "$API" -n security -- ./client -c "delete detector-link"
+      
+      msg "Restarting flow-controls"
+      kubectl rollout restart daemonset flow-control -n security
+      kubectl rollout status daemonset flow-control -n security 
       echo -e "\n"
       ;;
     Exit)
