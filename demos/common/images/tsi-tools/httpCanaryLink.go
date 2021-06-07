@@ -96,14 +96,11 @@ func timeGet(port string) {
 		if inMbps > *threshold || outMbps > *threshold {
 			log.Println("Threshold passed (In/Out)", inMbps, outMbps)
 			if failureCount >= *failures {
-				log.Println("Creating detectors")
 				createDetector()
 				failureCount = 0
 			} else {
 				failureCount++
 			}
-		} else {
-			failureCount = 0
 		}
 		time.Sleep(time.Second)
 	}

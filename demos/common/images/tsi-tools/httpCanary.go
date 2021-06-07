@@ -63,7 +63,6 @@ func timeGet(url string) {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
 				if failureCount >= *failures {
-					log.Println("Creating detectors")
 					createDetector()
 					failureCount = 0
 				} else {
@@ -88,14 +87,11 @@ func timeGet(url string) {
 		if interval > time.Duration(*threshold)*time.Millisecond {
 			log.Println("Threshold passed:", interval)
 			if failureCount >= *failures {
-				log.Println("Creating detectors")
 				createDetector()
 				failureCount = 0
 			} else {
 				failureCount++
 			}
-		} else {
-			failureCount = 0
 		}
 		httpClient.CloseIdleConnections()
 		time.Sleep(time.Second)
