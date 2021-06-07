@@ -77,8 +77,7 @@ func createDetector() {
 		log.Println(err)
 	}
 	detectorUp = true
-
-	return
+	log.Println("Deploying detectors...")
 }
 
 func timeGet(port string) {

@@ -70,7 +70,7 @@ do
       kubectl exec "$MALICE_POD_6" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
       sleep 2
 
-      msg "All the malicious pods should be limited and the canary log restored to normal" 
+      msg "Waiting for the Web server to be responsive again" 
       read -p "Press enter to continue"
      
       msg "Removing canary deployment" 
@@ -110,7 +110,7 @@ do
       kubectl exec "$MALICE_POD_12" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
       sleep 2
 
-      msg "All the malicious pods should be limited and the canary log restored to normal" 
+      msg "Waiting for the Web server to be responsive again" 
       read -p "Press enter to continue"
      
       msg "Removing canary link deployment" 

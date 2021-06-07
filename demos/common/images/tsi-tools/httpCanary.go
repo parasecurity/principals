@@ -46,6 +46,8 @@ func createDetector() {
 	if err != nil {
 		log.Println(err)
 	}
+	detectorUp = true
+	log.Println("Deploying detectors...")
 }
 
 func timeGet(url string) {
