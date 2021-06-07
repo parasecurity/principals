@@ -15,12 +15,13 @@ import (
 )
 
 var (
-	port       *string
-	api        *string
-	threshold  *int
-	failures   *int
-	logPath    *string
-	detectorUp bool = false
+	port         *string
+	api          *string
+	threshold    *int
+	failures     *int
+	logPath      *string
+	detectorUp   bool = false
+	failureCount int
 )
 
 type statistics struct {
@@ -84,7 +85,6 @@ func createDetector() {
 func timeGet(port string) {
 	var statistic statistics = getStatistics(port)
 	var lastStatistic statistics
-	var failureCount int
 	for {
 		lastStatistic = statistic
 		statistic = getStatistics(port)
@@ -95,12 +95,13 @@ func timeGet(port string) {
 
 		if inMbps > *threshold || outMbps > *threshold {
 			log.Println("Threshold passed (In/Out)", inMbps, outMbps)
+			failureCount++
 			if failureCount >= *failures {
 				createDetector()
 				failureCount = 0
-			} else {
-				failureCount++
 			}
+		} else {
+			failureCount = 0
 		}
 		time.Sleep(time.Second)
 	}
@@ -137,5 +138,6 @@ func init() {
 }
 
 func main() {
+	failureCount = 0
 	timeGet(*port)
 }

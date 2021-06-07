@@ -12,15 +12,16 @@ import (
 )
 
 var (
-	server     *string
-	api        *string
-	ca         *string
-	crt        *string
-	key        *string
-	threshold  *int
-	failures   *int
-	logPath    *string
-	detectorUp bool = false
+	server       *string
+	api          *string
+	ca           *string
+	crt          *string
+	key          *string
+	threshold    *int
+	failures     *int
+	logPath      *string
+	detectorUp   bool = false
+	failureCount int
 )
 
 func connectTCP() net.Conn {
@@ -56,17 +57,14 @@ func timeGet(url string) {
 	t.MaxIdleConns = 100
 	t.MaxConnsPerHost = 100
 	t.MaxIdleConnsPerHost = 100
-	var failureCount int
-	failureCount = 0
 	for {
-		defer func() {
+		defer func(count *int) {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
+				failureCount++
 				if failureCount >= *failures {
 					createDetector()
 					failureCount = 0
-				} else {
-					failureCount++
 				}
 			}
 		}()
@@ -86,12 +84,13 @@ func timeGet(url string) {
 
 		if interval > time.Duration(*threshold)*time.Millisecond {
 			log.Println("Threshold passed:", interval)
+			failureCount++
 			if failureCount >= *failures {
 				createDetector()
 				failureCount = 0
-			} else {
-				failureCount++
 			}
+		} else {
+			failureCount = 0
 		}
 		httpClient.CloseIdleConnections()
 		time.Sleep(time.Second)
@@ -129,6 +128,7 @@ func init() {
 }
 
 func main() {
+	failureCount = 0
 	for {
 		timeGet(*server)
 	}
