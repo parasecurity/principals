@@ -119,4 +119,9 @@ if __name__ == "__main__":
     if local_ip == None:
         request(action, arguments, remote_ip, remote_port)
     else:
-        client(remote_ip, local_ip, remote_port, local_port, action, arguments)
+        while True:
+            try:
+                client(remote_ip, local_ip, remote_port, local_port, action, arguments)
+            except: 
+                pass
+

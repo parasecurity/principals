@@ -43,16 +43,19 @@ kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl list-ports br-int 
   --id=@queue create queue other-config:max-rate=1000000 &> /dev/null"
 
 PS3="Select demo: "
-select option in DDoS DDoS_Link Exit
+select option in "DDoS with application level canary" "DDoS with link level canary" Exit
 do
   case $option in
-    DDoS)
+    "DDoS with application level canary")
       msg "Starting DDoS Demo"
-      
-      msg "Sending normal requests to web-site from alice" 
+     	
+      echo "Enter deployment command:"
+      read commands 
+
+      msg "Sending normal requests to http://kronos.mhl.tuc.gr:30001/ from alice" 
       kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ &"
 
-      msg "Deploying canary client to monitor the health of the website" 
+      msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
       kubectl exec -it "$API" -n security -- ./client -c "create canary"
 
       CANARY=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}')
@@ -84,13 +87,16 @@ do
       kubectl rollout status daemonset flow-control -n security 
       echo -e "\n"
      ;;
-    DDoS_Link)
+    "DDoS with link level canary")
       msg "Starting DDoS Link Demo"
       
-      msg "Sending normal requests to web-site from alice" 
+      echo "Enter deployment command:"
+      read commands
+
+      msg "Sending normal requests to http://kronos.mhl.tuc.gr:30002/ from alice" 
       kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -s 10 &"
 
-      msg "Deploying canary client to monitor the health of the website" 
+      msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
       kubectl exec -it "$API" -n security -- ./client -c "create canary-link"
 
       CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)

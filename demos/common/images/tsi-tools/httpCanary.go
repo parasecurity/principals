@@ -58,7 +58,7 @@ func timeGet(url string) {
 	t.MaxConnsPerHost = 100
 	t.MaxIdleConnsPerHost = 100
 	for {
-		defer func(count *int) {
+		defer func() {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
 				failureCount++
