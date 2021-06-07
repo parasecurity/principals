@@ -90,7 +90,7 @@ func timeGet(port string) {
 		statistic = getStatistics(port)
 
 		inMbps := toMbps(statistic.bytesIn - lastStatistic.bytesIn)
-		outMbps := toMbps(statistic.bytesIn - lastStatistic.bytesIn)
+		outMbps := toMbps(statistic.bytesOut - lastStatistic.bytesOut)
 		log.Println("(In/Out)", inMbps, outMbps)
 
 		if inMbps > *threshold || outMbps > *threshold {
