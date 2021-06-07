@@ -18,6 +18,7 @@ var (
 	port       *string
 	api        *string
 	threshold  *int
+	failures   *int
 	logPath    *string
 	detectorUp bool = false
 )
@@ -83,7 +84,7 @@ func createDetector() {
 func timeGet(port string) {
 	var statistic statistics = getStatistics(port)
 	var lastStatistic statistics
-
+	var failureCount int
 	for {
 		lastStatistic = statistic
 		statistic = getStatistics(port)
@@ -94,7 +95,15 @@ func timeGet(port string) {
 
 		if inMbps > *threshold || outMbps > *threshold {
 			log.Println("Threshold passed (In/Out)", inMbps, outMbps)
-			createDetector()
+			if failureCount >= *failures {
+				log.Println("Creating detectors")
+				createDetector()
+				failureCount = 0
+			} else {
+				failureCount++
+			}
+		} else {
+			failureCount = 0
 		}
 		time.Sleep(time.Second)
 	}
@@ -104,6 +113,7 @@ func init() {
 	port = flag.String("i", "antrea-gw0", "The port interface you want to monitor e.g. coredns--ec5e46")
 	api = flag.String("api", "10.244.0.9:8001", "The API server url e.g. 10.244.0.9:8001")
 	threshold = flag.Int("t", 10, "The Mbps threshold")
+	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary-link.log", "The path to the log file")
 	flag.Parse()
 
