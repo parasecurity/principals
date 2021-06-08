@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDetectorDaem() appsv1.DaemonSet {
+func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 
 	daemonSet := appsv1.DaemonSet{
@@ -50,10 +50,7 @@ func CreateDetectorDaem() appsv1.DaemonSet {
 							Command: []string{
 								"./home/httpDetector",
 							},
-							Args: []string{
-								"-ip=147.27.39.33",
-								"-t=300",
-							},
+							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},

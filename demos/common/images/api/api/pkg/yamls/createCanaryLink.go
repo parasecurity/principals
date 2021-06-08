@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateCanaryLinkDepl() appsv1.Deployment {
+func CreateCanaryLinkDepl(args []string) appsv1.Deployment {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 
 	deployment := appsv1.Deployment{
@@ -42,12 +42,7 @@ func CreateCanaryLinkDepl() appsv1.Deployment {
 							Command: []string{
 								"./home/httpCanaryLink",
 							},
-							Args: []string{
-								"-i=antrea-gw0",
-								"-api=10.104.54.11:8001",
-								"-t=10",
-								"-lp=./canary-link.log",
-							},
+							Args: args,
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      "host-var-run-antrea",

@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDetectorDepl() appsv1.Deployment {
+func CreateDetectorDepl(args []string) appsv1.Deployment {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 
 	deployment := appsv1.Deployment{
@@ -51,10 +51,7 @@ func CreateDetectorDepl() appsv1.Deployment {
 							Command: []string{
 								"./home/httpDetector",
 							},
-							Args: []string{
-								"-ip=147.27.39.33",
-								"-t=300",
-							},
+							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
