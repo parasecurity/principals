@@ -39,9 +39,9 @@ sudo visudo
 
 Edit the line:
 ```sh
-sudo   ALL=(ALL:ALL) ALL
+%sudo  ALL=(ALL:ALL) ALL
 # with
-sudo  ALL=(ALL:ALL) NOPASSWD: ALL
+%sudo  ALL=(ALL:ALL) NOPASSWD: ALL
 ```
 Log-out and log in again to test the passwordless sudo
 
