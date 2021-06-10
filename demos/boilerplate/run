@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ../common/scripts/funcs.sh
+
+msg "Adding tsi security"
+kubectl apply -f yamls/security
+
+waitUntilAllPodsRun
+
+readonly AGENT_POD_1=$(kubectl get -A po -o wide | grep "flow-server" | head -1 | awk '{print $2}')
+readonly AGENT_POD_2=$(kubectl get -A po -o wide | grep "flow-server" | tail -1 | awk '{print $2}')
+readonly API=$(kubectl get po -o wide -n security | grep "api" | awk '{print $1}')
+
+# Create pod with api command
+# kubectl exec -it "$API" -n security -- ./client -c "delete detector-link"      
