@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateCanaryDepl() appsv1.Deployment {
+func CreateCanaryDepl(args []string) appsv1.Deployment {
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -41,11 +41,7 @@ func CreateCanaryDepl() appsv1.Deployment {
 							Command: []string{
 								"./home/httpCanary",
 							},
-							Args: []string{
-								"-api=10.104.54.11:8001",
-								"-conn=http://kronos.mhl.tuc.gr:30001/health/",
-								"-t=350",
-							},
+							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},

@@ -10,31 +10,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func getDeployment(name string) appsv1.Deployment {
+func getDeployment(name string, args []string) appsv1.Deployment {
 	var deployment appsv1.Deployment
 	if name == "canary" {
-		deployment = yamls.CreateCanaryDepl()
+		deployment = yamls.CreateCanaryDepl(args)
 	}
 
 	return deployment
 }
 
-func getDaemonSet(name string) appsv1.DaemonSet {
+func getDaemonSet(name string, args []string) appsv1.DaemonSet {
 	var daemonSet appsv1.DaemonSet
 	if name == "detector-link" {
-		daemonSet = yamls.CreateDetectorLinkDaem()
+		daemonSet = yamls.CreateDetectorLinkDaem(args)
 	} else if name == "canary-link" {
-		daemonSet = yamls.CreateCanaryLinkDaem()
+		daemonSet = yamls.CreateCanaryLinkDaem(args)
 	} else if name == "detector" {
-		daemonSet = yamls.CreateDetectorDaem()
+		daemonSet = yamls.CreateDetectorDaem(args)
 	}
-
 
 	return daemonSet
 }
 
 func createDeployment(command Command) {
-	deployment := getDeployment(command.Name)
+	deployment := getDeployment(command.Name, command.Arguments)
 	log.Println("Creating deployment..")
 	result, err := DeploymentsClient.Create(context.TODO(), &deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -45,7 +44,7 @@ func createDeployment(command Command) {
 }
 
 func createDaemonSet(command Command) {
-	daemonset := getDaemonSet(command.Name)
+	daemonset := getDaemonSet(command.Name, command.Arguments)
 	log.Println("Creating DaemonSet..")
 	result, err := DaemonSetClient.Create(context.TODO(), &daemonset, metav1.CreateOptions{})
 	if err != nil {

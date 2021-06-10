@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateCanaryLinkDaem() appsv1.DaemonSet {
+func CreateCanaryLinkDaem(args []string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 
 	daemonSet := appsv1.DaemonSet{
@@ -41,12 +41,7 @@ func CreateCanaryLinkDaem() appsv1.DaemonSet {
 							Command: []string{
 								"./home/httpCanaryLink",
 							},
-							Args: []string{
-								"-i=antrea-gw0",
-								"-api=10.104.54.11:8001",
-								"-t=10",
-								"-lp=./canary-link.log",
-							},
+							Args: args,
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      "host-var-run-antrea",

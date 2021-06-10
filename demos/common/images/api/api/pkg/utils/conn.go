@@ -81,7 +81,7 @@ func PrintTLSState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State End <<<<<<<<<<<<<<<<")
 }
 
-func handleTLSConnection(c net.Conn) {
+func handleConnection(c net.Conn) {
 	var result string
 	// Recieve data from client
 	reader := bufio.NewReader(c)
@@ -119,6 +119,6 @@ func ListenAndServer(ln net.Listener) {
 			break
 		}
 		log.Printf("Connection open: %s", c.RemoteAddr())
-		go handleTLSConnection(c)
+		go handleConnection(c)
 	}
 }

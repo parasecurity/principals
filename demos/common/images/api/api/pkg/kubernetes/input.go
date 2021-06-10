@@ -1,13 +1,43 @@
 package kubernetes
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 type Command struct {
-	Action string
-	Name   string
+	Action    string
+	Name      string
+	Arguments []string
 }
 
-// TODO: Check that action, type, name has a correct variable
+func argCheck(input []string) error {
+	// Create a new possible error
+	err := errors.New("wrong input arguments")
+	// Size of input array
+	ArgLength := len(input)
+
+	// Input arguments correctness checking
+	if ArgLength < 2 {
+		return err
+	}
+
+	if input[0] != "create" &&
+		input[0] != "delete" {
+
+		return err
+	}
+
+	if input[1] != "canary" &&
+		input[1] != "canary-link" &&
+		input[1] != "detector" &&
+		input[1] != "detector-link" {
+
+		return err
+	}
+
+	return nil
+}
 
 func lowerSplit(input string) []string {
 	// Change input to lower case and split it
@@ -19,20 +49,22 @@ func lowerSplit(input string) []string {
 
 func ProcessInput(input string) Command {
 	commandTable := lowerSplit(input)
-	// When arguments are less than 3 return error
-	// Example of right command:
-	// 'create DeamonSet canary'
-	if len(commandTable) != 2 {
+	err := argCheck(commandTable)
+
+	if err != nil {
 		err := Command{
-			Action: "Error",
-			Name:   "",
+			Action:    "Error",
+			Name:      "",
+			Arguments: nil,
 		}
 		return err
 	}
 
+	length := len(commandTable)
 	newCommand := Command{
-		Action: commandTable[0],
-		Name:   commandTable[1],
+		Action:    commandTable[0],
+		Name:      commandTable[1],
+		Arguments: commandTable[2:length],
 	}
 
 	return newCommand
