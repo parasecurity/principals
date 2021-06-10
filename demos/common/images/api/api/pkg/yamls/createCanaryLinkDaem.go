@@ -30,7 +30,7 @@ func CreateCanaryLinkDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "130.207.224.36:5000/tsi-tools:1.0.22",
+							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -39,7 +39,7 @@ func CreateCanaryLinkDaem(args []string) appsv1.DaemonSet {
 								},
 							},
 							Command: []string{
-								"./home/httpCanaryLink",
+								"/home/tsi/bin/canaryLink",
 							},
 							Args: args,
 							VolumeMounts: []apiv1.VolumeMount{

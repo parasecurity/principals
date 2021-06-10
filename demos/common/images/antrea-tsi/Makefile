@@ -4,7 +4,7 @@ all: image
 
 clean:
 	rm -rf bin/
-	docker rmi antrea-tsi:v1.0.0
+	docker rmi antrea-tsi:v1.0.0 localhost:5000/antrea-tsi:v1.0.0
 
 broadcaster:
 	mkdir -p bin/

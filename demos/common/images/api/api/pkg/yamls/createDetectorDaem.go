@@ -39,7 +39,7 @@ func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector",
-							Image: "130.207.224.36:5000/tsi-tools:1.0.22",
+							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -48,7 +48,7 @@ func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 								},
 							},
 							Command: []string{
-								"./home/httpDetector",
+								"/home/tsi/bin/detector",
 							},
 							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
@@ -57,7 +57,7 @@ func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 					InitContainers: []apiv1.Container{
 						{
 							Name:  "init-mirror",
-							Image: "130.207.224.36:5000/antrea-tsi:v1.0.1",
+							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "NAME",
