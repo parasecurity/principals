@@ -53,4 +53,3 @@ func loadDaemonSet() (result bool, err error) {
 	DaemonSetClient = clientset.AppsV1().DaemonSets("security")
 	return true, err
 }
-

@@ -43,6 +43,3 @@ ADD rules/local.rules /etc/snort/rules
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && rm -rf /opt/snort-${SNORT_VERSION}* /opt/daq-${DAQ_VERSION}*
-
-
-WORKDIR /etc/snort/

@@ -31,7 +31,10 @@ func argCheck(input []string) error {
 	if input[1] != "canary" &&
 		input[1] != "canary-link" &&
 		input[1] != "detector" &&
-		input[1] != "detector-link" {
+		input[1] != "detector-link" &&
+		input[1] != "dga" &&
+		input[1] != "analyser" &&
+		input[1] != "snort" {
 
 		return err
 	}

@@ -27,6 +27,12 @@ func getDaemonSet(name string, args []string) appsv1.DaemonSet {
 		daemonSet = yamls.CreateCanaryLinkDaem(args)
 	} else if name == "detector" {
 		daemonSet = yamls.CreateDetectorDaem(args)
+	} else if name == "dga" {
+		daemonSet = yamls.CreateDgaDaem(args)
+	} else if name == "analyser" {
+		daemonSet = yamls.CreateAnalyserDaem(args)
+	} else if name == "snort" {
+		daemonSet = yamls.CreateSnortDaem(args)
 	}
 
 	return daemonSet
@@ -60,14 +66,19 @@ func Create(command Command) {
 		if err != nil {
 			return
 		}
+
 		createDeployment(command)
 	} else if command.Name == "canary-link" ||
 		command.Name == "detector-link" ||
-		command.Name == "detector" {
+		command.Name == "detector" ||
+		command.Name == "dga" ||
+		command.Name == "analyser" ||
+		command.Name == "snort" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return
 		}
+
 		createDaemonSet(command)
 	}
 
