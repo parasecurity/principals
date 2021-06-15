@@ -45,6 +45,17 @@ Edit the line:
 ```
 Log-out and log in again to test the passwordless sudo
 
+## Enable insecure repository access
+On all nodes on the cluster
+```sh
+# Change the ip with the ip of the registry
+sudo cat >>/etc/docker/daemon.json<<EOF
+{ "insecure-registries" : ["192.168.122.1:5000"] }
+EOF
+sudo systemctl restart docker.service
+sudo systemctl restart docker.socket
+```
+
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
 - https://linuxize.com/post/how-to-add-and-delete-users-on-ubuntu-18-04/
