@@ -2,6 +2,7 @@ from scapy.all import *
 import socket
 import argparse
 import time
+import json
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.keras.preprocessing import sequence
@@ -119,8 +120,15 @@ class PacketMonitor:
         pass
 
     def send_ip(self, address):
-        # Send bad ip address
-        self.socket.sendall(address.encode("utf-8"))
+        # Add ip to arguments 
+        self.arguments["ip"] = address
+        obj = {
+            "action": self.action,
+            "argument": self.arguments,
+        }
+        # Format json object
+        send_obj = json.dumps(obj) + "\n"
+        self.socket.sendall(send_obj.encode("utf-8"))
         pass
 
     def process_packet(self, packet):
@@ -163,10 +171,12 @@ class PacketMonitor:
             # sniff with default interface
             sniff(filter="port 53", prn=self.process_packet, store=False)
 
-    def __init__(self, iface, detector, address, port):
+    def __init__(self, iface, detector, address, port, action, arguments):
         self.iface = iface
         self.detector = detector
         self.establish_connection(address, port)
+        self.action = action
+        self.arguments = arguments
         pass
 
 
@@ -176,6 +186,8 @@ if __name__ == "__main__":
     parser.add_argument("-m", "--model", help="DGA detection model to load")
     parser.add_argument("-a", "--address", help="Ip address of flow controller")
     parser.add_argument("-p", "--port", help="Port of flow controller")
+    parser.add_argument("-c", "--command", help="The command we want to repeat to the ovs bridge to execute", required=True)
+    parser.add_argument("-arg", "--arguments", help="Input arguments in JSON format", required=False)
     args = parser.parse_args()
 
     model_path = args.model
@@ -185,6 +197,19 @@ if __name__ == "__main__":
     address = args.address
     port = int(args.port)
 
-    packet_monitor = PacketMonitor(iface, detector, address, port)
+    action = args.command
+    if args.arguments == None:
+        arguments_json = "\{\}"
+    else:
+        arguments_json = args.arguments
+
+    try:
+        arguments = json.loads(arguments_json)
+    except ValueError:
+        print("Decoding JSON has failed")
+        arguments = {}
+        pass
+
+    packet_monitor = PacketMonitor(iface, detector, address, port, action, arguments)
     packet_monitor.sniff_packets()
     packet_monitor.socket.close()
