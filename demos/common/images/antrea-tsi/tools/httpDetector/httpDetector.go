@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"flag"
 	"log"
 	"net"
@@ -19,18 +20,22 @@ import (
 
 var (
 	args struct {
-		iface     *string
-		fname     *string
-		snaplen   *int
-		promisc   *bool
-		monitorIp *string
-		threshold *int
-		logPath   *string
-		flowCtrl  *string
+		iface      *string
+		fname      *string
+		snaplen    *int
+		promisc    *bool
+		monitorIp  *string
+		threshold  *int
+		logPath    *string
+		flowServer *string
+		command    *string
+		arguments  *string
 	}
 	activeConns     map[uint32]chan gopacket.Packet
 	activeConnsLock sync.RWMutex
 )
+
+type message map[string]interface{}
 
 func init() {
 	args.iface = flag.String("i", "eth0", "Interface to read packets from")
@@ -39,7 +44,9 @@ func init() {
 	args.monitorIp = flag.String("ip", "", "Set monitor ip, if empty monitor all")
 	args.threshold = flag.Int("t", 1000, "Set the packet threshold, the value is packets per second")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
-	args.flowCtrl = flag.String("fc", "10.1.1.101:8080", "The flow controller connection in format ip:port e.g. 10.1.1.101:8080")
+	args.flowServer = flag.String("fc", "10.1.1.201:30002", "The flow server connection in format ip:port e.g. 10.1.1.101:8080")
+	args.command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
+	args.arguments = flag.String("args", "", "Arguments to pass to the command you want to execute")
 	flag.Parse()
 
 	// open log file
@@ -181,8 +188,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP) 
 	}
 }
 
-func flowClient(warn chan net.IP) {
-	conn, err := net.Dial("tcp", *args.flowCtrl)
+func flowServer(warn chan net.IP) {
+	conn, err := net.Dial("tcp", *args.flowServer)
 	if err != nil {
 		log.Println(err)
 		return
@@ -190,7 +197,14 @@ func flowClient(warn chan net.IP) {
 	defer conn.Close()
 
 	for srcIP := range warn {
-		_, err := conn.Write([]byte(srcIP.String() + "\n"))
+		msg := &message{
+			"Action": *args.command,
+			"Argument": map[string]interface{}{
+				"Ip": srcIP.String(),
+			},
+		}
+		jsonMsg, _ := json.Marshal(msg)
+		_, err := conn.Write([]byte(string(jsonMsg) + "\n"))
 		if err != nil {
 			log.Println(err)
 			return
@@ -203,7 +217,7 @@ func main() {
 	activeConns = make(map[uint32]chan gopacket.Packet)
 	//open flow client to send warnings
 	warn := make(chan net.IP)
-	go flowClient(warn)
+	go flowServer(warn)
 
 	//open pcap to get packets
 	var handle *pcap.Handle

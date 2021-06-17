@@ -25,12 +25,7 @@ func CreateDetectorDepl(args []string) appsv1.Deployment {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "detector",
-						"k8s.v1.cni.cncf.io/networks": `[
-							{ "name": "macvlan-conf",
-								"ips": [ "10.1.1.102/24" ],
-								"mac": "c2:b0:57:49:47:f1",
-								"gateway": [ "10.1.1.1" ]
-						}]`,
+						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
 					},
 					Labels: map[string]string{
 						"app": "detector",

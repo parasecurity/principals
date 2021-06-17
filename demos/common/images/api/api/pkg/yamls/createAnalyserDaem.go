@@ -26,12 +26,7 @@ func CreateAnalyserDaem(args []string) appsv1.DaemonSet {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "analyser",
-						"k8s.v1.cni.cncf.io/networks": `[
-							{ "name": "macvlan-conf",
-								"ips": [ "10.1.1.104/24" ],
-								"mac": "c2:b0:57:49:47:f1",
-								"gateway": [ "10.1.1.1" ]
-						}]`,
+						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
 					},
 					Labels: map[string]string{
 						"app": "analyser",
