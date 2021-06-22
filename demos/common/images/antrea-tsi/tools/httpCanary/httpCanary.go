@@ -14,14 +14,13 @@ import (
 var (
 	server       *string
 	api          *string
-	ca           *string
-	crt          *string
-	key          *string
 	threshold    *int
 	failures     *int
 	logPath      *string
 	detectorUp   bool = false
 	failureCount int
+	command      *string
+	primitive    *string
 )
 
 func connectTCP() net.Conn {
@@ -43,7 +42,7 @@ func createDetector() {
 	conn := connectTCP()
 	defer conn.Close()
 
-	command := "create detector"
+	command := "create " + *primitive + " -c=" + *command
 	_, err := conn.Write([]byte(command))
 	if err != nil {
 		log.Println(err)
@@ -103,6 +102,8 @@ func init() {
 	threshold = flag.Int("t", 1000, "The time threshold in ms")
 	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary.log", "The path to the log file")
+	command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
+	primitive = flag.String("p", "detector", "The primite to be deployed after the malicious behaviour")
 	flag.Parse()
 
 	// open log file

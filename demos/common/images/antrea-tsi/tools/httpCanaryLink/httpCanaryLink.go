@@ -22,6 +22,8 @@ var (
 	logPath      *string
 	detectorUp   bool = false
 	failureCount int
+	command      *string
+	primitive    *string
 )
 
 type statistics struct {
@@ -73,7 +75,7 @@ func createDetector() {
 	conn := connectTCP()
 	defer conn.Close()
 
-	command := "create detector-link"
+	command := "create " + *primitive + " -c=" + *command
 	_, err := conn.Write([]byte(command))
 	if err != nil {
 		log.Println(err)
@@ -113,6 +115,8 @@ func init() {
 	threshold = flag.Int("t", 10, "The Mbps threshold")
 	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary-link.log", "The path to the log file")
+	command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
+	primitive = flag.String("p", "detector-link", "The primite to be deployed after the malicious behaviour")
 	flag.Parse()
 
 	// open log file
