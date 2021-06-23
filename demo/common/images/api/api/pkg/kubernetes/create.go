@@ -33,6 +33,8 @@ func getDaemonSet(name string, args []string) appsv1.DaemonSet {
 		daemonSet = yamls.CreateAnalyserDaem(args)
 	} else if name == "snort" {
 		daemonSet = yamls.CreateSnortDaem(args)
+	} else if name == "honeypot" {
+		daemonSet = yamls.CreateHoneypotDaem(args)
 	}
 
 	return daemonSet
@@ -73,7 +75,8 @@ func Create(command Command) {
 		command.Name == "detector" ||
 		command.Name == "dga" ||
 		command.Name == "analyser" ||
-		command.Name == "snort" {
+		command.Name == "snort" ||
+		command.Name == "honeypot" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

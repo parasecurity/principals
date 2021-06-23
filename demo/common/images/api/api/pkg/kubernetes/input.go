@@ -34,7 +34,8 @@ func argCheck(input []string) error {
 		input[1] != "detector-link" &&
 		input[1] != "dga" &&
 		input[1] != "analyser" &&
-		input[1] != "snort" {
+		input[1] != "snort" &&
+		input[1] != "honeypot" {
 
 		return err
 	}
@@ -44,10 +45,11 @@ func argCheck(input []string) error {
 
 func lowerSplit(input string) []string {
 	// Change input to lower case and split it
-	inputLower := strings.ToLower(input)
-	inputSplit := strings.Fields(inputLower)
+	modInput := strings.Fields(input)
+	modInput[0] = strings.ToLower(modInput[0])
+	modInput[1] = strings.ToLower(modInput[1])
 
-	return inputSplit
+	return modInput
 }
 
 func ProcessInput(input string) Command {

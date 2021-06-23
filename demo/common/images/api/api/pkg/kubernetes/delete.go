@@ -44,7 +44,8 @@ func Delete(command Command) {
 		command.Name == "detector" ||
 		command.Name == "dga" ||
 		command.Name == "analyser" ||
-		command.Name == "snort" {
+		command.Name == "snort" ||
+		command.Name == "honeypot" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return
