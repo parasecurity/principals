@@ -1,5 +1,7 @@
 from scapy.all import *
 import socket
+import logging
+import ast
 import argparse
 import time
 import json
@@ -121,7 +123,9 @@ class PacketMonitor:
 
     def send_ip(self, address):
         # Add ip to arguments 
+        logging.debug("Arguments2: ", self.arguments)
         self.arguments["ip"] = address
+        logging.debug("Arguments3: ", self.arguments)
         obj = {
             "action": self.action,
             "argument": self.arguments,
@@ -181,6 +185,10 @@ class PacketMonitor:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='monitor.log',
+            filemode='w',
+            level=logging.DEBUG)
+
     parser = argparse.ArgumentParser(description="DGA detector")
     parser.add_argument("-i", "--iface", help="Interface to use, default is scapy's default interface")
     parser.add_argument("-m", "--model", help="DGA detection model to load")
@@ -204,7 +212,7 @@ if __name__ == "__main__":
         arguments_json = args.arguments
 
     try:
-        arguments = json.loads(arguments_json)
+        arguments = ast.literal_eval(arguments_json)
     except ValueError:
         print("Decoding JSON has failed")
         arguments = {}

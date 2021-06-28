@@ -10,4 +10,4 @@ push:
 	docker push localhost:5000/tsi-dga:v1.0.0
 
 clean:
-	docker rmi tsi-api:v1.0.0 localhost:5000/tsi-dga:v1.0.0
+	docker rmi tsi-dga:v1.0.0 localhost:5000/tsi-dga:v1.0.0

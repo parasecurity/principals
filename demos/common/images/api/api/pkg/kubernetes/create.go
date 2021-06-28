@@ -3,12 +3,27 @@ package kubernetes
 import (
 	"context"
 	"log"
+	"strings"
 
 	"api/pkg/yamls"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func getCommand(args []string) string {
+	argsLength := len(args)
+	for counter := 0; counter < argsLength; counter++ {
+		value := args[counter]
+		isCommand := strings.Contains(value, "-c=") || strings.Contains(value, "-command=")
+		if isCommand {
+			valueArray := strings.Split(value, "=")
+			return valueArray[1]
+		}
+	}
+
+	return "nil"
+}
 
 func getDeployment(name string, args []string) appsv1.Deployment {
 	var deployment appsv1.Deployment
@@ -28,7 +43,12 @@ func getDaemonSet(name string, args []string) appsv1.DaemonSet {
 	} else if name == "detector" {
 		daemonSet = yamls.CreateDetectorDaem(args)
 	} else if name == "dga" {
-		daemonSet = yamls.CreateDgaDaem(args)
+		command := getCommand(args)
+		if command == "forward" {
+			daemonSet = yamls.CreateDgaForwardDaem(args)
+		} else {
+			daemonSet = yamls.CreateDgaDaem(args)
+		}
 	} else if name == "analyser" {
 		daemonSet = yamls.CreateAnalyserDaem(args)
 	} else if name == "snort" {

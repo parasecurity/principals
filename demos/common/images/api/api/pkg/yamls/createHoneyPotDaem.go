@@ -59,6 +59,12 @@ func CreateHoneypotDaem(args []string) appsv1.DaemonSet {
 									MountPath: "/home/net",
 								},
 							},
+							Ports: []apiv1.ContainerPort{
+								{
+									Name:          "connect",
+									ContainerPort: 80,
+								},
+							},
 							SecurityContext: &apiv1.SecurityContext{
 								Capabilities: &apiv1.Capabilities{
 									Add: []apiv1.Capability{
