@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: detector-no-mirror
+  name: detector-no-mirror
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: detector-no-mirror
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: detector-no-mirror
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.102/24" ],
+          "mac": "c2:b0:57:49:47:f2",
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: security
+        component: detector-no-mirror
+    spec:
+      containers:
+        - command:
+            - "/home/tsi/bin/detectorLink"
+          image: 147.27.39.116:5000/antrea-tsi:v1.0.0
+          imagePullPolicy: Always
+          name: detector-no-mirror
+          resources:
+            requests:
+              cpu: 200m
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      volumes:
+        - hostPath:
+            path: /var/run/antrea
+            type: DirectoryOrCreate
+          name: host-var-run-antrea
+  updateStrategy:
+    type: RollingUpdate

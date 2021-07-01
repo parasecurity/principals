@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: dga
+  name: dga
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: dga
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: dga
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.102/24" ],
+          "mac": "c2:b0:57:49:47:f2",
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: security
+        component: dga
+    spec:
+      containers:
+        - command:
+            - /usr/bin/python3
+          args:
+            - /tmp/monitor.py
+            - -m=/tmp/dga.model
+            - -a=10.1.1.201
+            - -p=30002
+            - -c=block
+          image: 147.27.39.116:5000/tsi-dga:v1.0.0
+          imagePullPolicy: Always
+          name: dga
+          resources:
+            requests:
+              cpu: 200m
+      initContainers:
+        - name: init-mirror
+          image: 147.27.39.116:5000/antrea-tsi:v1.0.0
+          env:
+            - name: NAME 
+              value: "dga"
+          command: ["sh", "-c", "/home/tsi/scripts/mirror-port.sh"]
+          volumeMounts:
+            - mountPath: /var/run/openvswitch
+              name: host-var-run-antrea
+              subPath: openvswitch
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      volumes:
+        - hostPath:
+            path: /var/run/antrea
+            type: DirectoryOrCreate
+          name: host-var-run-antrea
+  updateStrategy:
+    type: RollingUpdate
