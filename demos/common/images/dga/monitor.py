@@ -207,13 +207,13 @@ if __name__ == "__main__":
 
     action = args.command
     if args.arguments == None:
-        arguments_json = "\{\}"
+        arguments_json = "{}"
     else:
         arguments_json = args.arguments
 
     try:
         arguments = ast.literal_eval(arguments_json)
-    except ValueError:
+    except:
         print("Decoding JSON has failed")
         arguments = {}
         pass

@@ -5,4 +5,4 @@ COPY scripts/ /home/tsi/scripts
 
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y libpcap-dev
+    apt-get install -y libpcap-dev iperf3
