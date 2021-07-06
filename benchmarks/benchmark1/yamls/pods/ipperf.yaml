@@ -15,7 +15,8 @@ spec:
       spec:
          containers:
          -  name: iperf3
-            image: 147.27.39.116:5000/antrea-tsi:v1.0.0
+            image: 130.207.224.36:5000/antrea-tsi:v1.0.0
             command: ['/bin/sh', '-c', 'sleep 1d']
             ports:
             - containerPort: 5201
+            imagePullPolicy: Always
