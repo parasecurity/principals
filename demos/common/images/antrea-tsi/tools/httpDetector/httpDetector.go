@@ -42,7 +42,7 @@ func init() {
 	args.fname = flag.String("r", "", "Filename to read from, overrides -i")
 	args.snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 	args.monitorIp = flag.String("ip", "", "Set monitor ip, if empty monitor all")
-	args.threshold = flag.Int("t", 1000, "Set the packet threshold, the value is packets per second")
+	args.threshold = flag.Int("t", 300, "Set the packet threshold, the value is packets per second")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
 	args.flowServer = flag.String("fc", "10.1.1.201:30002", "The flow server connection in format ip:port e.g. 10.1.1.101:8080")
 	args.command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
