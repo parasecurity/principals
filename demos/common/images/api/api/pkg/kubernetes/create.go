@@ -25,43 +25,43 @@ func getCommand(args []string) string {
 	return "nil"
 }
 
-func getDeployment(name string, args []string) appsv1.Deployment {
+func getDeployment(name string, args []string, registry *string) appsv1.Deployment {
 	var deployment appsv1.Deployment
 	if name == "canary" {
-		deployment = yamls.CreateCanaryDepl(args)
+		deployment = yamls.CreateCanaryDepl(args, registry)
 	}
 
 	return deployment
 }
 
-func getDaemonSet(name string, args []string) appsv1.DaemonSet {
+func getDaemonSet(name string, args []string, registry *string) appsv1.DaemonSet {
 	var daemonSet appsv1.DaemonSet
 	if name == "detector-link" {
-		daemonSet = yamls.CreateDetectorLinkDaem(args)
+		daemonSet = yamls.CreateDetectorLinkDaem(args, registry)
 	} else if name == "canary-link" {
-		daemonSet = yamls.CreateCanaryLinkDaem(args)
+		daemonSet = yamls.CreateCanaryLinkDaem(args, registry)
 	} else if name == "detector" {
-		daemonSet = yamls.CreateDetectorDaem(args)
+		daemonSet = yamls.CreateDetectorDaem(args, registry)
 	} else if name == "dga" {
 		command := getCommand(args)
 		if command == "forward" {
-			daemonSet = yamls.CreateDgaForwardDaem(args)
+			daemonSet = yamls.CreateDgaForwardDaem(args, registry)
 		} else {
-			daemonSet = yamls.CreateDgaDaem(args)
+			daemonSet = yamls.CreateDgaDaem(args, registry)
 		}
 	} else if name == "analyser" {
-		daemonSet = yamls.CreateAnalyserDaem(args)
+		daemonSet = yamls.CreateAnalyserDaem(args, registry)
 	} else if name == "snort" {
-		daemonSet = yamls.CreateSnortDaem(args)
+		daemonSet = yamls.CreateSnortDaem(args, registry)
 	} else if name == "honeypot" {
-		daemonSet = yamls.CreateHoneypotDaem(args)
+		daemonSet = yamls.CreateHoneypotDaem(args, registry)
 	}
 
 	return daemonSet
 }
 
-func createDeployment(command Command) {
-	deployment := getDeployment(command.Name, command.Arguments)
+func createDeployment(command Command, registry *string) {
+	deployment := getDeployment(command.Name, command.Arguments, registry)
 	log.Println("Creating deployment..")
 	result, err := DeploymentsClient.Create(context.TODO(), &deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -71,8 +71,8 @@ func createDeployment(command Command) {
 	log.Println("Created deployment:", result.GetObjectMeta().GetName())
 }
 
-func createDaemonSet(command Command) {
-	daemonset := getDaemonSet(command.Name, command.Arguments)
+func createDaemonSet(command Command, registry *string) {
+	daemonset := getDaemonSet(command.Name, command.Arguments, registry)
 	log.Println("Creating DaemonSet..")
 	result, err := DaemonSetClient.Create(context.TODO(), &daemonset, metav1.CreateOptions{})
 	if err != nil {
@@ -82,14 +82,14 @@ func createDaemonSet(command Command) {
 	log.Println("Created deamonset:", result.GetObjectMeta().GetName())
 }
 
-func Create(command Command) {
+func Create(command Command, registry *string) {
 	if command.Name == "canary" {
 		_, err := loadDeployment()
 		if err != nil {
 			return
 		}
 
-		createDeployment(command)
+		createDeployment(command, registry)
 	} else if command.Name == "canary-link" ||
 		command.Name == "detector-link" ||
 		command.Name == "detector" ||
@@ -102,7 +102,7 @@ func Create(command Command) {
 			return
 		}
 
-		createDaemonSet(command)
+		createDaemonSet(command, registry)
 	}
 
 }

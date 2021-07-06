@@ -6,7 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateCanaryDepl(args []string) appsv1.Deployment {
+func CreateCanaryDepl(args []string, registry *string) appsv1.Deployment {
+	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,7 +31,7 @@ func CreateCanaryDepl(args []string) appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",

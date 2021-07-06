@@ -6,10 +6,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDgaDaem(args []string) appsv1.DaemonSet {
+func CreateDgaDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	// Passing path to monitor.py file to args list
 	var modArgs []string = append([]string{"/tmp/monitor.py"}, args...)
+	var imageDga string = *registry + ":5000/tsi-dga:v1.0.0"
+	var imageMirror string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -36,7 +38,7 @@ func CreateDgaDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "dga",
-							Image: "147.27.39.116:5000/tsi-dga:v1.0.0",
+							Image: imageDga,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -54,7 +56,7 @@ func CreateDgaDaem(args []string) appsv1.DaemonSet {
 					InitContainers: []apiv1.Container{
 						{
 							Name:  "init-mirror",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: imageMirror,
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "NAME",

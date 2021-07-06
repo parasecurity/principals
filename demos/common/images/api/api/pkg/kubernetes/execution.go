@@ -1,9 +1,9 @@
 package kubernetes
 
-func Execute(command Command) string {
+func Execute(command Command, registry *string) string {
 	var result string
 	if command.Action == "create" {
-		Create(command)
+		Create(command, registry)
 	} else if command.Action == "delete" {
 		Delete(command)
 	}

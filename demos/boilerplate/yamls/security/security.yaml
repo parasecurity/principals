@@ -212,6 +212,7 @@ spec:
           - ./server
         args:
           - -ll=$(IP):8001
+          - -r=147.27.39.116
         ports:
         - containerPort: 8000
         - containerPort: 8001

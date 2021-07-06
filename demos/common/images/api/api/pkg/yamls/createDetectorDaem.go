@@ -6,8 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDetectorDaem(args []string) appsv1.DaemonSet {
+func CreateDetectorDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,7 +35,7 @@ func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -52,7 +53,7 @@ func CreateDetectorDaem(args []string) appsv1.DaemonSet {
 					InitContainers: []apiv1.Container{
 						{
 							Name:  "init-mirror",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "NAME",

@@ -6,10 +6,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateAnalyserDaem(args []string) appsv1.DaemonSet {
+func CreateAnalyserDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	// Passing path to monitor.py file to args list
 	var modArgs []string = append([]string{"/tmp/monitor.py"}, args...)
+	var image string = *registry + ":5000/tsi-analyser:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -36,7 +37,7 @@ func CreateAnalyserDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "analyser",
-							Image: "147.27.39.116:5000/tsi-analyser:v1.0.0",
+							Image: image,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",

@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateHoneypotDaem(args []string) appsv1.DaemonSet {
+func CreateHoneypotDaem(args []string, registry *string) appsv1.DaemonSet {
 	// Copying IP and mac address to shared drive
 	// Each service that wants access to those values
 	// just needs to mount the shared drive
@@ -19,6 +19,7 @@ func CreateHoneypotDaem(args []string) appsv1.DaemonSet {
 		args...)
 	modArgs = append(modArgs, []string{"&& sleep infinity"}...)
 	var stringArgs string = strings.Join(modArgs[:], " ")
+	var image string = *registry + ":5000/tsi-honeypot:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -44,7 +45,7 @@ func CreateHoneypotDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "honeypot",
-							Image: "147.27.39.116:5000/tsi-honeypot:v1.0.0",
+							Image: image,
 							Command: []string{
 								"bash",
 								"-c",

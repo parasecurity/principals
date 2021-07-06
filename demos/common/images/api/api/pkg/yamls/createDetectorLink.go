@@ -6,8 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateDetectorLinkDepl(args []string) appsv1.Deployment {
+func CreateDetectorLinkDepl(args []string, registry *string) appsv1.Deployment {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -35,7 +36,7 @@ func CreateDetectorLinkDepl(args []string) appsv1.Deployment {
 					Containers: []apiv1.Container{
 						{
 							Name:  "detector-link",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",
@@ -53,7 +54,7 @@ func CreateDetectorLinkDepl(args []string) appsv1.Deployment {
 					InitContainers: []apiv1.Container{
 						{
 							Name:  "init-mirror",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Env: []apiv1.EnvVar{
 								{
 									Name:  "NAME",

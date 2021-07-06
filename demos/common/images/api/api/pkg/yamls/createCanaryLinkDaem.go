@@ -6,8 +6,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateCanaryLinkDaem(args []string) appsv1.DaemonSet {
+func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -30,7 +31,7 @@ func CreateCanaryLinkDaem(args []string) appsv1.DaemonSet {
 					Containers: []apiv1.Container{
 						{
 							Name:  "canary",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
+							Image: image,
 							Ports: []apiv1.ContainerPort{
 								{
 									Name:          "http",

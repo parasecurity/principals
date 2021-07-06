@@ -81,7 +81,7 @@ func PrintTLSState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State End <<<<<<<<<<<<<<<<")
 }
 
-func handleConnection(c net.Conn) {
+func handleConnection(c net.Conn, registry *string) {
 	var result string
 	// Recieve data from client
 	reader := bufio.NewReader(c)
@@ -96,7 +96,7 @@ func handleConnection(c net.Conn) {
 	log.Println("Command received:", dataString)
 	command := kubernetes.ProcessInput(dataString)
 	if command.Action != "Error" {
-		result = kubernetes.Execute(command)
+		result = kubernetes.Execute(command, registry)
 	} else {
 		result = "fail"
 	}
@@ -110,7 +110,7 @@ func handleConnection(c net.Conn) {
 	c.Close()
 }
 
-func ListenAndServer(ln net.Listener) {
+func ListenAndServer(ln net.Listener, registry *string) {
 	defer ln.Close()
 	for {
 		c, err := ln.Accept()
@@ -119,6 +119,6 @@ func ListenAndServer(ln net.Listener) {
 			break
 		}
 		log.Printf("Connection open: %s", c.RemoteAddr())
-		go handleConnection(c)
+		go handleConnection(c, registry)
 	}
 }

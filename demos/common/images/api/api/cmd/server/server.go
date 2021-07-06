@@ -17,6 +17,7 @@ var (
 	crt       *string
 	key       *string
 	logPath   *string
+	registry  *string
 )
 
 func init() {
@@ -26,6 +27,7 @@ func init() {
 	crt = flag.String("crt", "./internal/server.crt", "The file path to server crt certificate e.g. ./server.crt")
 	key = flag.String("key", "./internal/server.key", "The file path to server key e.g. ./server.key")
 	logPath = flag.String("lp", "./server.log", "The path to the log file e.g. ./server.log")
+	registry = flag.String("r", "", "The registry ip to fetch the images")
 	flag.Parse()
 
 	// Open log file
@@ -55,6 +57,6 @@ func main() {
 	listenerTLS := utils.CreateTLS(ca, crt, key, listen)
 	listenerTCP := utils.CreateTCP(listenTCP)
 
-	go utils.ListenAndServer(listenerTLS)
-	utils.ListenAndServer(listenerTCP)
+	go utils.ListenAndServer(listenerTLS, registry)
+	utils.ListenAndServer(listenerTCP, registry)
 }
