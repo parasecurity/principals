@@ -1,4 +1,4 @@
-module httpDetector
+module detector
 
 go 1.13
 
