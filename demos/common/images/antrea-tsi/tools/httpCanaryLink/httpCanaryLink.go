@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	ovsctl "github.com/vmware-tanzu/antrea/pkg/ovs/ovsctl"
+	ovsctl "github.com/antrea-io/antrea/pkg/ovs/ovsctl"
 )
 
 var (
@@ -145,4 +145,3 @@ func main() {
 	failureCount = 0
 	timeGet(*port)
 }
-
