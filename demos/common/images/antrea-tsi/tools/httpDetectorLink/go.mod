@@ -1,4 +1,4 @@
-module httpDetectorLink
+module detectorLink
 
 go 1.13
 
