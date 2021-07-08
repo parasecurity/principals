@@ -1,50 +1,34 @@
-.PHONY: all clean image
+BUILD ?= $(PWD)/bin
+IMAGE ?= antrea-tsi
+VERSION ?= v1.0.0
+REMOTE_REGISTRY ?= localhost:5000
 
-all: image
+TOOLS := $(wildcard ./tools/*)
+FLOW := $(wildcard ./flow/*)
+
+export BUILD
+
+.PHONY: all tools flow $(TOOLS) $(FLOW) push clean
+
+all: tools flow
+	docker build . -t $(IMAGE):$(VERSION)
+
+tools: $(TOOLS)
+
+flow: $(FLOW)
+
+$(TOOLS):
+	mkdir -p ./bin
+	$(MAKE) -C $@
+
+$(FLOW):
+	mkdir -p ./bin
+	$(MAKE) -C $@
+
+push:
+	docker tag $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
+	docker push $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
 
 clean:
-	rm -rf bin/
-	docker rmi antrea-tsi:v1.0.0 localhost:5000/antrea-tsi:v1.0.0
-
-broadcaster:
-	mkdir -p bin/
-	cd flow/flow-broadcaster && go build -o ../../bin/flow-broadcaster broadcaster.go
-
-server:
-	mkdir -p bin/
-	cd flow/flow-server && go build -o ../../bin/flow-server server.go
-
-control:
-	mkdir -p bin/
-	cp flow/flow-control/forward.py bin/
-
-detector:
-	mkdir -p bin/
-	cd tools/httpDetector && go build -o ../../bin/detector httpDetector.go
-
-detectorLink:
-	mkdir -p bin/
-	cd tools/httpDetectorLink && go build -o ../../bin/detectorLink httpDetectorLink.go
-
-canary:
-	mkdir -p bin/
-	cd tools/httpCanary && go build -o ../../bin/canary httpCanary.go
-
-canaryLink:
-	mkdir -p bin/
-	cd tools/httpCanaryLink && go build -o ../../bin/canaryLink httpCanaryLink.go
-
-client:
-	mkdir -p bin/
-	cd tools/httpClient && go build -o ../../bin/client httpClient.go
-
-site:
-	mkdir -p bin/
-	cd tools/httpServer && go build -o ../../bin/site httpServer.go
-
-image: broadcaster server control detector detectorLink canary canaryLink client site
-	docker build . -t antrea-tsi:v1.0.0
-
-push: 
-	docker tag antrea-tsi:v1.0.0 localhost:5000/antrea-tsi:v1.0.0
-	docker push localhost:5000/antrea-tsi:v1.0.0
+	rm -rf ./bin
+	docker rmi -f $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
