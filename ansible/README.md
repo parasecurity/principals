@@ -56,6 +56,22 @@ sudo systemctl restart docker.service
 sudo systemctl restart docker.socket
 ```
 
+## Add autocompletion on kubectl
+Just run on the node you want to enable kubectl autocompletion
+```sh
+echo 'source <(kubectl completion bash)' >>~/.bashrc
+kubectl completion bash >/etc/bash_completion.d/kubectl
+```
+
+## Enable node deployment on master node
+We first remove the tain from master and then add a tag
+```sh
+# Remove taint
+kubectl taint node <master name> node-role.kubernetes.io/master:NoSchedule-
+# Add label on master
+kubectl label nodes <master name> dedicated=master
+```
+
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
 - https://linuxize.com/post/how-to-add-and-delete-users-on-ubuntu-18-04/
