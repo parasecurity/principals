@@ -3,11 +3,6 @@
 #   Generate root/server certificate
 #
 
-if [ "$EUID" -ne 0 ]; then
-        echo "Please run as root"
-        exit
-fi
-
 msg()
 {
         local message="$1"
@@ -40,9 +35,14 @@ prerequisites() {
     msg "Checking if openssl is installed"
     PKG_OK=$(dpkg-query -W --showformat='${Status}\n' openssl | grep "install ok installed")
     if [ "" = "$PKG_OK" ]; then
-        errmsg "No openssl. Setting up openssl."
-        sudo apt-get --yes install openssl
+        errmsg "No openssl. Please install openssl."
         exit
+    fi
+
+    msg "Checking if internal directory exists"
+    if [ ! -d "../../internal/" ] 
+    then
+        mkdir ../../internal/
     fi
 }
 
@@ -74,7 +74,7 @@ generate() {
     msg "Signing client certificate: client.crt"
     openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt
 
-    mv *.key *.csr *.crt ../../internal/ 
+    mv *.key *.csr *.crt ca.srl ../../internal/ 
 }
 
 prerequisites
