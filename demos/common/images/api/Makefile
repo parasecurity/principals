@@ -15,6 +15,7 @@ client:
 	cd api-client && go build -o ../bin/client cmd/client.go
 
 image: server client
+	./api/scripts/generateCert/generateCert.sh
 	docker build . -t tsi-api:v1.0.0
 
 push:

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ../common/scripts/funcs.sh
+
+msg "Delete tsi security"
+kubectl delete -f yamls/security
+
+waitUntilAllPodsRun
