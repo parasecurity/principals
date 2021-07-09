@@ -77,7 +77,7 @@ spec:
       - name: flow-broadcaster
         image: 130.207.224.36:5000/antrea-tsi:v1.0.0
         command:
-          - /home/tsi/bin/flow-broadcaster
+          - /home/tsi/bin/broadcaster
         args:
           - -c
           - $(IP):30000
@@ -141,7 +141,7 @@ spec:
       containers:
       - name: flow-server
         image: 130.207.224.36:5000/antrea-tsi:v1.0.0
-        command: ['bash', '-c', "/home/tsi/bin/flow-server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c 10.1.1.201:30002 -s $(ip a | grep inet | head -2 | tail -1 | awk '{print $2}')"]
+        command: ['bash', '-c', "/home/tsi/bin/server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c 10.1.1.201:30002 -s $(ip a | grep inet | head -2 | tail -1 | awk '{print $2}')"]
         env:
         - name: IP
           valueFrom:
