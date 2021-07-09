@@ -18,17 +18,24 @@ func CreateDetectorDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "detector",
+					"app":       "security",
+					"component": "detector",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "detector",
-						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
+						"k8s.v1.cni.cncf.io/networks": `[
+							{ "name": "macvlan-conf",
+							"ips": [ "10.1.1.202/24" ],
+							"mac": "c2:b0:57:49:47:f1",
+							"gateway": [ "10.1.1.1" ]
+							}]`,
 					},
 					Labels: map[string]string{
-						"app": "detector",
+						"app":       "security",
+						"component": "detector",
 					},
 				},
 				Spec: apiv1.PodSpec{

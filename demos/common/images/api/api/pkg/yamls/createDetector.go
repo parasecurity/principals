@@ -19,7 +19,8 @@ func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "detector",
+					"app":       "security",
+					"component": "detector",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
@@ -29,7 +30,8 @@ func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
 					},
 					Labels: map[string]string{
-						"app": "detector",
+						"app":       "security",
+						"component": "detector",
 					},
 				},
 				Spec: apiv1.PodSpec{

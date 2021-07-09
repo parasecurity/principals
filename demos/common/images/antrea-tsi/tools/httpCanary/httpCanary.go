@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,56 +14,64 @@ import (
 
 var (
 	server       *string
-	api          *string
+	detectorIP   *string
 	threshold    *int
 	failures     *int
 	logPath      *string
-	detectorUp   bool = false
 	failureCount int
-	command      *string
-	primitive    *string
+	ips          []net.IP
+	conn         net.Conn
 )
 
 func connectTCP() net.Conn {
-	addr := *api
-
-	// Connect to the tls server
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		log.Println("Failed to connect: %s", err.Error())
+	// Connect to the detector
+	connection, err := net.Dial("tcp", *detectorIP)
+	for err != nil {
+		log.Println("Trying to connect to detector...")
+		connection, err = net.Dial("tcp", *detectorIP)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 	}
-	return conn
+	return connection
 }
 
-func createDetector() {
-	if detectorUp == true {
-		return
-	}
+func sendIP(ip string) {
+	msg := string((ip + "\n"))
 
-	conn := connectTCP()
-	defer conn.Close()
-
-	command := "create " + *primitive + " -c=" + *command
-	_, err := conn.Write([]byte(command))
-	if err != nil {
+	_, err := conn.Write([]byte(msg))
+	for err != nil {
+		// If connection closes we try again
 		log.Println(err)
+		log.Println("Reopening connection")
+		conn, err = net.Dial("tcp", *detectorIP)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		_, err = conn.Write([]byte(msg))
 	}
-	detectorUp = true
-	log.Println("Deploying detectors...")
 }
 
-func timeGet(url string) {
+func enableDetector(ip string) {
+	sendIP(ip)
+	log.Println("Enabled detectors...")
+}
+
+func timeGet(urlC string) {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	t.MaxIdleConns = 100
 	t.MaxConnsPerHost = 100
 	t.MaxIdleConnsPerHost = 100
+
 	for {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
 				failureCount++
 				if failureCount >= *failures {
-					createDetector()
+					enableDetector(ips[0].String())
 					failureCount = 0
 				}
 			}
@@ -72,7 +81,7 @@ func timeGet(url string) {
 			Transport: t,
 		}
 		start := time.Now()
-		r, err := httpClient.Get(*server)
+		r, err := httpClient.Get(urlC)
 		r.Body.Close()
 		interval := time.Since(start)
 		log.Println("Response in :", interval)
@@ -85,7 +94,7 @@ func timeGet(url string) {
 			log.Println("Threshold passed:", interval)
 			failureCount++
 			if failureCount >= *failures {
-				createDetector()
+				enableDetector(ips[0].String())
 				failureCount = 0
 			}
 		} else {
@@ -98,12 +107,10 @@ func timeGet(url string) {
 
 func init() {
 	server = flag.String("conn", "http://kronos.mhl.tuc.gr:30001/health/", "The server url e.g. http://147.27.39.116:8080/health/")
-	api = flag.String("api", "10.244.0.9:8001", "The API server url e.g. 10.244.0.9:8001")
+	detectorIP = flag.String("d", "10.1.1.202:30000", "The detector IP address e.g. 10.1.1.202:30002")
 	threshold = flag.Int("t", 1000, "The time threshold in ms")
 	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary.log", "The path to the log file")
-	command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
-	primitive = flag.String("p", "detector", "The primite to be deployed after the malicious behaviour")
 	flag.Parse()
 
 	// open log file
@@ -126,6 +133,24 @@ func init() {
 		log.Println("RECEIVED SIGNAL:", s)
 		os.Exit(1)
 	}()
+
+	// Connect to detector
+	conn = connectTCP()
+
+	log.Println("Monitor URL: ", *server)
+	u, err := url.Parse(*server)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Hostname: ", u.Hostname())
+	ips_t, _ := net.LookupIP(u.Hostname())
+	for _, ip := range ips_t {
+		if ipv4 := ip.To4(); ipv4 != nil {
+			ips = append(ips, ip)
+			log.Println("IPv4: ", ipv4)
+		}
+	}
 }
 
 func main() {

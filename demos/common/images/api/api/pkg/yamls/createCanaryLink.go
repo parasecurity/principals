@@ -19,13 +19,15 @@ func CreateCanaryLinkDepl(args []string, registry *string) appsv1.Deployment {
 			Replicas: int32Ptr(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "canary-link",
+					"app":       "security",
+					"component": "canary-link",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": "canary-link",
+						"app":       "security",
+						"component": "canary-link",
 					},
 				},
 				Spec: apiv1.PodSpec{

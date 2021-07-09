@@ -29,7 +29,8 @@ func CreateHoneypotDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "honeypot",
+					"app":       "security",
+					"component": "honeypot",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
@@ -38,7 +39,8 @@ func CreateHoneypotDaem(args []string, registry *string) appsv1.DaemonSet {
 						"kubectl.kubernetes.io/default-container": "honeypot",
 					},
 					Labels: map[string]string{
-						"app": "honeypot",
+						"app":       "security",
+						"component": "honeypot",
 					},
 				},
 				Spec: apiv1.PodSpec{

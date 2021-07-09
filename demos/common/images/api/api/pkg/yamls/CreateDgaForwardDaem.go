@@ -30,7 +30,8 @@ func CreateDgaForwardDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "dga",
+					"app":       "security",
+					"component": "dga",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
@@ -40,7 +41,8 @@ func CreateDgaForwardDaem(args []string, registry *string) appsv1.DaemonSet {
 						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
 					},
 					Labels: map[string]string{
-						"app": "dga",
+						"app":       "security",
+						"component": "dga",
 					},
 				},
 				Spec: apiv1.PodSpec{

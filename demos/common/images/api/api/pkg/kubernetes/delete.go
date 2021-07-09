@@ -32,14 +32,8 @@ func deleteDaemonset(name string) {
 }
 
 func Delete(command Command) {
-	if command.Name == "canary" {
-		_, err := loadDeployment()
-		if err != nil {
-			return
-		}
-
-		deleteDeployment(command.Name)
-	} else if command.Name == "canary-link" ||
+	if command.Name == "canary" ||
+		command.Name == "canary-link" ||
 		command.Name == "detector-link" ||
 		command.Name == "detector" ||
 		command.Name == "dga" ||

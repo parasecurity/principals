@@ -36,7 +36,9 @@ func getDeployment(name string, args []string, registry *string) appsv1.Deployme
 
 func getDaemonSet(name string, args []string, registry *string) appsv1.DaemonSet {
 	var daemonSet appsv1.DaemonSet
-	if name == "detector-link" {
+	if name == "canary" {
+		daemonSet = yamls.CreateCanaryDaem(args, registry)
+	} else if name == "detector-link" {
 		daemonSet = yamls.CreateDetectorLinkDaem(args, registry)
 	} else if name == "canary-link" {
 		daemonSet = yamls.CreateCanaryLinkDaem(args, registry)
@@ -83,14 +85,8 @@ func createDaemonSet(command Command, registry *string) {
 }
 
 func Create(command Command, registry *string) {
-	if command.Name == "canary" {
-		_, err := loadDeployment()
-		if err != nil {
-			return
-		}
-
-		createDeployment(command, registry)
-	} else if command.Name == "canary-link" ||
+	if command.Name == "canary" ||
+		command.Name == "canary-link" ||
 		command.Name == "detector-link" ||
 		command.Name == "detector" ||
 		command.Name == "dga" ||

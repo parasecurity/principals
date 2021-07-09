@@ -18,13 +18,19 @@ func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "canary-link",
+					"app":       "security",
+					"component": "canary-link",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"kubectl.kubernetes.io/default-container": "canary-link",
+						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
+					},
 					Labels: map[string]string{
-						"app": "canary-link",
+						"app":       "security",
+						"component": "canary-link",
 					},
 				},
 				Spec: apiv1.PodSpec{
@@ -42,7 +48,8 @@ func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 							Command: []string{
 								"/home/tsi/bin/canaryLink",
 							},
-							Args: args,
+							Args:            args,
+							ImagePullPolicy: apiv1.PullAlways,
 							VolumeMounts: []apiv1.VolumeMount{
 								{
 									Name:      "host-var-run-antrea",
@@ -50,7 +57,6 @@ func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 									SubPath:   "openvswitch",
 								},
 							},
-							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
 					Volumes: []apiv1.Volume{

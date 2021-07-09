@@ -19,7 +19,8 @@ func CreateSnortDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "snort",
+					"app":       "security",
+					"component": "snort",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
@@ -34,7 +35,8 @@ func CreateSnortDaem(args []string, registry *string) appsv1.DaemonSet {
 						}]`,
 					},
 					Labels: map[string]string{
-						"app": "snort",
+						"app":       "security",
+						"component": "snort",
 					},
 				},
 				Spec: apiv1.PodSpec{

@@ -18,17 +18,24 @@ func CreateDetectorLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "detector-link",
+					"app":       "security",
+					"component": "detector-link",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						"kubectl.kubernetes.io/default-container": "detector-link",
-						"k8s.v1.cni.cncf.io/networks":             "macvlan-host-local",
+						"k8s.v1.cni.cncf.io/networks": `[
+							{ "name": "macvlan-conf",
+							"ips": [ "10.1.1.203/24" ],
+							"mac": "c2:b0:57:49:47:f1",
+							"gateway": [ "10.1.1.1" ]
+							}]`,
 					},
 					Labels: map[string]string{
-						"app": "detector-link",
+						"app":       "security",
+						"component": "detector-link",
 					},
 				},
 				Spec: apiv1.PodSpec{
@@ -48,6 +55,12 @@ func CreateDetectorLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 							},
 							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
+							VolumeMounts: []apiv1.VolumeMount{
+								{
+									Name:      "tsi-data",
+									MountPath: "/home/data",
+								},
+							},
 						},
 					},
 					InitContainers: []apiv1.Container{
@@ -81,6 +94,14 @@ func CreateDetectorLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 								HostPath: &apiv1.HostPathVolumeSource{
 									Path: "/var/run/antrea",
 									Type: &HostPathDirectoryOrCreate,
+								},
+							},
+						},
+						{
+							Name: "tsi-data",
+							VolumeSource: apiv1.VolumeSource{
+								HostPath: &apiv1.HostPathVolumeSource{
+									Path: "/mnt/data/security_vol",
 								},
 							},
 						},

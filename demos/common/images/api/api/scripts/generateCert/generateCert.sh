@@ -40,9 +40,9 @@ prerequisites() {
     fi
 
     msg "Checking if internal directory exists"
-    if [ ! -d "../../internal/" ] 
+    if [ ! -d " ./api/internal/" ] 
     then
-        mkdir ../../internal/
+        mkdir ./api/internal/
     fi
 }
 
@@ -74,7 +74,7 @@ generate() {
     msg "Signing client certificate: client.crt"
     openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out client.crt
 
-    mv *.key *.csr *.crt ca.srl ../../internal/ 
+    mv *.key *.csr *.crt ca.srl ./api/internal/ 
 }
 
 prerequisites

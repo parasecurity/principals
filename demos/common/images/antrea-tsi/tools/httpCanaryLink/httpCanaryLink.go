@@ -16,14 +16,13 @@ import (
 
 var (
 	port         *string
-	api          *string
+	detectorIP   *string
 	threshold    *int
 	failures     *int
 	logPath      *string
 	detectorUp   bool = false
 	failureCount int
-	command      *string
-	primitive    *string
+	conn         net.Conn
 )
 
 type statistics struct {
@@ -38,14 +37,17 @@ func toMbps(bytes int) int {
 }
 
 func connectTCP() net.Conn {
-	addr := *api
-
 	// Connect to the tls server
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		log.Println("Failed to connect:", err.Error())
+	connection, err := net.Dial("tcp", *detectorIP)
+	for err != nil {
+		log.Println("Trying to connect to detector...")
+		connection, err = net.Dial("tcp", *detectorIP)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
 	}
-	return conn
+	return connection
 }
 
 func getStatistics(port string) statistics {
@@ -67,21 +69,27 @@ func getStatistics(port string) statistics {
 	return statistic
 }
 
-func createDetector() {
-	if detectorUp == true {
+func enableDetector() {
+	if detectorUp {
 		return
 	}
 
-	conn := connectTCP()
-	defer conn.Close()
-
-	command := "create " + *primitive + " -c=" + *command
-	_, err := conn.Write([]byte(command))
-	if err != nil {
+	msg := string(("all" + "\n"))
+	_, err := conn.Write([]byte(msg))
+	for err != nil {
+		// If connection closes we try again
 		log.Println(err)
+		log.Println("Reopening connection")
+		conn, err = net.Dial("tcp", *detectorIP)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		_, err = conn.Write([]byte(msg))
 	}
+
 	detectorUp = true
-	log.Println("Deploying detectors...")
+	log.Println("Enabled detectors...")
 }
 
 func timeGet(port string) {
@@ -99,7 +107,7 @@ func timeGet(port string) {
 			log.Println("Threshold passed (In/Out)", inMbps, outMbps)
 			failureCount++
 			if failureCount >= *failures {
-				createDetector()
+				enableDetector()
 				failureCount = 0
 			}
 		} else {
@@ -111,12 +119,10 @@ func timeGet(port string) {
 
 func init() {
 	port = flag.String("i", "antrea-gw0", "The port interface you want to monitor e.g. coredns--ec5e46")
-	api = flag.String("api", "10.244.0.9:8001", "The API server url e.g. 10.244.0.9:8001")
+	detectorIP = flag.String("d", "10.1.1.203:30000", "The API server url e.g. 10.1.1.202:30000")
 	threshold = flag.Int("t", 10, "The Mbps threshold")
 	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary-link.log", "The path to the log file")
-	command = flag.String("c", "block", "The command to execute when a malicious behaviour is detected e.g. block, tarpit..")
-	primitive = flag.String("p", "detector-link", "The primite to be deployed after the malicious behaviour")
 	flag.Parse()
 
 	// open log file
@@ -139,6 +145,9 @@ func init() {
 		log.Println("RECEIVED SIGNAL:", s)
 		os.Exit(1)
 	}()
+
+	// Connect to detector
+	conn = connectTCP()
 }
 
 func main() {

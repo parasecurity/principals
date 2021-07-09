@@ -60,8 +60,8 @@ func main() {
 	router.HandleFunc("/health/", healthCheck)
 
 	srv := http.Server{
-		ReadHeaderTimeout: time.Second * 5,
-		ReadTimeout:       time.Second * 10,
+		ReadHeaderTimeout: time.Second,
+		ReadTimeout:       time.Second,
 		Handler:           router,
 	}
 

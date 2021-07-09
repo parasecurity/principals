@@ -220,6 +220,7 @@ func execCommand(netData []byte, toBroadcaster chan []byte, broadcastEnabled boo
 	} else {
 		log.Println("command ", cmd)
 	}
+	log.Println("executed command ", string(netData))
 }
 
 func connectionReader(c net.Conn, toBroadcaster chan []byte, broadcastEnabled bool) {
@@ -238,8 +239,7 @@ func connectionReader(c net.Conn, toBroadcaster chan []byte, broadcastEnabled bo
 		}
 
 		log.Println("received command from ", c.RemoteAddr().String(), ": ", string(netData))
-		execCommand(netData, toBroadcaster, broadcastEnabled)
-		log.Println("executed command from ", c.RemoteAddr().String(), ": ", string(netData))
+		go execCommand(netData, toBroadcaster, broadcastEnabled)
 	}
 	// if a flow controller connection is closed we let the handler terminate
 }
