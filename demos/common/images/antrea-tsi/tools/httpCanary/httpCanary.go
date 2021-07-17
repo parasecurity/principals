@@ -81,7 +81,7 @@ func sendIP(ip string) {
 		log.Println(err)
 		log.Println("Reopening connection")
 		localaddr.Port = localaddr.Port + 1
-		conn, err = net.DialIP("tcp", &localaddr, &remoteaddr)
+		conn, err = net.DialTCP("tcp", &localaddr, &remoteaddr)
 		if err != nil {
 			log.Println(err)
 			continue
