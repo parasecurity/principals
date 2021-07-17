@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"flag"
 	"io/ioutil"
 	"log"
@@ -13,13 +14,19 @@ import (
 	"syscall"
 )
 
+type Command struct {
+	Action    string
+	Target    string
+	Arguments []string
+}
+
 var (
-	connect *string
-	ca      *string
-	crt     *string
-	key     *string
-	command *string
-	logPath *string
+	connect   *string
+	ca        *string
+	crt       *string
+	key       *string
+	arguments *string
+	logPath   *string
 )
 
 func init() {
@@ -27,7 +34,7 @@ func init() {
 	ca = flag.String("ca", "internal/ca.crt", "The file path to ca certificate e.g. ./ca.crt")
 	crt = flag.String("crt", "internal/client.crt", "The file path to crt certificate e.g. ./client.crt")
 	key = flag.String("key", "internal/client.key", "The file path to client key e.g. ./client.key")
-	command = flag.String("c", "start canary http://localhost:8080/health", "Provide the command you want to execute on the cluster e.g. start canary http://localhost:8080/health")
+	arguments = flag.String("arg", "", "The arguments to be passed along with the action in JSON format")
 	logPath = flag.String("lp", "client.log", "The path to the log file e.g. ./client.log")
 	flag.Parse()
 
@@ -77,6 +84,20 @@ func createClientConfig(ca, crt, key string) (*tls.Config, error) {
 	}, nil
 }
 
+/* Parse the action and the arguments, create a json from them
+*  and return it to the main program
+ */
+func parseCommand(arguments *string) Command {
+	var command Command
+
+	err := json.Unmarshal([]byte(*arguments), &command)
+	if err != nil {
+		log.Println(err)
+	}
+
+	return command
+}
+
 func printConnState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State <<<<<<<<<<<<<<<<")
 	state := conn.ConnectionState()
@@ -97,11 +118,17 @@ func printConnState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State End <<<<<<<<<<<<<<<<")
 }
 
-func handleConnection(c net.Conn, command *string) {
+func handleConnection(c net.Conn, command Command) {
 	// Send command to server
-	_, err := c.Write([]byte(*command))
+	msg, err := json.Marshal(command)
 	if err != nil {
 		log.Print(err)
+		return
+	}
+	_, err = c.Write(msg)
+	if err != nil {
+		log.Print(err)
+		return
 	}
 
 	reader := bufio.NewReader(c)
@@ -130,6 +157,10 @@ func main() {
 	}
 	defer conn.Close()
 	log.Printf("Connect to %s succeed", addr)
+
 	printConnState(conn)
+	// Parse command given by the user
+	command := parseCommand(arguments)
+
 	handleConnection(conn, command)
 }

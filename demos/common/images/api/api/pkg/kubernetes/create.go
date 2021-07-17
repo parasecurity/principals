@@ -63,7 +63,7 @@ func getDaemonSet(name string, args []string, registry *string) appsv1.DaemonSet
 }
 
 func createDeployment(command Command, registry *string) {
-	deployment := getDeployment(command.Name, command.Arguments, registry)
+	deployment := getDeployment(command.Target, command.Arguments, registry)
 	log.Println("Creating deployment..")
 	result, err := DeploymentsClient.Create(context.TODO(), &deployment, metav1.CreateOptions{})
 	if err != nil {
@@ -74,7 +74,7 @@ func createDeployment(command Command, registry *string) {
 }
 
 func createDaemonSet(command Command, registry *string) {
-	daemonset := getDaemonSet(command.Name, command.Arguments, registry)
+	daemonset := getDaemonSet(command.Target, command.Arguments, registry)
 	log.Println("Creating DaemonSet..")
 	result, err := DaemonSetClient.Create(context.TODO(), &daemonset, metav1.CreateOptions{})
 	if err != nil {
@@ -85,14 +85,14 @@ func createDaemonSet(command Command, registry *string) {
 }
 
 func Create(command Command, registry *string) {
-	if command.Name == "canary" ||
-		command.Name == "canary-link" ||
-		command.Name == "detector-link" ||
-		command.Name == "detector" ||
-		command.Name == "dga" ||
-		command.Name == "analyser" ||
-		command.Name == "snort" ||
-		command.Name == "honeypot" {
+	if command.Target == "canary" ||
+		command.Target == "canary-link" ||
+		command.Target == "detector-link" ||
+		command.Target == "detector" ||
+		command.Target == "dga" ||
+		command.Target == "analyser" ||
+		command.Target == "snort" ||
+		command.Target == "honeypot" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

@@ -49,6 +49,13 @@ func CreateCanaryDaem(args []string, registry *string) appsv1.DaemonSet {
 							},
 							Args:            args,
 							ImagePullPolicy: apiv1.PullAlways,
+							SecurityContext: &apiv1.SecurityContext{
+								Capabilities: &apiv1.Capabilities{
+									Add: []apiv1.Capability{
+										"NET_ADMIN",
+									},
+								},
+							},
 						},
 					},
 				},

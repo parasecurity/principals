@@ -94,7 +94,7 @@ func handleConnection(c net.Conn, registry *string) {
 	// Execute the given command
 	dataString := string(netData[:size])
 	log.Println("Command received:", dataString)
-	command := kubernetes.ProcessInput(dataString)
+	command := kubernetes.ProcessInput(netData[:size])
 	if command.Action != "Error" {
 		result = kubernetes.Execute(command, registry)
 	} else {

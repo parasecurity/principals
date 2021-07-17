@@ -12,11 +12,21 @@ When all prerequisites are satisfied, you can start the demo with:
 
 For the _DDoS with application level canary_ demo, pass the following arguments:
 ```sh
-create canary -api=<API ip>:8001 -c=tarpit
+# This command creates the canary
+./client -arg "{\"action\":\"create\", \"target\": \"canary\", \"arguments\": []}"
+
+# This command creates the detector
+./client -arg "{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=tarpit\"]}"
+
 ```
 
 For the _DDoS with link level canary demo_, pass the following arguments:
 ```sh
-create canary-link -api=<API ip>:8001 -c=tarpit
+# This command creates the canary-link
+./client -arg "{\"action\":\"create\", \"target\": \"canary-link\", \"arguments\": []}"
+
+# This command creates the detector-link
+./client -arg "{\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=tarpit\"]}"
+
 ```
 

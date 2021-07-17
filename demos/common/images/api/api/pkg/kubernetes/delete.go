@@ -32,20 +32,20 @@ func deleteDaemonset(name string) {
 }
 
 func Delete(command Command) {
-	if command.Name == "canary" ||
-		command.Name == "canary-link" ||
-		command.Name == "detector-link" ||
-		command.Name == "detector" ||
-		command.Name == "dga" ||
-		command.Name == "analyser" ||
-		command.Name == "snort" ||
-		command.Name == "honeypot" {
+	if command.Target == "canary" ||
+		command.Target == "canary-link" ||
+		command.Target == "detector-link" ||
+		command.Target == "detector" ||
+		command.Target == "dga" ||
+		command.Target == "analyser" ||
+		command.Target == "snort" ||
+		command.Target == "honeypot" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return
 		}
 
-		deleteDaemonset(command.Name)
+		deleteDaemonset(command.Target)
 	}
 
 }
