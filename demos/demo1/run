@@ -49,25 +49,34 @@ do
     "DDoS with application level canary")
       msg "Starting DDoS Demo"
      	 
-      read -p "Enter deployment command: " commands
+      read -p "Enter canary deployment command: " canaryCommands
 
+      read -p "Enter detector deployment command: " detectorCommands
+      
+      msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
+      kubectl exec -it "$API" -n security -- ./client -c "$canaryCommands"
+      
+      msg "Deploying detector with mirroring but with BPF filter disabled" 
+      kubectl exec -it "$API" -n security -- ./client -c "$detectorCommands"
+      
       msg "Sending normal requests to http://kronos.mhl.tuc.gr:30001/ from alice" 
       kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ &"
 
-      msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
-      kubectl exec -it "$API" -n security -- ./client -c "$commands"
+      waitUntilAllPodsRun
+      
+      CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
+      CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
 
-      CANARY=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}')
-
-      msg "Please open a new terminal and execute the following command" 
-      echo "kubectl exec -it $CANARY -n security -- tail -f canary.log"
+      msg "Please open two new terminals and execute the following commands" 
+      echo "kubectl exec -it $CANARY_1 -n security -- tail -f canary.log"
+      echo "kubectl exec -it $CANARY_2 -n security -- tail -f canary.log"
       read -p "Press enter to continue"
 
       msg "Creating DDoS traffic from malicious pods"
-      kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
-      kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
-      kubectl exec "$MALICE_POD_3" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
-      kubectl exec "$MALICE_POD_4" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
+      kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
+      kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
+      kubectl exec "$MALICE_POD_3" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
+      kubectl exec "$MALICE_POD_4" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
       kubectl exec "$MALICE_POD_5" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
       kubectl exec "$MALICE_POD_6" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
       sleep 2
@@ -76,23 +85,36 @@ do
       read -p "Press enter to continue"
      
       msg "Removing canary deployment" 
-      kubectl exec -it "$API" -n security -- ./client -c "delete canary"
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"canary\", \"arguments\": []}" 
       
       msg "Removing detector deployment" 
-      kubectl exec -it "$API" -n security -- ./client -c "delete detector"
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector\", \"arguments\": []}"
+
+      msg "Aplied ovs rules"
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0 | true"
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0 | true"
+
+      msg "Cleaning cluster"
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
 
       echo -e "\n"
       ;;
     "DDoS with link level canary")
       msg "Starting DDoS Link Demo"
       
-      read -p "Enter deployment command: " commands
+      read -p "Enter canary deployment command: " canaryCommands
+
+      read -p "Enter detector deployment command: " detectorCommands
+      
+      msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
+      kubectl exec -it "$API" -n security -- ./client -c "$canaryCommands"
+      
+      msg "Deploying detector with mirroring but with BPF filter disabled" 
+      kubectl exec -it "$API" -n security -- ./client -c "$detectorCommands"
 
       msg "Sending normal requests to http://kronos.mhl.tuc.gr:30002/ from alice" 
       kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -s 10 &"
-
-      msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
-      kubectl exec -it "$API" -n security -- ./client -c "$commands"
 
       CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
       CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
@@ -105,7 +127,7 @@ do
       msg "Creating DDoS traffic from malicious pods"
       kubectl exec "$MALICE_POD_7" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
       kubectl exec "$MALICE_POD_8" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
-      kubectl exec "$MALICE_POD_9" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
+      kubectl exec "$MALICE_POD_9" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0  -t 0 &"
       kubectl exec "$MALICE_POD_10" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
       kubectl exec "$MALICE_POD_11" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
       kubectl exec "$MALICE_POD_12" -- bash -c "nohup /home/httpClient -conn=http://kronos.mhl.tuc.gr:30002/ -c 100 -s 0 -t 0 &"
@@ -115,10 +137,18 @@ do
       read -p "Press enter to continue"
      
       msg "Removing canary link deployment" 
-      kubectl exec -it "$API" -n security -- ./client -c "delete canary-link"
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"canary-link\", \"arguments\": []}"
       
       msg "Removing detector link deployment" 
-      kubectl exec -it "$API" -n security -- ./client -c "delete detector-link"
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
+
+      msg "Aplied ovs rules"
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0 | true"
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0 | true"
+
+      msg "Cleaning cluster"
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true"  &> /dev/null || true
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true"  &> /dev/null || true
       
       echo -e "\n"
       ;;
@@ -127,8 +157,8 @@ do
       msg "Cleaning cluster"
 
       msg "Removing applied rules from nodes"
-      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
-      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true"
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true"
       
       msg "Removing deployed pods"
       kubectl delete -f yamls/security
