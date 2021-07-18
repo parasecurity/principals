@@ -16,7 +16,7 @@ For the _DDoS with application level canary_ demo, pass the following arguments:
 {\"action\":\"create\", \"target\": \"canary\", \"arguments\": []}
 
 # This command creates the detector
-{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=tarpit\"]}
+{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}
 
 ```
 
@@ -26,7 +26,7 @@ For the _DDoS with link level canary demo_, pass the following arguments:
 {\"action\":\"create\", \"target\": \"canary-link\", \"arguments\": []}
 
 # This command creates the detector-link
-{\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=tarpit\"]}
+{\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=block\"]}
 
 ```
 
