@@ -21,7 +21,6 @@ var (
 	logPath      *string
 	failureCount int
 	ips          []net.IP
-	conn         net.Conn
 	localaddr    net.TCPAddr
 	remoteaddr   net.TCPAddr
 )
@@ -49,7 +48,7 @@ func getInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 	return ipv4Addr.String(), nil
 }
 
-func connectTCP() net.Conn {
+func connectTCP() {
 	// Get net1 interface ip
 	ip, _ := getInterfaceIpv4Addr("net1")
 
@@ -58,24 +57,23 @@ func connectTCP() net.Conn {
 	remoteaddr.IP = net.ParseIP(*detectorIP)
 	remoteaddr.Port = *detectorPort
 
-	// Connect to the detector
-	connection, err := net.DialTCP("tcp", &localaddr, &remoteaddr)
+}
+
+func sendIP(ip string) {
+	msg := (ip + string('\n'))
+
+	conn, err := net.DialTCP("tcp", &localaddr, &remoteaddr)
 	for err != nil {
 		log.Println("Trying to connect to detector...")
 		localaddr.Port = localaddr.Port + 1
-		connection, err = net.DialTCP("tcp", &localaddr, &remoteaddr)
+		conn, err = net.DialTCP("tcp", &localaddr, &remoteaddr)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 	}
-	return connection
-}
+	_, err = conn.Write([]byte(msg))
 
-func sendIP(ip string) {
-	msg := string((ip + "\n"))
-
-	_, err := conn.Write([]byte(msg))
 	for err != nil {
 		// If connection closes we try again
 		log.Println(err)
@@ -92,7 +90,7 @@ func sendIP(ip string) {
 
 func enableDetector(ip string) {
 	sendIP(ip)
-	log.Println("Enabled detectors...")
+	log.Println("Enabled detectors ...")
 }
 
 func timeGet(urlC string) {
@@ -172,7 +170,7 @@ func init() {
 	}()
 
 	// Connect to detector
-	conn = connectTCP()
+	connectTCP()
 
 	log.Println("Monitor URL: ", *server)
 	u, err := url.Parse(*server)

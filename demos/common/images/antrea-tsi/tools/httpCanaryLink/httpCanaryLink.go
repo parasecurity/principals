@@ -23,7 +23,6 @@ var (
 	logPath      *string
 	detectorUp   bool = false
 	failureCount int
-	conn         net.Conn
 	localaddr    net.TCPAddr
 	remoteaddr   net.TCPAddr
 )
@@ -62,7 +61,7 @@ func getInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
 	return ipv4Addr.String(), nil
 }
 
-func connectTCP() net.Conn {
+func connectTCP() {
 	// Get net1 interface ip
 	ip, _ := getInterfaceIpv4Addr("net1")
 
@@ -70,19 +69,6 @@ func connectTCP() net.Conn {
 	localaddr.Port = 6000
 	remoteaddr.IP = net.ParseIP(*detectorIP)
 	remoteaddr.Port = *detectorPort
-
-	// Connect to the tls server
-	connection, err := net.DialTCP("tcp", &localaddr, &remoteaddr)
-	for err != nil {
-		log.Println("Trying to connect to detector...")
-		localaddr.Port = localaddr.Port + 1
-		connection, err = net.DialTCP("tcp", &localaddr, &remoteaddr)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-	}
-	return connection
 }
 
 func getStatistics(port string) statistics {
@@ -105,12 +91,21 @@ func getStatistics(port string) statistics {
 }
 
 func enableDetector() {
-	if detectorUp {
-		return
-	}
+	msg := ("all" + string('\n'))
 
-	msg := string(("all" + "\n"))
-	_, err := conn.Write([]byte(msg))
+	// Connect to the tcp server
+	conn, err := net.DialTCP("tcp", &localaddr, &remoteaddr)
+	for err != nil {
+		log.Println("Trying to connect to detector...")
+		localaddr.Port = localaddr.Port + 1
+		conn, err = net.DialTCP("tcp", &localaddr, &remoteaddr)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+	}
+	_, err = conn.Write([]byte(msg))
+
 	for err != nil {
 		// If connection closes we try again
 		log.Println(err)
@@ -184,7 +179,7 @@ func init() {
 	}()
 
 	// Connect to detector
-	conn = connectTCP()
+	connectTCP()
 }
 
 func main() {

@@ -73,6 +73,16 @@ func init() {
 	}()
 }
 
+func arrayContains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
 func deviceExists(name string) bool {
 	devices, err := pcap.FindAllDevs()
 
@@ -216,16 +226,16 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 	// Initialy BPF filter to track the `lo` network
 	var bpffilter string = "net 127.0.0.0"
 	if err := handle.SetBPFFilter(bpffilter); err != nil {
-		log.Fatal("BPF filter error:", err)
+		log.Println("BPF filter error:", err)
 	}
 	log.Println("Initial bpf: " + bpffilter)
 
 	monitorAll = false
 	// whenever a flow controller connects we open a new reader routine
 
-	listener, err := net.Listen("tcp", *args.listen)
+	listener, err := net.Listen("tcp4", *args.listen)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer listener.Close()
 
@@ -237,26 +247,22 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 		}
 		reader := bufio.NewReader(c)
 		for {
-			netData, _, err := reader.ReadLine()
+			netData, err := reader.ReadString('\n')
 			if err != nil {
 				log.Println(err)
 				break
 			}
 
-			netIP := string(netData)
+			netIP := strings.TrimSpace(string(netData))
 			log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
-			ip := net.ParseIP(netIP)
-
-			if ip == nil && netIP != "all" {
-				log.Fatal("monitor ip has wrong format: ", netIP)
-			}
 
 			if netIP == "all" {
 				monitorAll = true
 			} else {
-				//TODO check if IP already in monitored list
-				monitorAll = false
-				monitoredIPs = append(monitoredIPs, netIP)
+				if !arrayContains(monitoredIPs, netIP) {
+					monitorAll = false
+					monitoredIPs = append(monitoredIPs, netIP)
+				}
 			}
 			bpffilter = ""
 			if !monitorAll {
@@ -267,7 +273,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 					// monitor array of ips
 					for n, ip := range monitoredIPs {
 						if n == 0 {
-							bpffilter = "(tcp and host " + ip + " )"
+							bpffilter = "(tcp and dst host  " + ip + " )"
 						} else {
 							bpffilter = bpffilter + " or (tcp and host " + ip + " )"
 						}
@@ -281,7 +287,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 			log.Println("Updating bpf: " + bpffilter)
 
 			if err = handle.SetBPFFilter(bpffilter); err != nil {
-				log.Fatal("BPF filter error:", err)
+				log.Println("BPF filter error:", err)
 			}
 		}
 
@@ -330,17 +336,17 @@ func main() {
 
 	if *args.fname != "" {
 		if handle, err = pcap.OpenOffline(*args.fname); err != nil {
-			log.Fatal("PCAP OpenOffline error:", err)
+			log.Println("PCAP OpenOffline error:", err)
 		}
 	} else {
 		if !deviceExists(*args.iface) {
-			log.Fatal("Unable to open device ", *args.iface)
+			log.Println("Unable to open device ", *args.iface)
 		}
 
 		handle, err = pcap.OpenLive(*args.iface, int32(*args.snaplen), true, pcap.BlockForever)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		defer handle.Close()
 	}

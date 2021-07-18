@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"strings"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -70,6 +71,16 @@ func init() {
 		log.Printf("RECEIVED SIGNAL: %s", s)
 		os.Exit(1)
 	}()
+}
+
+func arrayContains(s []string, str string) bool {
+        for _, v := range s {
+                if v == str {
+                        return true
+                }
+        }
+
+        return false
 }
 
 func deviceExists(name string) bool {
@@ -216,7 +227,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 	monitorAll = false
 	// whenever a flow controller connects we open a new reader routine
 
-	listener, err := net.Listen("tcp", *args.listen)
+	listener, err := net.Listen("tcp4", *args.listen)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -230,26 +241,22 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 		}
 		reader := bufio.NewReader(c)
 		for {
-			netData, _, err := reader.ReadLine()
+			netData, err := reader.ReadString('\n')
 			if err != nil {
 				log.Println(err)
 				break
 			}
 
-			netIP := string(netData)
+			netIP := strings.TrimSpace(string(netData))
 			log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
-			ip := net.ParseIP(netIP)
-
-			if ip == nil && netIP != "all" {
-				log.Fatal("monitor ip has wrong format: ", netIP)
-			}
 
 			if netIP == "all" {
 				monitorAll = true
 			} else {
-				//TODO check if IP already in monitored list
-				monitorAll = false
-				monitoredIPs = append(monitoredIPs, netIP)
+				if !arrayContains(monitoredIPs, netIP) {
+                                        monitorAll = false
+                                        monitoredIPs = append(monitoredIPs, netIP)
+                                }
 			}
 			bpffilter = ""
 			if !monitorAll {
@@ -274,7 +281,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 			log.Println("Updating bpf: " + bpffilter)
 
 			if err = handle.SetBPFFilter(bpffilter); err != nil {
-				log.Fatal("BPF filter error:", err)
+				log.Println("BPF filter error:", err)
 			}
 		}
 

@@ -39,7 +39,6 @@ spec:
   config: '{
     "cniVersion": "0.3.1",
     "type": "macvlan",
-    "capabilities": { "ips": true },
     "master": "enp81s0f0",
     "mode": "bridge",
     "ipam": {
