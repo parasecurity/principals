@@ -9,4 +9,4 @@ $(BINARY): go.mod $(SRC)
 	go build -o $(BUILD)/$(BINARY)
 
 clean:
-	rm -f $(BUILD)/$(BINARY)
+	rm -rf $(BUILD)/$(BINARY)
