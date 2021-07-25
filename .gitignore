@@ -2,4 +2,6 @@
 *.csr
 *.key
 *.log
+*.srl
 bin/
+*.swp
