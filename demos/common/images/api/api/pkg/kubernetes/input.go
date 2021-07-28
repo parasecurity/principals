@@ -18,7 +18,7 @@ func ProcessInput(input []byte) Command {
 	err := json.Unmarshal(input, &commandTable)
 
 	if err != nil {
-		log.Println("Error on Json parce:", err)
+		log.Println("Error on json parce:", err)
 	}
 
 	log.Println(commandTable)

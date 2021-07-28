@@ -51,8 +51,8 @@ func toByte(number *int64) *int64 {
  */
 func init() {
 	iface = flag.String("i", "eth0", "Interface to read packets from")
-	//code = flag.String("code", "while(true) {var x = 1}", "The code that you want to execute in the pod")
-	code = flag.String("code", `var counter =0;var client = net.createConnection("/tmp/echo.sock");client.on("data", (data)=>{counter+=JSON.stringify(data).length});`, "The code that you want to execute in the pod")
+	code = flag.String("code", "while(true) {var x = 1}", "The code that you want to execute in the pod")
+	//code = flag.String("code", `var counter =0;var client = net.createConnection("/tmp/echo.sock");client.on("data", (data)=>{counter+=JSON.stringify(data).length;console.log(counter)});`, "The code that you want to execute in the pod")
 	cpu_quota_us = flag.Int64("cpu_quota", 50000, "Add cpu contraints to the program you want to execute")
 	cpu_period_us = flag.Uint64("cpu_period", 100000, "Add cpu contraints to the program you want to execute")
 	mem = flag.Int64("mem", 64, "Add RAM constrains in the program you want to run in MBs")
@@ -101,7 +101,7 @@ func deviceExists(name string) bool {
 func startCmd() {
 	cmd := exec.Command("/usr/bin/nodejs", "-e", *code)
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
 	// start app
 	if err = cmd.Start(); err != nil {
 		log.Println("Error on executing the user command", err)
