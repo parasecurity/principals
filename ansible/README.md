@@ -59,6 +59,7 @@ sudo systemctl restart docker.socket
 ## Add autocompletion on kubectl
 Just run on the node you want to enable kubectl autocompletion
 ```sh
+sudo apt install bash-completion
 echo 'source <(kubectl completion bash)' >>~/.bashrc
 kubectl completion bash >/etc/bash_completion.d/kubectl
 ```
