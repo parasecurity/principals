@@ -20,6 +20,7 @@ var (
 	port    uint
 	clients int
 	logPath string
+	localIP net.IP
 )
 
 func isRoot() {
@@ -148,13 +149,26 @@ func (tcp *TCPIP) setTarget(ipAddr string, port uint16) {
 	tcp.DstPort = port
 }
 
-func (tcp *TCPIP) genIP() {
-	firstOct := tcp.randByte()
-	for tcp.invalidFirstOctet(firstOct) {
-		firstOct = tcp.randByte()
+func setLocalIP() {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Println(err)
 	}
 
-	tcp.SRC = []byte{firstOct, tcp.randByte(), tcp.randByte(), tcp.randByte()}
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				localIP = net.ParseIP(ipnet.IP.String())
+			}
+		}
+	}
+}
+
+func (tcp *TCPIP) genIP() {
+
+	tcp.SRC = localIP.To4()
+	tcp.SRC[3] = tcp.randByte()
+
 	tcp.SrcPort = (uint16)(((uint16)(tcp.randByte()) << 8) | (uint16)(tcp.randByte()))
 	for tcp.SrcPort <= 0x03FF {
 		tcp.SrcPort = (uint16)(((uint16)(tcp.randByte()) << 8) | (uint16)(tcp.randByte()))
@@ -172,6 +186,7 @@ func checkInputArgs() {
 		log.Println("invalid port: %d", port)
 	}
 }
+
 func init() {
 	/* Check root accesses
 	*
@@ -192,6 +207,11 @@ func init() {
 	*
 	 */
 	setupSignals()
+
+	/* Set local IP variable
+	*
+	 */
+	setLocalIP()
 }
 
 func main() {
