@@ -45,6 +45,12 @@ Edit the line:
 ```
 Log-out and log in again to test the passwordless sudo
 
+## Start local registry on master node
+On master node run:
+```sh
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+```
+
 ## Enable insecure repository access
 On all nodes on the cluster
 ```sh
