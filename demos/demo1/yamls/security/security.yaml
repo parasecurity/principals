@@ -74,7 +74,7 @@ spec:
     spec:
       containers:
       - name: flow-broadcaster
-        image: 130.207.224.36:5000/antrea-tsi:v1.0.0
+        image: 192.168.49.1:5000/antrea-tsi:v1.0.0
         command:
           - /home/tsi/bin/broadcaster
         args:
@@ -139,7 +139,7 @@ spec:
     spec:
       containers:
       - name: flow-server
-        image: 130.207.224.36:5000/antrea-tsi:v1.0.0
+        image: 192.168.49.1:5000/antrea-tsi:v1.0.0
         command: ['bash', '-c', "/home/tsi/bin/server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c 10.1.1.201:30002 -s $(ip a | grep inet | head -2 | tail -1 | awk '{print $2}')"]
         env:
         - name: IP
@@ -202,7 +202,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         name: api
-        image: 130.207.224.36:5000/tsi-api:v1.0.0
+        image: 192.168.49.1:5000/tsi-api:v1.0.0
         imagePullPolicy: Always 
         volumeMounts:
           - mountPath: /home/.kube/
@@ -211,7 +211,7 @@ spec:
           - ./server
         args:
           - -ll=$(IP):8001
-          - -r=130.207.224.36
+          - -r=192.168.49.1
         ports:
         - containerPort: 8000
         - containerPort: 8001
@@ -219,7 +219,7 @@ spec:
         dedicated: master
       volumes:
       - hostPath:
-          path: /home/gntousakis/.kube/
+          path: /home/vagrant/.kube/
           type: DirectoryOrCreate
         name: kubeconfig
 ---
