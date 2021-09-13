@@ -1,4 +1,4 @@
-BUILD ?= $(PWD)/bin
+BUILD ?= $(CURDIR)/bin
 IMAGE ?= antrea-tsi
 VERSION ?= v1.0.0
 REMOTE_REGISTRY ?= localhost:5000
