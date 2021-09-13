@@ -39,7 +39,7 @@ minikube start \
 msg "Adding Antrea CNI"
 
 kubectl apply \
-    -f https://github.com/vmware-tanzu/antrea/releases/download/v0.12.0/antrea.yml \
+    -f demos/common/images/antrea-tsi.yml \
     > /dev/null
 
 waitUntilAllPodsRun
@@ -48,11 +48,8 @@ waitUntilAllPodsRun
 readonly ANTREA_AGENT=$(kubectl get -A po | grep "antrea-agent" | awk '{print $2}')
 readonly ANTREA_POD="kubectl -n kube-system exec -it $ANTREA_AGENT -c antrea-agent -- "
 
-msg "Adding some demo pods"
-kubectl apply -f ./utils/alices.yaml > /dev/null
-
-waitUntilAllPodsRun
-
 echo -e "\n\n"
+
+kubectl label nodes minikube dedicated=master
 
 msg "You should have a working kubernetes cluster running ovs!"
