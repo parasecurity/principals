@@ -20,7 +20,7 @@
 - name: Copy admin.conf to user's kube conf
   copy:
     src: /etc/kubernetes/admin.conf
-    dest: /home/gntousakis/.kube/config
+    dest: /home/vagrant/.kube/config
     remote_src: yes
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
