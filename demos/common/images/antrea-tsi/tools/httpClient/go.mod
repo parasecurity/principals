@@ -1,3 +1,3 @@
-module client
+module httpClient
 
 go 1.13
