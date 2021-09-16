@@ -31,10 +31,26 @@
       - containerd.io
     state: present
 
+- name: Add user "{{ ansible_user }}" to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Configure Docker
+  copy:
+    dest: "/etc/docker/daemon.json"
+    content: |
+      {
+        "exec-opts": ["native.cgroupdriver=systemd"],
+        "insecure-registries": ["{{ registry_ip }}"]
+      }
+
 - name: Start Docker
   service:  
     name: docker 
-    state: started  
+    daemon_reload: yes
+    state: restarted  
 
 - name: Hold docker version
   when: ansible_os_family == "Debian"
