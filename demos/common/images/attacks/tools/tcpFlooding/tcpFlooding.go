@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 var (
@@ -56,10 +57,19 @@ func generateServerAddress() {
 	server = ip + ":" + port
 }
 
-func sendBuffer(conn net.Conn, buf []byte, wg *sync.WaitGroup) {
+func sendBuffer(conn net.Conn, buf []byte, wg *sync.WaitGroup, numbClient int) {
 	defer wg.Done()
+	start := time.Now()
+	sBuff := 0
 	for {
 		conn.Write(buf)
+		sBuff += len(buf)
+		t := time.Now()
+		if t.Sub(start) > time.Second {
+			log.Println(numbClient, sBuff)
+			sBuff = 0
+			start = time.Now()
+		}
 	}
 }
 
@@ -101,7 +111,7 @@ func main() {
 	 */
 	for c := 0; c < clients; c++ {
 		wg.Add(1)
-		go sendBuffer(conn, buf, &wg)
+		go sendBuffer(conn, buf, &wg, c)
 	}
 
 	wg.Wait()

