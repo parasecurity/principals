@@ -4,4 +4,5 @@
 *.log
 *.srl
 bin/
-*.swp
+*.swptags
+tags
