@@ -4,6 +4,7 @@ import (
 	"os"
 	"io"
 	"fmt"
+	"sync"
 	"encoding/binary"
 	"os/signal"
 	"syscall"
@@ -14,18 +15,22 @@ import (
 
 var (
 	foo *string
+	central_logs *os.File
+	mx sync.Mutex
 )
 
 func init() {
 
 	// Open log file
-	logFile, err := os.OpenFile("metrics.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	temp, err := os.OpenFile("logs.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	central_logs = temp
+	logFile, err := os.OpenFile("local.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
+	// log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
 	// Setup signal catching
@@ -61,7 +66,9 @@ func handleConnection(c net.Conn){
 				log.Println(err)
 			}
 		}
-		log.Print(str)
+		mx.Lock()
+		central_logs.WriteString(str)
+		mx.Unlock()
 	}
 }
 

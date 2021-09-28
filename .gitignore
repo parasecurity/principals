@@ -6,3 +6,4 @@
 bin/
 *.swptags
 tags
+*results*.txt

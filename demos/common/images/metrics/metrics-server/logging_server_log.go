@@ -10,23 +10,50 @@ import (
 	"net"
 	"bufio"
 	"log"
+	"sync"
 )
 
 var (
-	foo *string
+	logger *server_logger
 )
+
+type server_logger struct {
+	m sync.Mutex
+	file *os.File
+}
+
+func init_server_logger(fname string) (*server_logger) {
+	f, err := os.OpenFile(fname, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0664)
+	if err != nil {
+		print("error opening logs' file")
+		return nil
+	}
+	sl := new(server_logger)
+	sl.file = f
+	return sl
+}
+
+func (sl *server_logger) Write(p []byte) (n int, err error) {
+	sl.m.Lock()
+	n, err = sl.file.Write(p)
+	sl.m.Unlock()
+	return n, err
+}
 
 func init() {
 
 	// Open log file
-	logFile, err := os.OpenFile("metrics.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	// logFile, err := os.OpenFile("logs", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
+	logger = init_server_logger("logs.log")
 
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
-	log.SetOutput(logFile)
+	log.SetOutput(logger)
+	log.SetPrefix("logging server: ")
+
 
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
@@ -49,6 +76,7 @@ func handleConnection(c net.Conn){
 
 	reader := bufio.NewReader(c)
 	log.Printf("Serving %s", c.RemoteAddr().String())
+	cli_log := log.New(log.Writer(), c.RemoteAddr().String()+": ", 0)
 
 	for {
 
@@ -61,7 +89,7 @@ func handleConnection(c net.Conn){
 				log.Println(err)
 			}
 		}
-		log.Print(str)
+		cli_log.Print(str)
 	}
 }
 

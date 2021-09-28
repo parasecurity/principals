@@ -19,13 +19,13 @@ var (
 func init() {
 
 	// Open log file
-	logFile, err := os.OpenFile("metrics.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile("logs", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
+	// log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
 	// Setup signal catching
