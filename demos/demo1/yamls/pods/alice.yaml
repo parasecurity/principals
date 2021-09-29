@@ -6,7 +6,7 @@ metadata:
 spec:
   containers:
     - name: alice
-      image: 192.168.49.1:5000/antrea-tsi:v1.0.1
+      image: localhost:5000/antrea-tsi:v1.0.1
       command:
         - sleep
         - infinity
