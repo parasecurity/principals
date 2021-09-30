@@ -1,6 +1,6 @@
 BUILD ?= $(CURDIR)/bin
 IMAGE ?= antrea-tsi
-VERSION ?= v1.0.2
+VERSION ?= v1.0.0
 REMOTE_REGISTRY ?= localhost:5000
 
 TOOLS := $(wildcard ./tools/*)

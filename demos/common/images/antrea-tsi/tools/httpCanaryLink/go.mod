@@ -1,4 +1,4 @@
-module httpCanaryLink
+module canaryLink
 
 go 1.13
 

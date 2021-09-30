@@ -1,3 +1,3 @@
-module httpCanary
+module canary
 
 go 1.13
