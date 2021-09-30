@@ -2,7 +2,7 @@
 ansible_user: vagrant 
 
 # Docker registry IP
-registry_ip: "192.168.49.1:5000"
+registry_ip: "10.8.8.2:5000"
 
 # Networks for kubernetes deployment
 pod_network_cidr: "10.8.0.0/16"
