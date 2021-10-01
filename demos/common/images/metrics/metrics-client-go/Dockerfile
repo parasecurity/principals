@@ -1,5 +1,5 @@
 FROM golang
 
 WORKDIR "/home"
-COPY test.go .
+COPY cli_std.go .
 RUN go build test.go 

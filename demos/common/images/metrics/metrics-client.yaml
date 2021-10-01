@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   labels:
     app: security
@@ -23,48 +23,8 @@ spec:
         - command:
             - sleep
             - infinity
-          image: 192.168.49.1:5000/metrics-client-go:common
+          image: 10.8.8.2:5000/metrics-client-go:common
           imagePullPolicy: IfNotPresent
-          name: metrics-server
-          resources:
-            requests:
-              cpu: 200m
-      nodeSelector:
-        kubernetes.io/os: linux
-  updateStrategy:
-    type: RollingUpdate
----
-apiVersion: apps/v1
-kind: DaemonSet
-metadata:
-  labels:
-    app: security
-    component: metrics-client-py
-  name: metrics-client-py
-  namespace: security
-spec:
-  selector:
-    matchLabels:
-      app: security
-      component: metrics-client-py
-  template:
-    metadata:
-      annotations:
-        kubectl.kubernetes.io/default-container: metrics-client-py
-      labels:
-        app: security
-        component: metrics-client-py
-    spec:
-      containers:
-        - command:
-            - sleep
-            - infinity
-          image: 192.168.49.1:5000/metrics-client-py:common
-          imagePullPolicy: IfNotPresent
-          name: metrics-server
-          resources:
-            requests:
-              cpu: 200m
       nodeSelector:
         kubernetes.io/os: linux
   updateStrategy:
