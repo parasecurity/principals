@@ -25,6 +25,7 @@ spec:
             - infinity
           image: 10.8.8.2:5000/metrics-client-go:common
           imagePullPolicy: IfNotPresent
+          name: metrics-client-go
       nodeSelector:
         kubernetes.io/os: linux
   updateStrategy:
