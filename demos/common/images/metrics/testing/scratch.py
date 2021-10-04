@@ -133,8 +133,8 @@ def analyze_v2(result_file, log_file_name):
     # print("formated: "+str(s2/c2))
     # print("not formated: "+str(s3/c3))
     print("================ Client logging delay =================")
-    print("formated: microseconds"+str((s4/c4)/1000))
-    print("not formated: microseconds"+str((s5/c5)/1000))
+    print("formated: "+str((s4/c4)/1000)+" microseconds")
+    print("not formated: "+str((s5/c5)/1000)+" microseconds")
     print("corrupted log entries: "+str(c6))
     return ((s4/c4)/1000), ((s5/c5)/1000), c6
 
@@ -165,8 +165,8 @@ if __name__ == "__main__":
         os.system("echo > {}".format(args.logfile))
         os.system("go run {} -l {}".format(args.client, args.workload))
         time.sleep(0.1)
-        fm, nfm, cor = analyze_v1(args.output, args.logfile)
-        # fm, nfm, cor = analyze_v2(args.output, args.logfile)
+        # fm, nfm, cor = analyze_v1(args.output, args.logfile)
+        fm, nfm, cor = analyze_v2(args.output, args.logfile)
         fm_total += fm
         nfm_total += nfm
         cor_total += cor
