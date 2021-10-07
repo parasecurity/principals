@@ -23,10 +23,8 @@ spec:
         - command:
             - sleep
             - infinity
-          image: 10.8.8.2:5000/metrics-client-go:common
+          image: 10.8.8.2:5000/metrics-client-go:std
           imagePullPolicy: IfNotPresent
           name: metrics-client-go
       nodeSelector:
         kubernetes.io/os: linux
-  updateStrategy:
-    type: RollingUpdate
