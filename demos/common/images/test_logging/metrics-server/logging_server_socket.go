@@ -133,6 +133,11 @@ func handleMetricsConnection(c net.Conn){
 func main() {
 
 	sock_addr, err := net.ResolveUnixAddr("unix", "/tmp/fastlog.sock")
+
+	if err := os.RemoveAll(SockAddr); err != nil {
+        log.Fatal(err)
+    }
+
 	listener, err := net.ListenUnix("unix", sock_addr)
 	if err != nil {
 		log.Fatal(err)
