@@ -17,6 +17,7 @@ var (
 	foo *string
 	central_logs *os.File
 	mx sync.Mutex
+	stop chan struct{}
 )
 
 func init() {
@@ -33,6 +34,7 @@ func init() {
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
+	stop = make(chan struct{})
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
 	// Catch all signals since not explicitly listing
@@ -41,6 +43,7 @@ func init() {
 	go func() {
 		s := <-sigs
 		log.Printf("RECEIVED SIGNAL: %s", s)
+		// stop<- struct{}{}
 		os.Exit(1)
 	}()
 }
@@ -72,6 +75,19 @@ func handleConnection(c net.Conn){
 		// mx.Unlock()
 	}
 }
+func ping(c net.Conn) {
+	b := []byte{65}
+	for {
+		select{
+		case <-stop:
+			log.Println("received stop signal")
+			return
+		default:
+			log.Println("writing ping stop signal")
+			c.Write(b)
+		}
+	}
+}
 
 func main() {
 
@@ -88,6 +104,7 @@ func main() {
 			break
 		}
 		log.Printf("Connection open: %s", cli.RemoteAddr())
+		// go ping(cli)
 		go handleConnection(cli)
 	}
 	listener.Close()

@@ -18,10 +18,9 @@ client:
 	mkdir -p bin/
 	go build -o bin/client cmd/client/client.go
 
-# image: server client
-# 	./api/scripts/generateCert/generateCert.sh
-# 	docker build . -t tsi-api:v1.0.0
+image: server agent client
+	docker build . -t tsi-logging:v1.0.0
 
-# push:
-# 	docker tag tsi-api:v1.0.0 localhost:5000/tsi-api:v1.0.0
-# 	docker push localhost:5000/tsi-api:v1.0.0
+push:
+	docker tag tsi-logging:v1.0.0 localhost:5000/tsi-logging:v1.0.0
+	docker push localhost:5000/tsi-logging:v1.0.0

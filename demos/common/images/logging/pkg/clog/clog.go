@@ -16,56 +16,17 @@ func debug(format string, args ...interface{}){
 	fmt.Fprintf(os.Stderr, format, args...)
 }
 
-// 1633745232195634 this is a timestamp in microseconds
-// 16 decimal digits long for the next 266 years
-
 type buffer struct {
 	sb strings.Builder
 	next *buffer
 }
 
-const digitMap = "0123456789"
-
-// formats a timestamp to a 16 digit decimal
-// string. Used by println and print families
-// but not by printf
-// func (b * timeBuff)digitf(d int64) string {
-// 	b.buff[16] = 0
-// 	for i := 15; i >= 0; i-- {
-// 		b.buff[i] = digitMap[d%10]
-// 		d /= 10
-// 	}
-// 	return *(*string)(unsafe.Pointer(&b.buff))
-// }
 
 // buffer freelist 
 var pool *buffer
 var pmx sync.Mutex
 
 var control chan struct{}
-
-// populates the buffer pool 
-// can be stopped anytime via 
-// a write on ctrl channel
-// func maker(ctrl chan struct{}){
-// 	for i := 0; true; i++ {
-// 		select {
-// 		case <-ctrl:
-// 			return
-// 		default:
-// 			if i < 10 {
-// 				b := new(timeBuff)
-// 				b.buff = make([]byte, 17)
-// 				pmx.Lock()
-// 				b.next = pool
-// 				pool = b
-// 				pmx.Unlock()
-// 			} else {
-// 				runtime.Gosched()
-// 			}
-// 		}
-// 	}
-// }
 
 // returns a buffer from pool
 func getBuff() *buffer {
@@ -128,7 +89,13 @@ func init (){
 	//TODO error handling
 	var err error
 	log.sock_addr, err = net.ResolveUnixAddr(network, path)
-	log.conn, err = net.DialUnix(network, nil, log.sock_addr)
+	for i := 0; i < 20; i++ {
+		log.conn, err = net.DialUnix(network, nil, log.sock_addr)
+		if err == nil {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 	log.host, err = os.Hostname()
 	log.command = os.Args[0]
 	err = err // to avoid error 
@@ -167,6 +134,8 @@ func Print(args ...interface{}){
 	log.print(args...)
 }
 
+////////////////////////////////////////
+// public 
 func Println(args ...interface{}){
 	log.println(args...)
 }
@@ -177,25 +146,34 @@ func Printf(format string, args ...interface{}){
 
 func Panic(args ...interface{}){
 	log.print(args...)
+	s := fmt.Sprint(args...)
+	panic(s)
 }
 
 func Panicln(args ...interface{}){
 	log.println(args...)
+	s := fmt.Sprintln(args...)
+	panic(s)
 }
 
 func Panicf(format string, args ...interface{}){
 	log.printf(format, args...)
+	s := fmt.Sprintf(format, args...)
+	panic(s)
 }
 
 func Fatal(args ...interface{}){
 	log.print(args...)
+	os.Exit(1)
 }
 
 func Fatalln(args ...interface{}){
 	log.println(args...)
+	os.Exit(1)
 }
 
 func Fatalf(format string, args ...interface{}){
 	log.printf(format, args...)
+	os.Exit(1)
 }
 
