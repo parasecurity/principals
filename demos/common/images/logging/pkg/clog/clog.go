@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 	"os"
+	"io"
 	"fmt"
 	"time"
 	"strings"
@@ -25,8 +26,6 @@ type buffer struct {
 // buffer freelist 
 var pool *buffer
 var pmx sync.Mutex
-
-var control chan struct{}
 
 // returns a buffer from pool
 func getBuff() *buffer {
@@ -58,49 +57,58 @@ type logging struct {
 	conn *net.UnixConn
 	sock_addr *net.UnixAddr
 
-	// TODO build them in one string for efficiency
 	host string
 	command string
 }
 
-
+// TODO named return values?
 func (l logging) Write(p []byte) (n int, err error) {
 
 	// TODO error handling and fall-back in disconnections
 	if p[len(p) - 1] == p[len(p) - 2]{
-		l.conn.Write(p[:len(p) - 1])
+		_, err = l.conn.Write(p[:len(p) - 1])
 	} else {
-		l.conn.Write(p)
+		_, err = l.conn.Write(p)
+	}
+	if err != nil {
+		// do something or suppose agent doesn't die
+		panic("agent down! agent down!")
 	}
 
-	return len(p), nil
+	return len(p), err
 
 }
 
 var log logging
 
-func init (){
+// for negative or 0 retries loops forever
+func connectToAgent(retries int) (err error){
+	for i := retries; i != 1; i-- {
+		log.conn, err = net.DialUnix("unixpacket", nil, log.sock_addr)
+		if err == nil {
+			break
+		}
+		// TODO log the error maybe
+		time.Sleep(1 * time.Second)
+	}
+	return
+}
 
-	control = make(chan struct{})
-	// go maker(control)
+func init (){
 
 	network := "unixpacket"
 	path := "/tmp/testlog.sock"
 	//TODO error handling
 	var err error
 	log.sock_addr, err = net.ResolveUnixAddr(network, path)
-	for i := 0; i < 20; i++ {
-		log.conn, err = net.DialUnix(network, nil, log.sock_addr)
-		if err == nil {
-			break
-		}
-		time.Sleep(1 * time.Second)
+	err = connectToAgent(20)
+	if err != nil {
+		// do something or suppose agent doesn't die
+		panic("agent down! agent down!")
 	}
 	log.host, err = os.Hostname()
 	log.command = os.Args[0]
-	err = err // to avoid error 
 
-	// control<- struct{}{}
 }
 
 func ( *logging) printf(format string, args ...interface{}) {
@@ -177,3 +185,11 @@ func Fatalf(format string, args ...interface{}){
 	os.Exit(1)
 }
 
+func SetFlags(flag int) {
+	return
+}
+
+func SetOutput(w io.Writer) {
+	// TODO 
+	return
+}
