@@ -25,6 +25,7 @@ var (
 
 	args struct {
 		logServer *string
+		nodeName *string
 	}
 
 )
@@ -90,7 +91,7 @@ func fixit() {
 func stateCheck() {
 	for {
 		<-control.req
-		n, err := fmt.Fprintf(srv, "%s ping", srv.LocalAddr().String())
+		n, err := fmt.Fprintf(srv, "%s ping", *args.nodeName)
 		n = n
 		if err != nil {
 			srv.Close()
@@ -104,6 +105,7 @@ func stateCheck() {
 func init() {
 
 	args.logServer = flag.String("logserveraddr", "localhost:4321", "The logging server listening connection in format ip:port")
+	args.nodeName = flag.String("nodename", "localhost", "The node hostname")
 	flag.Parse()
 
 	control.req = make(chan struct{})
@@ -145,7 +147,7 @@ func serverWriter(logs chan []byte){
 		msg := <-logs
 		// TODO
 		for {
-			_, err := fmt.Fprintf(srv, "%s %s", srv.LocalAddr().String(), msg)
+			_, err := fmt.Fprintf(srv, "%s %s", *args.nodeName, msg)
 			if err != nil {
 				fixit()
 			} else {

@@ -24,11 +24,11 @@ spec:
         component: log-server
     spec:
       containers:
-        name: log-server
+      - name: log-server
         image: 10.8.8.2:5000/tsi-logging:v1.0.0
         imagePullPolicy: Always 
         command:
-          - ./bin/server
+          - ./server
         ports:
         - containerPort: 4321
       nodeSelector:
@@ -70,12 +70,21 @@ spec:
         component: log-agent
     spec:
       containers:
-      - name: log-agent
+      - env:
+        - name: NODE
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        name: log-agent
         image: 10.8.8.2:5000/tsi-logging:v1.0.0
-        command: ['bash', '-c', "/home/clog/bin/agent -logserveraddr $(LOG_SERVER_SERVICE_HOST):$(LOG_SERVER_SERVICE_PORT_LOGGING)"]
+        command: 
+          - ./agent
+        args:
+          - -logserveraddr=$(LOG_SERVER_SERVICE_HOST):$(LOG_SERVER_SERVICE_PORT_LOGGING)
+          - -nodename=$(NODE)
         imagePullPolicy: Always
         volumeMounts:
-          - mountPath: /tmp/testlog.sock/
+          - mountPath: /tmp
             name: logsock
       dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
@@ -90,7 +99,7 @@ spec:
           operator: Exists
       volumes:
       - hostPath:
-          path: /tmp/testlog.sock
+          path: /tmp
           type: Directory
         name: logsock
   updateStrategy:
