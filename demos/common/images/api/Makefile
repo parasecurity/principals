@@ -16,8 +16,8 @@ client:
 
 image: server client
 	./api/scripts/generateCert/generateCert.sh
-	docker build . -t tsi-api:v1.0.0
+	docker build . -t tsi-api:v1.0.1
 
 push:
-	docker tag tsi-api:v1.0.0 localhost:5000/tsi-api:v1.0.0
-	docker push localhost:5000/tsi-api:v1.0.0
+	docker tag tsi-api:v1.0.1 localhost:5000/tsi-api:v1.0.1
+	docker push localhost:5000/tsi-api:v1.0.1
