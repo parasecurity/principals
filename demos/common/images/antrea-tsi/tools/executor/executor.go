@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/exec"

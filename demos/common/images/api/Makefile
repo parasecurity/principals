@@ -8,11 +8,11 @@ clean:
 
 server:
 	mkdir -p bin/
-	cd api && go build -o ../bin/server cmd/server/server.go
+	cd api && go mod tidy && go build -o ../bin/server cmd/server/server.go
 
 client:
 	mkdir -p bin/
-	cd api-client && go build -o ../bin/client cmd/client.go
+	cd api-client && go mod tidy && go build -o ../bin/client cmd/client.go
 
 image: server client
 	./api/scripts/generateCert/generateCert.sh

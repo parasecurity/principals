@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"log"
+	log "logging"
 
 	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/client-go/kubernetes/typed/apps/v1"

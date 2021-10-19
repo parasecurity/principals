@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"

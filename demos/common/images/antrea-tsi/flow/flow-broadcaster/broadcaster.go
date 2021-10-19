@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"

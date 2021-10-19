@@ -2,7 +2,7 @@ package main
 
 import (
 	"time"
-	log "logging/pkg/clog"
+	log "logging"
 )
 
 func main(){

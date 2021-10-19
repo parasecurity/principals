@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"encoding/json"
-	"log"
+	log "logging"
 )
 
 type Command struct {
