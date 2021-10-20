@@ -8,7 +8,7 @@ import (
 
 func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,6 +50,9 @@ func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 								"/home/tsi/bin/detector",
 							},
 							Args:            args,
+							VolumeMounts: []apiv1.VolumeMount{
+								LogMount,
+							},
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
@@ -87,6 +90,7 @@ func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 								},
 							},
 						},
+						LogVolume,
 					},
 				},
 			},

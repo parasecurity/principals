@@ -7,7 +7,7 @@ import (
 )
 
 func CreateCanaryDepl(args []string, registry *string) appsv1.Deployment {
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -45,8 +45,14 @@ func CreateCanaryDepl(args []string, registry *string) appsv1.Deployment {
 								"/home/tsi/bin/canary",
 							},
 							Args:            args,
+							VolumeMounts: []apiv1.VolumeMount{
+								LogMount,
+							},
 							ImagePullPolicy: apiv1.PullAlways,
 						},
+					},
+					Volumes: []apiv1.Volume{
+						LogVolume,
 					},
 				},
 			},

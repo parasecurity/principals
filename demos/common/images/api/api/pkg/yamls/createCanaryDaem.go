@@ -7,7 +7,7 @@ import (
 )
 
 func CreateCanaryDaem(args []string, registry *string) appsv1.DaemonSet {
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -48,6 +48,9 @@ func CreateCanaryDaem(args []string, registry *string) appsv1.DaemonSet {
 								"/home/tsi/bin/canary",
 							},
 							Args:            args,
+							VolumeMounts: []apiv1.VolumeMount{
+								LogMount,
+							},
 							ImagePullPolicy: apiv1.PullAlways,
 							SecurityContext: &apiv1.SecurityContext{
 								Capabilities: &apiv1.Capabilities{
@@ -57,6 +60,9 @@ func CreateCanaryDaem(args []string, registry *string) appsv1.DaemonSet {
 								},
 							},
 						},
+					},
+					Volumes: []apiv1.Volume{
+						LogVolume,
 					},
 				},
 			},

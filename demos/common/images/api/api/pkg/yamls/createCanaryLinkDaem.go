@@ -8,7 +8,7 @@ import (
 
 func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -56,6 +56,7 @@ func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 									MountPath: "/var/run/openvswitch",
 									SubPath:   "openvswitch",
 								},
+								LogMount,
 							},
 						},
 					},
@@ -69,6 +70,7 @@ func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 								},
 							},
 						},
+						LogVolume,
 					},
 				},
 			},

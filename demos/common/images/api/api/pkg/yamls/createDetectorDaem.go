@@ -8,7 +8,7 @@ import (
 
 func CreateDetectorDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,6 +54,9 @@ func CreateDetectorDaem(args []string, registry *string) appsv1.DaemonSet {
 								"/home/tsi/bin/detector",
 							},
 							Args:            args,
+							VolumeMounts: []apiv1.VolumeMount{
+								LogMount,
+							},
 							ImagePullPolicy: apiv1.PullAlways,
 						},
 					},
@@ -91,6 +94,7 @@ func CreateDetectorDaem(args []string, registry *string) appsv1.DaemonSet {
 								},
 							},
 						},
+						LogVolume,
 					},
 				},
 			},

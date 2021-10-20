@@ -8,7 +8,7 @@ import (
 
 func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSet {
 	// Parsing the correct registry IP address
-	var image string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	var sudo int64 = int64(0)
 	var trueVar bool = true
@@ -48,6 +48,9 @@ func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSe
 								"/home/tsi/bin/executor",
 							},
 							Args:            args,
+							VolumeMounts: []apiv1.VolumeMount{
+								LogMount,
+							},
 							ImagePullPolicy: apiv1.PullAlways,
 							SecurityContext: &apiv1.SecurityContext{
 								Privileged: &trueVar,
@@ -94,6 +97,7 @@ func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSe
 								},
 							},
 						},
+						LogVolume,
 					},
 				},
 			},
