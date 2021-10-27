@@ -7,7 +7,6 @@ import (
 )
 
 func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
-	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
 
 	deployment := appsv1.Deployment{
@@ -57,39 +56,10 @@ func CreateDetectorDepl(args []string, registry *string) appsv1.Deployment {
 						},
 					},
 					InitContainers: []apiv1.Container{
-						{
-							Name:  "init-mirror",
-							Image: image,
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "NAME",
-									Value: "detector",
-								},
-							},
-							Command: []string{
-								"sh",
-								"-c",
-								"/home/tsi/scripts/mirror-port.sh",
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "host-var-run-antrea",
-									MountPath: "/var/run/openvswitch",
-									SubPath:   "openvswitch",
-								},
-							},
-						},
+						mirrorContainter("detector", registry),
 					},
 					Volumes: []apiv1.Volume{
-						{
-							Name: "host-var-run-antrea",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
-									Path: "/var/run/antrea",
-									Type: &HostPathDirectoryOrCreate,
-								},
-							},
-						},
+						RunAntreaVolume,
 						LogVolume,
 					},
 				},

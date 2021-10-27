@@ -59,28 +59,7 @@ func CreateSnortDaem(args []string, registry *string) appsv1.DaemonSet {
 						},
 					},
 					InitContainers: []apiv1.Container{
-						{
-							Name:  "init-mirror",
-							Image: imageAntrea,
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "NAME",
-									Value: "snort",
-								},
-							},
-							Command: []string{
-								"sh",
-								"-c",
-								"/home/tsi/scripts/mirror-port.sh",
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "host-var-run-antrea",
-									MountPath: "/var/run/openvswitch",
-									SubPath:   "openvswitch",
-								},
-							},
-						},
+						mirrorContainter("snort", registry),
 					},
 					Volumes: []apiv1.Volume{
 						{

@@ -67,7 +67,6 @@ func listenUnixAndServe(logs chan []byte) {
 		println(err)
 	}
 
-
 	for {
 		cli, err := listener.AcceptUnix()
 		if err != nil {
@@ -79,9 +78,6 @@ func listenUnixAndServe(logs chan []byte) {
 	}
 	listener.Close()
 }
-
-
-
 
 func fixit() {
 	control.req<- struct{}{}
@@ -97,7 +93,6 @@ func stateCheck() {
 			srv.Close()
 			err = connectToServer(0)
 		}
-
 		control.ans<- struct{}{}
 	}
 }

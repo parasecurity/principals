@@ -7,7 +7,6 @@ import (
 )
 
 func CreateAnalyserDaem(args []string, registry *string) appsv1.DaemonSet {
-	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	// Passing path to monitor.py file to args list
 	var modArgs []string = append([]string{"/tmp/monitor.py"}, args...)
 	var image string = *registry + ":5000/tsi-analyser:v1.0.0"
@@ -55,39 +54,10 @@ func CreateAnalyserDaem(args []string, registry *string) appsv1.DaemonSet {
 						},
 					},
 					InitContainers: []apiv1.Container{
-						{
-							Name:  "init-mirror",
-							Image: "147.27.39.116:5000/antrea-tsi:v1.0.0",
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "NAME",
-									Value: "analyser",
-								},
-							},
-							Command: []string{
-								"sh",
-								"-c",
-								"/home/tsi/scripts/mirror-port.sh",
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "host-var-run-antrea",
-									MountPath: "/var/run/openvswitch",
-									SubPath:   "openvswitch",
-								},
-							},
-						},
+						mirrorContainter("analyser", registry),
 					},
 					Volumes: []apiv1.Volume{
-						{
-							Name: "host-var-run-antrea",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
-									Path: "/var/run/antrea",
-									Type: &HostPathDirectoryOrCreate,
-								},
-							},
-						},
+						RunAntreaVolume,
 					},
 				},
 			},

@@ -9,7 +9,6 @@ import (
 )
 
 func CreateDgaForwardDaem(args []string, registry *string) appsv1.DaemonSet {
-	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	// Passing path to monitor.py file to args list
 	// And declare HONEYPOT_MAC and HONEYPOT_IP address
 	var modArgs []string = append([]string{
@@ -91,39 +90,10 @@ func CreateDgaForwardDaem(args []string, registry *string) appsv1.DaemonSet {
 								},
 							},
 						},
-						{
-							Name:  "init-mirror",
-							Image: imageAntrea,
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "NAME",
-									Value: "dga",
-								},
-							},
-							Command: []string{
-								"sh",
-								"-c",
-								"/home/tsi/scripts/mirror-port.sh",
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "host-var-run-antrea",
-									MountPath: "/var/run/openvswitch",
-									SubPath:   "openvswitch",
-								},
-							},
-						},
+						mirrorContainter("dga", registry),
 					},
 					Volumes: []apiv1.Volume{
-						{
-							Name: "host-var-run-antrea",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
-									Path: "/var/run/antrea",
-									Type: &HostPathDirectoryOrCreate,
-								},
-							},
-						},
+						RunAntreaVolume,
 						{
 							Name: "dionaea",
 							VolumeSource: apiv1.VolumeSource{

@@ -3,9 +3,6 @@ package main
 import (
 	"os"
 	"io"
-	// "fmt"
-	"sync"
-	// "encoding/binary"
 	"os/signal"
 	"syscall"
 	"net"
@@ -13,18 +10,9 @@ import (
 	"log"
 )
 
-var (
-	foo *string
-	central_logs *os.File
-	mx sync.Mutex
-	stop chan struct{}
-)
-
 func init() {
 
 	// Open log file
-	temp, err := os.OpenFile("logs.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-	central_logs = temp
 	logFile, err := os.OpenFile("local.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
@@ -48,7 +36,7 @@ func init() {
 	}()
 }
 
-func handleConnection(c net.Conn){
+func handleConnection(c net.Conn, toPrinter chan []byte, toAnalyser chan []byte){
 
 	defer func() {
 		c.Close()
@@ -60,7 +48,7 @@ func handleConnection(c net.Conn){
 
 	for {
 
-		str, err := reader.ReadString('\n')
+		str, err := reader.ReadBytes('\n')
 
 		if err != nil {
 			if err == io.EOF {
@@ -69,24 +57,23 @@ func handleConnection(c net.Conn){
 				log.Println(err)
 			}
 		}
-		// mx.Lock()
-		// central_logs.WriteString(str)
-		print(str)
-		// mx.Unlock()
-	}
-}
-func ping(c net.Conn) {
-	b := []byte{65}
-	for {
-		select{
-		case <-stop:
-			log.Println("received stop signal")
-			return
-		default:
-			log.Println("writing ping stop signal")
-			c.Write(b)
+		// TODO select for efficiency
+		select {
+		case toPrinter <- str:
+			toAnalyser <- str
+		case toAnalyser <- str:
+			toPrinter <- str
 		}
 	}
+}
+
+func analyseLogs(logs chan []byte){
+		_ = <-logs
+}
+
+func printLogs(logs chan []byte){
+		msg := <-logs
+		print(msg)
 }
 
 func main() {
@@ -97,6 +84,10 @@ func main() {
 	}
 	log.Printf("Listenning on port 4321")
 
+	toPrinter := make(chan []byte, 128)
+	toAnalyser := make(chan []byte, 128)
+	go printLogs(toPrinter)
+	go analyseLogs(toAnalyser)
 	for {
 		cli, err := listener.Accept()
 		if err != nil {
@@ -104,8 +95,7 @@ func main() {
 			break
 		}
 		log.Printf("Connection open: %s", cli.RemoteAddr())
-		// go ping(cli)
-		go handleConnection(cli)
+		go handleConnection(cli, toPrinter, toAnalyser)
 	}
 	listener.Close()
 }

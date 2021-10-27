@@ -61,22 +61,22 @@ type logging struct {
 	command string
 }
 
-// TODO named return values?
 func (l logging) Write(p []byte) (n int, err error) {
 
 	// TODO error handling and fall-back in disconnections
-	if p[len(p) - 1] == p[len(p) - 2]{
-		_, err = l.conn.Write(p[:len(p) - 1])
+	n = len(p)
+	if p[n - 1] == p[n - 2]{
+		_, err = l.conn.Write(p[:n - 1])
 	} else {
 		_, err = l.conn.Write(p)
 	}
+
 	if err != nil {
-		// do something or suppose agent doesn't die
+		// TODO do something or suppose agent doesn't die
 		panic("agent down! agent down!")
 	}
 
-	return len(p), err
-
+	return
 }
 
 var log logging
@@ -199,15 +199,15 @@ const (
 	Lmsgprefix                    // move the "prefix" from the beginning of the line to before the message
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
 )
+
 func SetFlags(flag int) {
 	return
 }
 
 func SetOutput(w io.Writer) {
-	// TODO 
 	// nothing todo here
-	// standard logger does not close the writer set by the programmer
+	// standard logger does not close the writer set by the programmer anyway
 	// whoever calls SetOutput is responsible of closing the corresponding writer
-	// or hope GC will do its job correctly and quickly
+	// or hope GC will do its job correctly and quickly (which is not the case)
 	return
 }

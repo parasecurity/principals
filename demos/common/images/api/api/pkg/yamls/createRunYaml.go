@@ -9,7 +9,6 @@ import (
 func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSet {
 	// Parsing the correct registry IP address
 	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
-	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	var sudo int64 = int64(0)
 	var trueVar bool = true
 
@@ -64,39 +63,10 @@ func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSe
 						},
 					},
 					InitContainers: []apiv1.Container{
-						{
-							Name:  "init-mirror",
-							Image: image,
-							Env: []apiv1.EnvVar{
-								{
-									Name:  "NAME",
-									Value: "executor",
-								},
-							},
-							Command: []string{
-								"sh",
-								"-c",
-								"/home/tsi/scripts/mirror-port.sh",
-							},
-							VolumeMounts: []apiv1.VolumeMount{
-								{
-									Name:      "host-var-run-antrea",
-									MountPath: "/var/run/openvswitch",
-									SubPath:   "openvswitch",
-								},
-							},
-						},
+						mirrorContainter( "executor", registry),
 					},
 					Volumes: []apiv1.Volume{
-						{
-							Name: "host-var-run-antrea",
-							VolumeSource: apiv1.VolumeSource{
-								HostPath: &apiv1.HostPathVolumeSource{
-									Path: "/var/run/antrea",
-									Type: &HostPathDirectoryOrCreate,
-								},
-							},
-						},
+						RunAntreaVolume,
 						LogVolume,
 					},
 				},
