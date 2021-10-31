@@ -79,6 +79,9 @@ kubectl taint node <master name> node-role.kubernetes.io/master:NoSchedule-
 kubectl label nodes <master name> dedicated=master
 ```
 
+## Fix secondary interface problems
+- https://stackoverflow.com/questions/52364785/kubernetes-service-external-ip-assigned-to-node-secondary-interface
+
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
 - https://linuxize.com/post/how-to-add-and-delete-users-on-ubuntu-18-04/
