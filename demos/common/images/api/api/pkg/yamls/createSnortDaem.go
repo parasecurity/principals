@@ -9,7 +9,6 @@ import (
 func CreateSnortDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
 	var image string = *registry + ":5000/tsi-snort:v1.0.0"
-	var imageAntrea string = *registry + ":5000/antrea-tsi:v1.0.0"
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
