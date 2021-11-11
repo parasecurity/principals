@@ -22,7 +22,7 @@ func init() {
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
-	stop = make(chan struct{})
+	//stop = make(chan struct{})
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
 	// Catch all signals since not explicitly listing
