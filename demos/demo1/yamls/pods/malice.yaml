@@ -6,7 +6,7 @@ metadata:
 spec:
   containers:
     - name: malice1
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -19,7 +19,7 @@ metadata:
 spec:
   containers:
     - name: malice2
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -32,7 +32,7 @@ metadata:
 spec:
   containers:
     - name: malice3
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -45,7 +45,7 @@ metadata:
 spec:
   containers:
     - name: malice4
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -58,7 +58,7 @@ metadata:
 spec:
   containers:
     - name: malice5
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -71,7 +71,7 @@ metadata:
 spec:
   containers:
     - name: malice6
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -84,7 +84,7 @@ metadata:
 spec:
   containers:
     - name: malice7
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -97,7 +97,7 @@ metadata:
 spec:
   containers:
     - name: malice8
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -110,7 +110,7 @@ metadata:
 spec:
   containers:
     - name: malice9
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -123,7 +123,7 @@ metadata:
 spec:
   containers:
     - name: malice11
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -136,7 +136,7 @@ metadata:
 spec:
   containers:
     - name: malice11
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
@@ -149,7 +149,7 @@ metadata:
 spec:
   containers:
     - name: malice12
-      image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+      image: 10.9.9.2:5000/antrea-tsi:v1.0.0
       command:
         - sleep
         - infinity
