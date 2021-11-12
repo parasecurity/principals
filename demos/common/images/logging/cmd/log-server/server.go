@@ -68,12 +68,16 @@ func handleConnection(c net.Conn, toPrinter chan []byte, toAnalyser chan []byte)
 }
 
 func analyseLogs(logs chan []byte){
+	for {
 		_ = <-logs
+	}
 }
 
 func printLogs(logs chan []byte){
+	for {
 		msg := <-logs
-		print(msg)
+		print(string(msg))
+	}
 }
 
 func main() {
