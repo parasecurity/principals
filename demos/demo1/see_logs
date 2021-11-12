@@ -1,0 +1,2 @@
+#!/bin/bash
+kubectl -n security logs -f $(kubectl get -A po | grep log-server| awk '{print $2}')

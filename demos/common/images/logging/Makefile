@@ -4,7 +4,7 @@ all: server agent client
 
 clean:
 	rm -rf bin/
-	# docker rmi tsi-api:v1.0.0 localhost:5000/tsi-logging:v1.0.0
+	docker rmi tsi-api:v1.0.0 localhost:5000/tsi-logging:v1.0.0
 
 server:
 	mkdir -p bin/
