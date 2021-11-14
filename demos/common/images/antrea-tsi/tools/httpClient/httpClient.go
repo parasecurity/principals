@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"io/ioutil"
-	"log"
+	log "logging"
 	"net/http"
 	"os"
 	"os/signal"
