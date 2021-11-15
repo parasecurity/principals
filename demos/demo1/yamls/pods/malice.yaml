@@ -11,6 +11,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -24,6 +32,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -37,6 +53,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -50,6 +74,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -63,6 +95,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -76,6 +116,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -89,6 +137,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -102,6 +158,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -115,6 +179,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -128,6 +200,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -141,6 +221,14 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
 ---
 apiVersion: v1
 kind: Pod
@@ -154,3 +242,11 @@ spec:
         - sleep
         - infinity
       imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
