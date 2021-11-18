@@ -79,7 +79,7 @@ func main() {
 			for {
 				resp, err := httpClient.Get(args.server)
 				if err != nil {
-					panic(err)
+					log.Panic(err)
 				}
 				defer resp.Body.Close()
 

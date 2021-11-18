@@ -77,12 +77,12 @@ do
       read -p "Press enter to continue"
       
       msg "Creating DDoS traffic from malicious pods"
-      kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
-      kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
-      kubectl exec "$MALICE_POD_3" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
-      kubectl exec "$MALICE_POD_4" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0  &"
-      kubectl exec "$MALICE_POD_5" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
-      kubectl exec "$MALICE_POD_6" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 &"
+      kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
+      kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
+      kubectl exec "$MALICE_POD_3" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
+      kubectl exec "$MALICE_POD_4" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
+      kubectl exec "$MALICE_POD_5" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0 &"
+      kubectl exec "$MALICE_POD_6" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0 &"
       sleep 2
 
       msg "Waiting for the Web server to be responsive again" 
