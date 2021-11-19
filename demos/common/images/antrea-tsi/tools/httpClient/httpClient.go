@@ -54,9 +54,9 @@ func init() {
 
 func main() {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 100
-	t.MaxConnsPerHost = 100
-	t.MaxIdleConnsPerHost = 100
+	t.MaxIdleConns = 10000
+	t.MaxConnsPerHost = 10000
+	t.MaxIdleConnsPerHost = 10000
 
 	var wg sync.WaitGroup
 
@@ -81,7 +81,7 @@ func main() {
 				if err != nil {
 					log.Panic(err)
 				}
-				defer resp.Body.Close()
+				// defer resp.Body.Close()
 
 				log.Println("Response status:", resp.Status)
 
