@@ -27,6 +27,8 @@ and check to make sure that only the key(s) you wanted were added.
 ```
 
 ## Setup passwordless sudo
+NOTE: if you used kubecluster's vagrant, then it is already set up
+
 ssh to the remote user
 ```sh
 ssh <user>@<ip address>
@@ -46,12 +48,16 @@ Edit the line:
 Log-out and log in again to test the passwordless sudo
 
 ## Start local registry on master node
+NOTE: it is automated by this playbook
+
 On master node run:
 ```sh
 docker run -d -p 5000:5000 --restart=always --name registry registry:2
 ```
 
 ## Enable insecure repository access
+NOTE: it is automated by this playbook
+
 On all nodes on the cluster
 ```sh
 # Change the ip with the ip of the registry
@@ -71,12 +77,21 @@ kubectl completion bash >/etc/bash_completion.d/kubectl
 ```
 
 ## Enable node deployment on master node
+NOTE: it is automated by this playbook
+
 We first remove the tain from master and then add a tag
 ```sh
 # Remove taint
 kubectl taint node <master name> node-role.kubernetes.io/master:NoSchedule-
 # Add label on master
 kubectl label nodes <master name> dedicated=master
+```
+## deploy NetworkAttachmentDefinition
+You need to deploy multus daemonset before running any demos
+
+You can find a yaml deploymen in principals/demos/demo1/yamls/ directory on logging branch
+```sh
+kubectl apply -f /path/to/multus-daemonset.yml
 ```
 
 ## References
