@@ -65,7 +65,7 @@ func main() {
 		go func(c int, wg *sync.WaitGroup) {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Println("client ", c, " closed")
+					log.Println("client ", c, " closed. Error: ", r)
 				}
 			}()
 			defer wg.Done()

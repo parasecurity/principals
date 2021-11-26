@@ -10,7 +10,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -31,7 +31,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -52,7 +52,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -73,7 +73,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -94,7 +94,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -115,7 +115,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -136,7 +136,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -157,7 +157,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -178,7 +178,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -199,7 +199,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -220,7 +220,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
@@ -241,7 +241,7 @@ spec:
       command:
         - sleep
         - infinity
-      imagePullPolicy: IfNotPresent
+      imagePullPolicy: Always
       volumeMounts:
         - mountPath: /tmp
           name: logsock
