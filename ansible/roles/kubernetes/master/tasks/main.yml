@@ -19,10 +19,22 @@
   register: started_kubelet
 
 - name: Get join command
-  become_user: "{{ ansible_user }}"   
+  become_user: "{{ ansible_user }}"
   shell: kubeadm token create --print-join-command
   register: join_command_raw
     
 - name: Set join command
   set_fact: 
     join_command: "{{ join_command_raw.stdout_lines[0] }}"
+
+- name: Remove taint from master
+  become_user: "{{ ansible_user }}"
+  shell: kubectl taint nodes {{ ansible_hostname }} node-role.kubernetes.io/master:NoSchedule- || echo "no taint found"
+
+- name: Add label on master
+  become_user: "{{ ansible_user }}"
+  shell: kubectl label nodes {{ ansible_hostname }} dedicated=master
+
+- name: Setup registry on master
+  become_user: "{{ ansible_user }}"
+  shell: docker run -d -p 5000:5000 --restart=always --name registry registry:2
