@@ -176,7 +176,6 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				warn <- srcIP
 			}
 			log.Println("count: ", connStr, " count: ", count)
-			log.Println("count threshold: ", *args.threshold)
 			count = 0
 		case <-timeoutTimer.C:
 			if !used {
