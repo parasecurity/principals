@@ -88,10 +88,14 @@ kubectl label nodes <master name> dedicated=master
 ```
 ## deploy NetworkAttachmentDefinition
 You need to deploy multus daemonset before running any demos
+Ansible will install https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml
+which is tested. You can remove it and deploy the yaml of principals repo ( which is an older version )
 
-You can find a yaml deploymen in principals/demos/demo1/yamls/ directory on logging branch
 ```sh
-kubectl apply -f /path/to/multus-daemonset.yml
+
+kubectl delete -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml
+# wait until it is removed
+kubectl apply -f /path/to/principals/demos/demo1/yaml/multus-daemonset.yml
 ```
 
 ## References
