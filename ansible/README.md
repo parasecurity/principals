@@ -1,7 +1,19 @@
-# Add a new node 
+## Create VMs
 
-Create the same username across all machines.
-Install openssh-server on all nodes.
+Use this [repo](git@kition.mhl.tuc.gr:tsi-group/kubecluster.git) in order to generate the new VMs.
+There is a nessasary port configuration on the _VagrantFile_ and  _worker.vm.network/master.vm.network_
+in order to check there is no overlapping network.
+
+## Configure ansible deployment
+
+On the group_var folder set the registry ip, pod_network_cidr, and master_ip on the correct values.
+
+## Deploy ansible
+
+In order to deploy the ansible configuration and create the cluster:
+```sh
+ansible-playbook start.yml
+```
 
 ## Setup Passwordless SSH Login
 ssh to ansible control machine
