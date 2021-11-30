@@ -67,7 +67,8 @@ application_level_canary()
       msg "Starting DDoS Demo"
      	 
 	  canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": []}"
-	  detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\", \"-t=5\"]}"
+	  detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+	  # detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\", \"-t=5\"]}"
       
       msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
       kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"

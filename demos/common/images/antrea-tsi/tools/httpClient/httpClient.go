@@ -54,15 +54,17 @@ func init() {
 
 func main() {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 10000
-	t.MaxConnsPerHost = 10000
-	t.MaxIdleConnsPerHost = 10000
+	t.MaxIdleConns = 100
+	t.MaxConnsPerHost = 100
+	t.MaxIdleConnsPerHost = 100
 
 	var wg sync.WaitGroup
 
 	for c := 0; c < args.clients; c++ {
 		wg.Add(1)
 		go func(c int, wg *sync.WaitGroup) {
+			// this code will never run
+			// TODO clean up
 			defer func() {
 				if r := recover(); r != nil {
 					log.Println("client ", c, " closed. Error: ", r)
@@ -79,9 +81,10 @@ func main() {
 			for {
 				resp, err := httpClient.Get(args.server)
 				if err != nil {
-					log.Panic(err)
+					log.Print(err)
+					continue
 				}
-				// defer resp.Body.Close()
+				defer resp.Body.Close()
 
 				log.Println("Response status:", resp.Status)
 
