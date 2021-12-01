@@ -45,7 +45,7 @@ if [ $# -eq 1 ]; then
 	if [ $1 = "--clean" ]; then
 		clean
 	elif [ $1 = "--help" ]; then
-		usage 0
+		usage $0 0
 	else
 		usage $0 1
 	fi
