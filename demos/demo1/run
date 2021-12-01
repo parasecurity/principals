@@ -216,15 +216,15 @@ interactive(){
 usage() {
 	echo "Usage: $1"
 	echo "       $1 [OPTION]"
-	echo "	interactive dDos demo"
+	echo "  interactive dDos demo"
 	echo ""
 	echo ""
 	echo "Options:"
-	echo "	--clean				clean the cluster from a possibly broken previous run"
-	echo "	--app-level			run ddos with application level canary with default deployment commands"
-	echo "	--link-level		run ddos with link level canary with default deployment commands"
-	echo "	--interactive		run demo in fully interactive mode (default action, prompt for deployment commands)"
-	echo "	--help				print this message"
+	echo "  --clean             clean the cluster from a possibly broken previous run"
+	echo "  --app-level         run ddos with application level canary with default deployment commands"
+	echo "  --link-level        run ddos with link level canary with default deployment commands"
+	echo "  --interactive       run demo in fully interactive mode (default action, prompt for deployment commands)"
+	echo "  --help              print this message"
 
 	exit $2
 }
@@ -232,19 +232,28 @@ usage() {
 if [ $# -eq 1 ]; then
 	if [ $1 = "--clean" ]; then
 		load_vars
-		clean
+		clean_cluster
 	elif [ $1 = "--help" ]; then
-		usage 0
+		usage $0 0
 	elif [ $1 = "--app-level" ]; then
 		init
 		application_level_canary
+		clean_cluster
 	elif [ $1 = "--link-level" ]; then
 		init
 		link_level_canary
+		clean_cluster
+	elif [ $1 = "--interactive" ]; then
+		init
+		interactive
+		clean_cluster
 	else
 		usage $0 1
 	fi
 elif [ $# -eq 0 ]; then
+	init
+	interactive
+	clean_cluster
 else
 	usage $0 1
 fi

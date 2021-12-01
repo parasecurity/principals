@@ -8,3 +8,7 @@ bin/
 tags
 *results*.txt
 *.swp
+demos/demo1/yamls/pods/malice.yaml
+demos/demo1/yamls/pods/alice.yaml
+demos/demo1/yamls/security/security.yaml
+demos/demo1/yamls/security/logging.yaml

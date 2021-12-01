@@ -30,13 +30,13 @@ clean() {
 usage() {
 	echo "Usage: $1"
 	echo "       $1 [OPTION]"
-	echo "	Generates yaml deployment files for ddos demo"
+	echo "  Generates yaml deployment files for ddos demo"
 	echo ""
 	echo ""
 	echo "Options:"
-	echo "	--clean				remove generated yaml files"
-	echo "	--file FILENAME		generate for specific file"
-	echo "	--help				print this message"
+	echo "  --clean             remove generated yaml files"
+	echo "  --file FILENAME     generate for specific file"
+	echo "  --help              print this message"
 
 	exit $2
 }
