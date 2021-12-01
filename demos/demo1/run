@@ -2,60 +2,93 @@
 #
 #  Demo 9: DDoS Attack
 #
+# call with clean option to clean a broken cluster
 set -euo pipefail
 
 source ../common/scripts/funcs.sh
 
-msg "Adding tsi security"
-kubectl apply -f yamls/security
+load_vars(){
+	readonly AGENT_POD_1=$(kubectl get -A po -o wide | grep "flow-server" | head -1 | awk '{print $2}')
+	readonly AGENT_POD_2=$(kubectl get -A po -o wide | grep "flow-server" | tail -1 | awk '{print $2}')
+	readonly ANTREA_POD_1=$(kubectl get -A po -o wide | grep "antrea-agent" | head -1 | awk '{print $2}')
+	readonly ANTREA_POD_2=$(kubectl get -A po -o wide | grep "antrea-agent" | tail -1 | awk '{print $2}')
+	readonly API=$(kubectl get po -o wide -n security | grep "api" | awk '{print $1}')
+	readonly ALICE_POD_1=alice
+	readonly MALICE_POD_1=malice1
+	readonly MALICE_POD_2=malice2
+	readonly MALICE_POD_3=malice3
+	readonly MALICE_POD_4=malice4
+	readonly MALICE_POD_5=malice5
+	readonly MALICE_POD_6=malice6
+	readonly MALICE_POD_7=malice7
+	readonly MALICE_POD_8=malice8
+	readonly MALICE_POD_9=malice9
+	readonly MALICE_POD_10=malice10
+	readonly MALICE_POD_11=malice11
+	readonly MALICE_POD_12=malice12
+}
 
-msg "Adding demo pods"
-kubectl apply -f yamls/pods
+init(){
+	msg "Adding tsi security"
+	kubectl apply -f yamls/security
 
-waitUntilAllPodsRun
+	msg "Adding demo pods"
+	kubectl apply -f yamls/pods
 
-readonly AGENT_POD_1=$(kubectl get -A po -o wide | grep "flow-server" | head -1 | awk '{print $2}')
-readonly AGENT_POD_2=$(kubectl get -A po -o wide | grep "flow-server" | tail -1 | awk '{print $2}')
-readonly ANTREA_POD_1=$(kubectl get -A po -o wide | grep "antrea-agent" | head -1 | awk '{print $2}')
-readonly ANTREA_POD_2=$(kubectl get -A po -o wide | grep "antrea-agent" | tail -1 | awk '{print $2}')
-readonly API=$(kubectl get po -o wide -n security | grep "api" | awk '{print $1}')
-readonly ALICE_POD_1=alice
-readonly MALICE_POD_1=malice1
-readonly MALICE_POD_2=malice2
-readonly MALICE_POD_3=malice3
-readonly MALICE_POD_4=malice4
-readonly MALICE_POD_5=malice5
-readonly MALICE_POD_6=malice6
-readonly MALICE_POD_7=malice7
-readonly MALICE_POD_8=malice8
-readonly MALICE_POD_9=malice9
-readonly MALICE_POD_10=malice10
-readonly MALICE_POD_11=malice11
-readonly MALICE_POD_12=malice12
+	waitUntilAllPodsRun
+	load_vars
 
-sleep 4 
+	sleep 4 
 
-msg "Adding queues on demo pods"
-kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
-  --id=@newqos create qos type=linux-htb \
-      queues:100=@queue -- \
-  --id=@queue create queue other-config:max-rate=100 &> /dev/null"
+	msg "Adding queues on demo pods"
+	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
+		--id=@newqos create qos type=linux-htb \
+		queues:100=@queue -- \
+		--id=@queue create queue other-config:max-rate=100 &> /dev/null"
 
-kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
-  --id=@newqos create qos type=linux-htb \
-      queues:100=@queue -- \
-  --id=@queue create queue other-config:max-rate=100 &> /dev/null"
+	kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
+		--id=@newqos create qos type=linux-htb \
+		queues:100=@queue -- \
+		--id=@queue create queue other-config:max-rate=100 &> /dev/null"
+}
 
-PS3="Select demo: "
-select option in "DDoS with application level canary" "DDoS with link level canary" Exit
-do
-  case $option in
-    "DDoS with application level canary")
+clean_cluster(){
+	echo -e "\n\n"
+	msg "Cleaning cluster"
+
+	msg "Removing applied rules from nodes"
+	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+	kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+
+
+	msg "Removing deployed pods"
+	kubectl delete -f yamls/security
+	kubectl delete -f yamls/pods
+
+	msg "Removing qos and queue"
+	kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true
+	kubectl exec -n kube-system "$ANTREA_POD_2" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true
+
+	kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy queue" &> /dev/null || true
+	kubectl exec -n kube-system "$ANTREA_POD_2" -- bash -c "ovs-vsctl --all destroy queue" &> /dev/null || true
+
+	msg "End of demo!"
+	exit
+}
+
+application_level_canary()
+{
+
       msg "Starting DDoS Demo"
      	 
-      read -p "Enter canary deployment command: " canaryCommands
+	  canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": []}"
+	  detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+	  # detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\", \"-t=5\"]}"
 
-      read -p "Enter detector deployment command: " detectorCommands
+	  if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
+		  read -p "Enter canary deployment command: " canaryCommands
+		  read -p "Enter detector deployment command: " detectorCommands
+	  fi; fi
       
       msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
       kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
@@ -71,11 +104,10 @@ do
       CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
       CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
 
-      msg "Please open two new terminals and execute the following commands" 
-      echo "kubectl exec -it $CANARY_1 -n security -- tail -f canary.log"
-      echo "kubectl exec -it $CANARY_2 -n security -- tail -f canary.log"
+      msg "Please open one new terminal and execute the following command" 
+      echo "./see_logs | grep canary"
       read -p "Press enter to continue"
-      
+
       msg "Creating DDoS traffic from malicious pods"
       kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
       kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ -c 100 -s 0 -t 0  &"
@@ -102,13 +134,19 @@ do
       kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
       echo -e "\n"
-      ;;
-    "DDoS with link level canary")
+}
+
+link_level_canary()
+{
       msg "Starting DDoS Link Demo"
       
-      read -p "Enter canary deployment command: " canaryCommands
-
-      read -p "Enter detector deployment command: " detectorCommands
+	  canaryCommands="{\"action\":\"create\", \"target\": \"canary-link\", \"arguments\": []}"
+      detectorCommands="{\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=block\"]}"
+      
+	  if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
+		  read -p "Enter canary deployment command: " canaryCommands
+		  read -p "Enter detector deployment command: " detectorCommands
+	  fi; fi
       
       msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
       kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
@@ -122,9 +160,8 @@ do
       CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
       CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
 
-      msg "Please open two new terminals and execute the following commands" 
-      echo "kubectl exec -it $CANARY_1 -n security -- tail -f canary-link.log"
-      echo "kubectl exec -it $CANARY_2 -n security -- tail -f canary-link.log"
+      msg "Please open one new terminal and execute the following command" 
+      echo "./see_logs | grep canary"
       read -p "Press enter to continue"
 
       msg "Creating DDoS traffic from malicious pods"
@@ -153,32 +190,62 @@ do
       kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
       
       echo -e "\n"
-      ;;
-    Exit)
-      echo -e "\n\n"
-      msg "Cleaning cluster"
+}
 
-      msg "Removing applied rules from nodes"
-      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
-      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+interactive(){
+	PS3="Select demo: "
+	select option in "DDoS with application level canary" "DDoS with link level canary" Exit
+	do
+		case $option in
+			"DDoS with application level canary")
+				application_level_canary -i
+				;;
+			"DDoS with link level canary")
+				link_level_canary -i
+				;;
+			Exit)
+				clean_cluster
+				;;
+			*)
+				echo "Invalid option"
+				;;
+		esac
+	done
+}
 
-      
-      msg "Removing deployed pods"
-      kubectl delete -f yamls/security
-      kubectl delete -f yamls/pods
+usage() {
+	echo "Usage: $1"
+	echo "       $1 [OPTION]"
+	echo "	interactive dDos demo"
+	echo ""
+	echo ""
+	echo "Options:"
+	echo "	--clean				clean the cluster from a possibly broken previous run"
+	echo "	--app-level			run ddos with application level canary with default deployment commands"
+	echo "	--link-level		run ddos with link level canary with default deployment commands"
+	echo "	--interactive		run demo in fully interactive mode (default action, prompt for deployment commands)"
+	echo "	--help				print this message"
 
-      msg "Removing qos and queue"
-      kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true
-      kubectl exec -n kube-system "$ANTREA_POD_2" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true
-      
-      kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy queue" &> /dev/null || true
-      kubectl exec -n kube-system "$ANTREA_POD_2" -- bash -c "ovs-vsctl --all destroy queue" &> /dev/null || true
+	exit $2
+}
 
-      msg "End of demo!"
-      exit
-      ;;
-    *)
-      echo "Invalid option"
-      ;;
-  esac
-done
+if [ $# -eq 1 ]; then
+	if [ $1 = "--clean" ]; then
+		load_vars
+		clean
+	elif [ $1 = "--help" ]; then
+		usage 0
+	elif [ $1 = "--app-level" ]; then
+		init
+		application_level_canary
+	elif [ $1 = "--link-level" ]; then
+		init
+		link_level_canary
+	else
+		usage $0 1
+	fi
+elif [ $# -eq 0 ]; then
+else
+	usage $0 1
+fi
+
