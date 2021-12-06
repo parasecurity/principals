@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+source ../common/scripts/funcs.sh
+
 CONF_DIR=conf
 ROOT_DIR=`git rev-parse --show-toplevel`
 DEMO_DIR="$ROOT_DIR/demos/demo1"
@@ -20,20 +22,21 @@ generate() {
 	mkdir -p yamls/security
 	mkdir -p yamls/pods
 	for file in $KUBE_DEPLOYMENTS; do
+		msg "Generating yamls/$file.yaml"
 		awk "$awk_script" $CONF_DIR/$file.yaml.conf > yamls/$file.yaml
 	done;
 }
 
 check() {
 	if [ ! -d $CONF_DIR ]; then
-		echo "Error: Directory $CONF_DIR does not exist!"
-		echo "  Please make sure you are in $DEMO_DIR directory and"
-		echo "  your repo is up to date."
+		errmsg "Error: Directory $CONF_DIR does not exist!"
+		wrnmsg "  Please make sure you are in $DEMO_DIR directory and\n"
+		wrnmsg "  your repo is up to date.\n"
 		exit 2
 	fi
 	for file in $KUBE_DEPLOYMENTS; do
 		if [ ! -f $CONF_DIR/$file.yaml.conf ]; then
-			echo "Error: file $CONF_DIR/$file.yaml.conf not found!"
+			errmsg "Error: file $CONF_DIR/$file.yaml.conf not found!"
 			exit 2
 		fi
 	done;
@@ -53,19 +56,19 @@ clean() {
 
 	if [ -d yamls/security ]; then
 		if [ ! "$(ls yamls/security 2> /dev/null)" ] ; then
-			echo "cleaning security"
+			msg "cleaning security"
 			rm -rf yamls/security 2> /dev/null
 		fi
 	fi
 	if [ -d yamls/pods ]; then
 		if [ ! "$(ls yamls/pods 2> /dev/null)" ] ; then
-			echo "cleaning pods"
+			msg "cleaning pods"
 			rm -rf yamls/pods 2> /dev/null
 		fi
 	fi
 	if [ -d yamls ]; then
 		if [ ! "$(ls yamls 2> /dev/null)" ] ; then
-			echo "removing yamls"
+			msg "removing yamls"
 			rm -rf yamls 2> /dev/null
 		fi
 	fi
@@ -98,12 +101,10 @@ if [ $# -eq 1 ]; then
 		usage $0 1
 	fi
 elif [ $# -eq 0 ]; then
-	clean
 	generate
 elif [ $1 = "--file" ]; then
 	shift
 	KUBE_DEPLOYMENTS="$@"
-	clean
 	generate
 else
 	usage $0 1

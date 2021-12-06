@@ -14,28 +14,28 @@ check() {
 	_ok=ok
 	if [ ! -d yamls ]; then
 		errmsg "Error: Directory yamls does not exist!"
-		wrnmsg "  Please make sure you are in $DEMO_DIR directory and"
-		wrnmsg "  your repo is up to date."
+		wrnmsg "  Please make sure you are in $DEMO_DIR directory and\n"
+		wrnmsg "  your repo is up to date.\n"
 		exit 2
 	fi
 
 	if [ ! -d yamls/security ]; then
 		errmsg "Error: Directory yamls/security does not exist!"
-		wrnmsg "  Please make sure you have configured the demo"
+		wrnmsg "  Please make sure you have configured the demo\n"
 		_ok=""
 	elif [ ! "$(ls yamls/security 2> /dev/null)" ] ; then
 		errmsg "Error: Directory yamls/security is empty!"
-		wrnmsg "  Please make sure you have configured the demo"
+		wrnmsg "  Please make sure you have configured the demo"\n
 		_ok=""
 	fi
 
 	if [ ! -d yamls/pods ]; then
 		errmsg "Error: Directory yamls/pods does not exist!"
-		wrnmsg "  Please make sure you have configured the demo"
+		wrnmsg "  Please make sure you have configured the demo\n"
 		_ok=""
 	elif [ ! "$(ls yamls/pods 2> /dev/null)" ] ; then
 		errmsg "Error: Directory yamls/pods is empty!"
-		wrnmsg "  Please make sure you have configured the demo"
+		wrnmsg "  Please make sure you have configured the demo\n"
 		_ok=""
 	fi
 
