@@ -38,7 +38,8 @@ wrnmsg()
 	local color=$(tput setaf 4)
 	local color_default=$(tput setaf 9)
 
-	echo -en "${bold}${color}${message}${color_default}${normal}"
+	echo ""
+	echo "${bold}${color}${message}${color_default}${normal}"
 }
 
 waitUntilAllPodsRun()

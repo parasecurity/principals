@@ -45,7 +45,7 @@ check() {
 # or add them in KUBE_DEPLOYMENTS in demo.conf
 clean() {
 	for file in $KUBE_DEPLOYMENTS; do
-		if [ ! -f $file ]; then
+		if [ ! -f yamls/$file.yaml ]; then
 			continue
 		fi
 		rm yamls/$file.yaml 2> /dev/null

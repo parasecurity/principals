@@ -7,6 +7,43 @@ set -euo pipefail
 
 source ../common/scripts/funcs.sh
 
+check() {
+	msg "Checking requirements"
+	ROOT_DIR=`git rev-parse --show-toplevel`
+	DEMO_DIR="$ROOT_DIR/demos/demo1"
+	_ok=ok
+	if [ ! -d yamls ]; then
+		errmsg "Error: Directory yamls does not exist!"
+		wrnmsg "  Please make sure you are in $DEMO_DIR directory and"
+		wrnmsg "  your repo is up to date."
+		exit 2
+	fi
+
+	if [ ! -d yamls/security ]; then
+		errmsg "Error: Directory yamls/security does not exist!"
+		wrnmsg "  Please make sure you have configured the demo"
+		_ok=""
+	elif [ ! "$(ls yamls/security 2> /dev/null)" ] ; then
+		errmsg "Error: Directory yamls/security is empty!"
+		wrnmsg "  Please make sure you have configured the demo"
+		_ok=""
+	fi
+
+	if [ ! -d yamls/pods ]; then
+		errmsg "Error: Directory yamls/pods does not exist!"
+		wrnmsg "  Please make sure you have configured the demo"
+		_ok=""
+	elif [ ! "$(ls yamls/pods 2> /dev/null)" ] ; then
+		errmsg "Error: Directory yamls/pods is empty!"
+		wrnmsg "  Please make sure you have configured the demo"
+		_ok=""
+	fi
+
+	if [ "$_ok" = "" ]; then
+		exit 2
+	fi
+}
+
 load_vars(){
 	readonly AGENT_POD_1=$(kubectl get -A po -o wide | grep "flow-server" | head -1 | awk '{print $2}')
 	readonly AGENT_POD_2=$(kubectl get -A po -o wide | grep "flow-server" | tail -1 | awk '{print $2}')
@@ -231,19 +268,23 @@ usage() {
 
 if [ $# -eq 1 ]; then
 	if [ $1 = "--clean" ]; then
+		check
 		load_vars
 		clean_cluster
 	elif [ $1 = "--help" ]; then
 		usage $0 0
 	elif [ $1 = "--app-level" ]; then
+		check
 		init
 		application_level_canary
 		clean_cluster
 	elif [ $1 = "--link-level" ]; then
+		check
 		init
 		link_level_canary
 		clean_cluster
 	elif [ $1 = "--interactive" ]; then
+		check
 		init
 		interactive
 		clean_cluster
@@ -251,6 +292,7 @@ if [ $# -eq 1 ]; then
 		usage $0 1
 	fi
 elif [ $# -eq 0 ]; then
+	check
 	init
 	interactive
 	clean_cluster
