@@ -77,11 +77,14 @@ func main() {
 			}
 
 			var count uint64
+			var failCount uint64
 			count = 0
+			failCount = 0
 			for {
 				resp, err := httpClient.Get(args.server)
 				if err != nil {
-					log.Print(err)
+					failCount++
+					log.Print("Fail Count:", failCount, err)
 					continue
 				}
 				defer resp.Body.Close()
