@@ -128,6 +128,7 @@ func main() {
 					resp, err := httpClient.Get(args.server)
 					if err != nil {
 						log.Println(err)
+						return
 					}
 					defer resp.Body.Close()
 
