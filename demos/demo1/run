@@ -134,7 +134,7 @@ application_level_canary()
       kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
       
       msg "Sending normal requests to http://kronos.mhl.tuc.gr:30001/ from alice" 
-      kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30001/ &"
+      kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://kronos.mhl.tuc.gr:30001/ &"
 
       waitUntilAllPodsRun
       
