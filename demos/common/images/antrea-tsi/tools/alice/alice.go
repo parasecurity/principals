@@ -118,7 +118,7 @@ func main() {
 		for _, key := range keys {
 			conc := hist[key] / 20
 
-			log.Println(conc)
+			// log.Println(conc)
 			for cl := 0; cl < conc; cl++ {
 				go func(r int, conc int, c int) {
 					httpClient := &http.Client{

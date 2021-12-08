@@ -1,10 +1,13 @@
+VERSION ?= v1.0.1
+IMAGE ?= tsi-logging
+REMOTE_REGISTRY ?= localhost:5000
+
 .PHONY: all clean image
 
 all: server agent client
 
 clean:
-	rm -rf bin/
-	docker rmi tsi-api:v1.0.0 localhost:5000/tsi-logging:v1.0.0
+	rm -rf bin/ docker rmi $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
 
 server:
 	mkdir -p bin/
@@ -20,8 +23,8 @@ client:
 	go build -o bin/multithread_client cmd/multithread_client/multithread_client.go
 
 image: server agent client
-	docker build . -t tsi-logging:v1.0.0
+	docker build . -t $(IMAGE):$(VERSION)
 
-push:
-	docker tag tsi-logging:v1.0.0 localhost:5000/tsi-logging:v1.0.0
-	docker push localhost:5000/tsi-logging:v1.0.0
+push: image
+	docker tag $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
+	docker push $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
