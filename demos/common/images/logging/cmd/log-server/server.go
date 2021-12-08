@@ -115,7 +115,10 @@ func (s stats) printStats() {
 type canaryStamps struct {
 	timeout int64
 	detectorEnable int64
-	serverUp int64
+	serverUpTime int64
+	serverUp bool
+	inRipple bool
+	rippleCount int
 }
 
 type detectorStamps struct {
@@ -133,7 +136,7 @@ func analyseLogs(logs chan []byte){
 
 	defer func() {
 		for c, can := range canaries {
-			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.timeout, can.detectorEnable, can.serverUp)
+			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.timeout, can.detectorEnable, can.serverUpTime)
 		}
 		for c, cl := range cluster {
 			fmt.Fprintln(parserOutput, "node ", c, cl)
@@ -242,27 +245,54 @@ func analyseLogs(logs chan []byte){
 							}
 							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"enabled detectors")
 						}
-						if c.serverUp == 0 && 
+						if !c.serverUp && 
 						   strings.Contains(log, "Response in") {
 						   // server is responve again
-							c.serverUp = timestamp
-							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again")
+						   // may be reverted if ripple
+						    if c.serverUpTime == 0 {
+								c.serverUpTime = timestamp
+							}
+							c.rippleCount--
+							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again, or ripple")
+
 							if attack.reconnections == nodes {
-								// every node can access the attacked server
+								// a node can access the attacked server
+								// this measurement may be reverted if ripple
 								attack.st.timeUntilResponsive = timestamp - attack.downTime
 							} 
-							attack.reconnections--
+							if !c.inRipple {
+								attack.reconnections--
+								c.inRipple = true
+							}
 							if attack.reconnections == 0 {
 								// every node can access the attacked server
+								// this measurement may be reverted if ripple
 								attack.st.timeUntilFullyResponsive = timestamp - attack.downTime
-								attack.st.printStats()
 							} 
+							if c.inRipple && c.rippleCount == 0{
+								// it is truly Up!
+								c.serverUp = true
+								c.inRipple = false
+								c.rippleCount = 2
+								attack.st.printStats()
+							}
+						}else if !c.serverUp && 
+					          strings.Contains(log, "Canary connection timeout") {
+							if c.inRipple {
+								// revert! we are experianing a ripple
+								attack.reconnections++
+								attack.st.timeUntilFullyResponsive = 0
+								attack.st.timeUntilResponsive = 0
+								c.inRipple = false
+								c.rippleCount = 2
+								c.serverUpTime = 0
+							}
 						}
 					}
 					canaries[pod] = c
 				} else {
 					if strings.Contains(log, "Canary connection timeout") {
-						canaries[pod] = canaryStamps{timestamp, 0, 0}
+						canaries[pod] = canaryStamps{timestamp, 0, 0, false, false, 2}
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
 						if attack.st.timeUntilFirstTimeout == 0 {
 							attack.st.timeUntilFirstTimeout = timestamp - attack.startTime
