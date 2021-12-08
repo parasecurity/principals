@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"fmt"
 	"io"
 	"os/signal"
 	"syscall"
@@ -12,6 +13,8 @@ import (
 	"log"
 )
 
+var parserOutput *os.File
+
 func init() {
 
 	// Open log file
@@ -20,6 +23,8 @@ func init() {
 		log.Println(err)
 		return
 	}
+
+	parserOutput, err = os.OpenFile("/tsi/parser.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
@@ -95,15 +100,16 @@ type stats struct {
 }
 
 func (s stats) printStats() {
-	println("=================================================================")
-	println("timeUntilFirstBlock", s.timeUntilFirstBlock, "usec",						float32(s.timeUntilFirstBlock/1000.0),				"msec")
-	println("timeUntilLastBlock", s.timeUntilLastBlock, "usec",							float32(s.timeUntilLastBlock/1000.0),				"msec")
-	println("timeUntilAllDetectorsEnabled", s.timeUntilAllDetectorsEnabled, "usec", 	float32(s.timeUntilAllDetectorsEnabled/1000.0),		"msec")
-	println("timeUntilFirstDetectorsEnabled", s.timeUntilFirstDetectorsEnabled, "usec", float32(s.timeUntilFirstDetectorsEnabled/1000.0),	"msec")
-	println("timeUntilFirstTimeout", s.timeUntilFirstTimeout, "usec",					float32(s.timeUntilFirstTimeout/1000.0),				"msec")
-	println("timeUntilResponsive", s.timeUntilResponsive, "usec",						float32(s.timeUntilResponsive/1000.0),				"msec")
-	println("timeUntilFullyResponsive", s.timeUntilFullyResponsive, "usec", 			float32(s.timeUntilFullyResponsive/1000.0),			"msec")
-	println("=================================================================")
+	// TODO fix float printing to something more human readable
+	fmt.Fprintln(parserOutput, "=================================================================")
+	fmt.Fprintln(parserOutput, "timeUntilFirstBlock", s.timeUntilFirstBlock, "usec",						float32(s.timeUntilFirstBlock/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilLastBlock", s.timeUntilLastBlock, "usec",							float32(s.timeUntilLastBlock/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilAllDetectorsEnabled", s.timeUntilAllDetectorsEnabled, "usec", 	float32(s.timeUntilAllDetectorsEnabled/1000.0),		"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFirstDetectorsEnabled", s.timeUntilFirstDetectorsEnabled, "usec", float32(s.timeUntilFirstDetectorsEnabled/1000.0),	"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFirstTimeout", s.timeUntilFirstTimeout, "usec",					float32(s.timeUntilFirstTimeout/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilResponsive", s.timeUntilResponsive, "usec",						float32(s.timeUntilResponsive/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFullyResponsive", s.timeUntilFullyResponsive, "usec", 			float32(s.timeUntilFullyResponsive/1000.0),			"msec")
+	fmt.Fprintln(parserOutput, "=================================================================")
 }
 
 type canaryStamps struct {
@@ -127,14 +133,17 @@ func analyseLogs(logs chan []byte){
 
 	defer func() {
 		for c, can := range canaries {
-			println("canary ", c, "times: ", can.timeout, can.detectorEnable, can.serverUp)
+			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.timeout, can.detectorEnable, can.serverUp)
 		}
 		for c, cl := range cluster {
-			println("node ", c, cl)
+			fmt.Fprintln(parserOutput, "node ", c, cl)
 		}
 		for i, a := range attacks {
-			println("attack: ", i, a.started, a.cleanStart, a.startTime)
+			fmt.Fprintln(parserOutput, "attack: ", i, a.started, a.cleanStart, a.startTime)
 		}
+		// TODO error checking
+		parserOutput.Sync()
+		parserOutput.Close()
 	}()
 
 	// OPT could use the length of cluster
@@ -160,11 +169,11 @@ func analyseLogs(logs chan []byte){
 				if strings.Compare(a, pod) != 0 {
 					// EVENT for some reason flow-server restarted
 					cluster[node] = pod
-					println(timestamp, "flow-server on node ", node, "restarted. New server: ", pod)
+					fmt.Fprintln(parserOutput, timestamp, "flow-server on node ", node, "restarted. New server: ", pod)
 				}	
 				if strings.Contains(log, "executed command") &&
 				   strings.Contains(log, "block") {
-					   println(timestamp, "flow-server ", pod, "blocked applied")
+					   fmt.Fprintln(parserOutput, timestamp, "flow-server ", pod, "blocked applied")
 				   }
 				// I don't remember why the line bellow exists
 				cluster[node] = a
@@ -172,7 +181,7 @@ func analyseLogs(logs chan []byte){
 				// INIT EVENT a new node detected
 				cluster[node] = pod
 				nodes++
-				println(timestamp, "New node detected: ", node, pod)
+				fmt.Fprintln(parserOutput, timestamp, "New node detected: ", node, pod)
 			}
 		}
 
@@ -192,7 +201,7 @@ func analyseLogs(logs chan []byte){
 				// EVENT new attack detected
 				d := dDos{true, false, timestamp, 0, 0, nodes, stats{0, 0, 0, 0, 0, 0, 0}}
 				attacks = append(attacks, d)
-				println(timestamp, "[!] ddos attack initiated")
+				fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 			} else {
 				attack := &(attacks[len(attacks) - 1])
 				// EVENT in case of out of order logs, check if we have
@@ -200,12 +209,12 @@ func analyseLogs(logs chan []byte){
 				if !attack.cleanStart {
 					if attack.startTime > timestamp {
 						attack.startTime = timestamp
-						println(timestamp, "missed initial log of attack")
+						fmt.Fprintln(parserOutput, timestamp, "missed initial log of attack")
 					} else if (timestamp - attack.startTime) > 1000000 {
 						// mark it as clean-start. no chance we missed 
 						// log one second earlier
 						attack.cleanStart = true
-						println(timestamp, "ddos: initial timestamp validated")
+						fmt.Fprintln(parserOutput, timestamp, "ddos: initial timestamp validated")
 					}
 				}
 			}
@@ -220,7 +229,7 @@ func analyseLogs(logs chan []byte){
 			if len(attacks) == 0 {
 				if strings.Contains(log, "Canary connection timeout") {
 					// canary timed out but no attack is present
-					println(timestamp, "canary timed out but no attack is present")
+					fmt.Fprintln(parserOutput, timestamp, "canary timed out but no attack is present")
 				}
 			} else {
 				attack := &(attacks[len(attacks) - 1])
@@ -231,13 +240,13 @@ func analyseLogs(logs chan []byte){
 							if c.detectorEnable == 0 {
 								c.detectorEnable = timestamp
 							}
-							println(timestamp, "canary ", pod,"enabled detectors")
+							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"enabled detectors")
 						}
 						if c.serverUp == 0 && 
 						   strings.Contains(log, "Response in") {
 						   // server is responve again
 							c.serverUp = timestamp
-							println(timestamp, "canary ", pod,"connected to server again")
+							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again")
 							if attack.reconnections == nodes {
 								// every node can access the attacked server
 								attack.st.timeUntilResponsive = timestamp - attack.downTime
@@ -254,7 +263,7 @@ func analyseLogs(logs chan []byte){
 				} else {
 					if strings.Contains(log, "Canary connection timeout") {
 						canaries[pod] = canaryStamps{timestamp, 0, 0}
-						println(timestamp, "canary ", pod,"timed out")
+						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
 						if attack.st.timeUntilFirstTimeout == 0 {
 							attack.st.timeUntilFirstTimeout = timestamp - attack.startTime
 							attack.downTime = timestamp
@@ -269,11 +278,11 @@ func analyseLogs(logs chan []byte){
 		if strings.Contains(pod, "detector") {
 			if len(attacks) == 0 {
 				if strings.Contains(log, "Received IP") {
-					println(timestamp, "detector notified but no attack is present");
+					fmt.Fprintln(parserOutput, timestamp, "detector notified but no attack is present");
 				} else if strings.Contains(log, "new connection") {
-					println(timestamp, "detector new connection detected but no attack is present")
+					fmt.Fprintln(parserOutput, timestamp, "detector new connection detected but no attack is present")
 				} else if strings.Contains(log, "block") {
-					println(timestamp, "detector blocking command sent but no attack is present")
+					fmt.Fprintln(parserOutput, timestamp, "detector blocking command sent but no attack is present")
 				}
 			} else {
 
@@ -281,12 +290,12 @@ func analyseLogs(logs chan []byte){
 				d, e := detectors[pod]
 				if e {
 					if strings.Contains(log, "Received IP") {
-						println(timestamp, "detector ", pod, "notified again");
+						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, "notified again");
 					} else if strings.Contains(log, "new connection") {
 						if d.firstDetection == 0 {
 							d.firstDetection = timestamp
 						}
-						println(timestamp, "detector ", pod, "detected new connection")
+						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, "detected new connection")
 					} else if strings.Contains(log, "block") {
 						if d.firstBlocking == 0 {
 							d.firstBlocking = timestamp
@@ -298,7 +307,7 @@ func analyseLogs(logs chan []byte){
 						if attack.blockedConnections == len(malices) {
 							attack.st.timeUntilLastBlock = timestamp - attack.downTime
 						}
-						println(timestamp, "detector ", pod, " send blocking command")
+						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " send blocking command")
 					}
 					detectors[pod] = d
 				} else {
@@ -310,7 +319,7 @@ func analyseLogs(logs chan []byte){
 						if len(detectors) == nodes {
 							attack.st.timeUntilAllDetectorsEnabled = timestamp - attack.downTime
 						}
-						println(timestamp, "detector ", pod, " notified for first time");
+						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " notified for first time");
 					}
 				}
 
@@ -322,9 +331,9 @@ func analyseLogs(logs chan []byte){
 
 func printLogs(logs chan []byte){
 	for {
-		// msg := <-logs
-		// print(string(msg))
-		_ = <-logs
+		msg := <-logs
+		print(string(msg))
+		// _ = <-logs
 	}
 }
 
