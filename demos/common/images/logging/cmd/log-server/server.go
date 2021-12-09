@@ -13,23 +13,40 @@ import (
 	"log"
 )
 
-var parserOutput *os.File
+var (
+	parserOutput *os.File
+	logFile *os.File
+	clusterLogging *os.File
+)
 
 func init() {
 
 	// Open log file
-	logFile, err := os.OpenFile("local.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile("/tsi/logging-server.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
 	parserOutput, err = os.OpenFile("/tsi/parser.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	clusterLogging, err = os.OpenFile("/tsi/tsi.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
-	//stop = make(chan struct{})
+	// key: node hostname 
+	// val: flow-server pod-hostname
+	cluster = make(map[string]*nodePods)
+
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
 	// Catch all signals since not explicitly listing
@@ -64,7 +81,7 @@ func handleConnection(c net.Conn, toPrinter chan []byte, toAnalyser chan []byte)
 				log.Println(err)
 			}
 		}
-		// TODO select for efficiency
+		// select for efficiency
 		select {
 		case toPrinter <- str:
 			toAnalyser <- str
@@ -77,16 +94,21 @@ func handleConnection(c net.Conn, toPrinter chan []byte, toAnalyser chan []byte)
 /* parsing conventions
 *    STEPS: smallest measurable action/reaction
 *    EVENTS: consist of STEPS
+*         ^				^				^
+*		don't bother with this commend block yet
 */
 
-type dDos struct {
-	started bool
-	cleanStart bool
-	startTime int64
-	downTime int64
-	blockedConnections int
-	reconnections int
-	st stats
+// TODO fix float printing to something more human readable
+func (s stats) printStats() {
+	fmt.Fprintln(parserOutput, "=================================================================")
+	fmt.Fprintln(parserOutput, "timeUntilFirstBlock", s.timeUntilFirstBlock, "usec",						float32(s.timeUntilFirstBlock/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilLastBlock", s.timeUntilLastBlock, "usec",							float32(s.timeUntilLastBlock/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilAllDetectorsEnabled", s.timeUntilAllDetectorsEnabled, "usec", 	float32(s.timeUntilAllDetectorsEnabled/1000.0),		"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFirstDetectorsEnabled", s.timeUntilFirstDetectorsEnabled, "usec", float32(s.timeUntilFirstDetectorsEnabled/1000.0),	"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFirstTimeout", s.timeUntilFirstTimeout, "usec",					float32(s.timeUntilFirstTimeout/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilResponsive", s.timeUntilResponsive, "usec",						float32(s.timeUntilResponsive/1000.0),				"msec")
+	fmt.Fprintln(parserOutput, "timeUntilFullyResponsive", s.timeUntilFullyResponsive, "usec", 			float32(s.timeUntilFullyResponsive/1000.0),			"msec")
+	fmt.Fprintln(parserOutput, "=================================================================")
 }
 
 type stats struct {
@@ -99,21 +121,38 @@ type stats struct {
 	timeUntilFullyResponsive int64
 }
 
-func (s stats) printStats() {
-	// TODO fix float printing to something more human readable
-	fmt.Fprintln(parserOutput, "=================================================================")
-	fmt.Fprintln(parserOutput, "timeUntilFirstBlock", s.timeUntilFirstBlock, "usec",						float32(s.timeUntilFirstBlock/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilLastBlock", s.timeUntilLastBlock, "usec",							float32(s.timeUntilLastBlock/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilAllDetectorsEnabled", s.timeUntilAllDetectorsEnabled, "usec", 	float32(s.timeUntilAllDetectorsEnabled/1000.0),		"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFirstDetectorsEnabled", s.timeUntilFirstDetectorsEnabled, "usec", float32(s.timeUntilFirstDetectorsEnabled/1000.0),	"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFirstTimeout", s.timeUntilFirstTimeout, "usec",					float32(s.timeUntilFirstTimeout/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilResponsive", s.timeUntilResponsive, "usec",						float32(s.timeUntilResponsive/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFullyResponsive", s.timeUntilFullyResponsive, "usec", 			float32(s.timeUntilFullyResponsive/1000.0),			"msec")
-	fmt.Fprintln(parserOutput, "=================================================================")
+// Refactoring TODO include only interesting timestamps
+type dDos struct {
+	started bool
+	cleanStart bool
+	startTime int64
+	downTime int64
+	blockedConnections int
+	reconnections int
+	st stats
+}
+
+func initCanary(now int64, name, node string) *canaryStamps {
+	newCanarty := canaryStamps{
+		name: name, 
+		node: node, 
+
+		firstTimeout: now,
+		detectorEnable: 0,
+		serverUpTime: 0,
+		serverUp: false,
+		inRipple: false,
+		rippleCount: 2 }
+
+	cluster[node].canary = (* canaryStamps)(&newCanarty)
+	return (* canaryStamps)(&newCanarty)
 }
 
 type canaryStamps struct {
-	timeout int64
+	name string
+	node string
+
+	firstTimeout int64
 	detectorEnable int64
 	serverUpTime int64
 	serverUp bool
@@ -121,22 +160,59 @@ type canaryStamps struct {
 	rippleCount int
 }
 
+func initDetector(now int64, name, node string) *detectorStamps {
+	newDetector := detectorStamps {
+		name: name,
+		node: node,
+
+		init: now,
+		firstDetection: 0,
+		firstBlocking: 0 }
+
+	cluster[node].detector = (* detectorStamps)(&newDetector)
+	return (* detectorStamps)(&newDetector)
+}
+
 type detectorStamps struct {
+	name string
+	node string
+
+	// first time notified by canary after attack initiation
 	init int64
 	firstDetection int64
+	// first blocking command sent to flow server
 	firstBlocking int64
 }
 
+func initNode(name, flow string) *nodePods {
+	newNode := nodePods{
+		canary: nil,
+		detector: nil,
+		flow: flow }
+
+	cluster[name] = (*nodePods)(&newNode)
+	return (*nodePods)(&newNode)
+}
+
+type nodePods struct {
+	canary *canaryStamps
+	detector *detectorStamps
+	flow string
+}
+
+var cluster map[string]*nodePods
+
 func analyseLogs(logs chan []byte){
-	cluster := make(map[string]string)
-	canaries := make(map[string]canaryStamps)
-	detectors := make(map[string]detectorStamps)
+
+	canaries := make(map[string]*canaryStamps)
+	detectors := make(map[string]*detectorStamps)
 	attacks := make([]dDos,0)
 	malices := make(map[string]string)
 
+	// depr
 	defer func() {
 		for c, can := range canaries {
-			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.timeout, can.detectorEnable, can.serverUpTime)
+			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.firstTimeout, can.detectorEnable, can.serverUpTime)
 		}
 		for c, cl := range cluster {
 			fmt.Fprintln(parserOutput, "node ", c, cl)
@@ -169,22 +245,28 @@ func analyseLogs(logs chan []byte){
 		if strings.Contains(pod, "flow-server") {
 			a, e := cluster[node]
 			if e {
-				if strings.Compare(a, pod) != 0 {
+				if strings.Compare(a.flow, pod) != 0 {
 					// EVENT for some reason flow-server restarted
-					cluster[node] = pod
-					fmt.Fprintln(parserOutput, timestamp, "flow-server on node ", node, "restarted. New server: ", pod)
+					a.flow = pod
+					fmt.Fprintln(parserOutput, timestamp, 
+								"flow-server on node ", node, 
+								"restarted. New server: ", pod)
 				}	
 				if strings.Contains(log, "executed command") &&
 				   strings.Contains(log, "block") {
-					   fmt.Fprintln(parserOutput, timestamp, "flow-server ", pod, "blocked applied")
+					   fmt.Fprintln(parserOutput, timestamp, 
+									"flow-server ", pod, "blocked applied")
 				   }
-				// I don't remember why the line bellow exists
+				//   I don't remember why the line bellow exists <--comment before refactoring
+				// now it has some value, maybe it is not needed, as the map consists of pointers
+				// I'm not sure about golang's sorcery
 				cluster[node] = a
 			} else {
 				// INIT EVENT a new node detected
-				cluster[node] = pod
+				initNode(node, pod)
 				nodes++
-				fmt.Fprintln(parserOutput, timestamp, "New node detected: ", node, pod)
+				fmt.Fprintln(parserOutput, timestamp, 
+							"New node detected: ", node, pod)
 			}
 		}
 
@@ -292,7 +374,7 @@ func analyseLogs(logs chan []byte){
 					canaries[pod] = c
 				} else {
 					if strings.Contains(log, "Canary connection timeout") {
-						canaries[pod] = canaryStamps{timestamp, 0, 0, false, false, 2}
+						canaries[pod] = initCanary(timestamp, pod, node)
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
 						if attack.st.timeUntilFirstTimeout == 0 {
 							attack.st.timeUntilFirstTimeout = timestamp - attack.startTime
@@ -342,7 +424,8 @@ func analyseLogs(logs chan []byte){
 					detectors[pod] = d
 				} else {
 					if strings.Contains(log, "Received IP") {
-						detectors[pod] = detectorStamps{timestamp, 0 ,0}
+						// detectors[pod] = detectorStamps{timestamp, 0 ,0}
+						detectors[pod] = initDetector(timestamp, pod, node)
 						if attack.st.timeUntilFirstDetectorsEnabled == 0 {
 							attack.st.timeUntilFirstDetectorsEnabled = timestamp - attack.downTime
 						}
@@ -359,13 +442,19 @@ func analyseLogs(logs chan []byte){
 	} // main loop
 }
 
+/* this function prints logs to stdout in order to be managed by kubernetes logging system
+* logs are also written to tsi shared directory in tsi.log
+* IMPORTANT! Logs may be out of order in same cases of bursting. 
+* Out of order logs do not affect the parsing system above
+*/
 func printLogs(logs chan []byte){
 	for {
 		msg := <-logs
 		print(string(msg))
-		// _ = <-logs
+		fmt.Fprint(clusterLogging, string(msg))
 	}
 }
+
 
 func main() {
 
