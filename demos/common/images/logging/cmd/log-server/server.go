@@ -122,46 +122,20 @@ type stats struct {
 	timeUntilFullyResponsive int64
 }
 
-// Refactoring TODO include only interesting timestamps
-type dDos struct {
-	started bool
-	cleanStart bool
-	startTime int64
-	startingPoint stamp
-	downTime int64
-	blockedConnections int
-	reconnections int
-	st stats
-}
-
-//d := dDos{true, false, timestamp, 0, 0, nodes, stats{0, 0, 0, 0, 0, 0, 0}}
-func (d dDos) start(now int64) {
-	d.started = true
-	d.cleanStart = false // TODO
-	d.startTime = now // TODO
-	d.startingPoint.init(now)
-	d.downTime = 0
-	d.blockedConnections = 0
-	d.reconnections = nodes
-	// TODO d.st = 
-
-}
-
 type stamp struct {
 	// main
 	timestamp int64
 	valid bool
-	threshold int64 // time in microseconds
-
-	// meta
+	threshold int64 // time in microseconds, if zero no validation will be done
 }
 
-func (s stamp) init(now int64) {
+func (s stamp) init(now, thr int64) {
 	s.timestamp = now
-	s.valid = false
+	s.valid = thr == 0
+	s.threshold = thr
 }
 
-/* jjjjfor now it doesn't produce any output
+/* for now it doesn't produce any output
 * it returns true only when the timestamp gets validated and false 
 * in ANY other case, including when it is already validated
 *
@@ -183,6 +157,26 @@ func (s stamp) validate(now int64) bool {
 		return true
 	}
 	return false
+}
+
+// Refactoring TODO include only interesting timestamps
+type dDos struct {
+	started bool
+	startingPoint stamp
+	downTime int64
+	blockedConnections int
+	reconnections int
+	st stats
+}
+
+func (d dDos) start(now int64) {
+	d.started = true
+	d.startingPoint.init(now, 1000000)
+	d.downTime = 0
+	d.blockedConnections = 0
+	d.reconnections = nodes
+	// TODO d.st = 
+
 }
 
 func (d dDos) validateStart(now int64) {
@@ -271,7 +265,7 @@ func analyseLogs(logs chan []byte){
 
 	canaries := make(map[string]*canaryStamps)
 	detectors := make(map[string]*detectorStamps)
-	// attacks := make([]dDos,0)
+	attack.started = false
 	malices := make(map[string]string)
 
 	// depr
@@ -282,7 +276,6 @@ func analyseLogs(logs chan []byte){
 		for c, cl := range cluster {
 			fmt.Fprintln(parserOutput, "node ", c, cl)
 		}
-		fmt.Fprintln(parserOutput, "attack: ", attack.started, attack.cleanStart, attack.startTime)
 		// TODO error checking
 		parserOutput.Sync()
 		parserOutput.Close()
@@ -428,7 +421,7 @@ func analyseLogs(logs chan []byte){
 						canaries[pod] = initCanary(timestamp, pod, node)
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
 						if attack.st.timeUntilFirstTimeout == 0 {
-							attack.st.timeUntilFirstTimeout = timestamp - attack.startTime
+							attack.st.timeUntilFirstTimeout = timestamp - attack.startingPoint.timestamp
 							attack.downTime = timestamp
 						}
 					}
