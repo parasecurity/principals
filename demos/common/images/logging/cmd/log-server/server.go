@@ -46,6 +46,7 @@ func init() {
 	// key: node hostname 
 	// val: flow-server pod-hostname
 	cluster = make(map[string]*nodePods)
+	nodes = 0
 
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
@@ -126,10 +127,68 @@ type dDos struct {
 	started bool
 	cleanStart bool
 	startTime int64
+	startingPoint stamp
 	downTime int64
 	blockedConnections int
 	reconnections int
 	st stats
+}
+
+//d := dDos{true, false, timestamp, 0, 0, nodes, stats{0, 0, 0, 0, 0, 0, 0}}
+func (d dDos) start(now int64) {
+	d.started = true
+	d.cleanStart = false // TODO
+	d.startTime = now // TODO
+	d.startingPoint.init(now)
+	d.downTime = 0
+	d.blockedConnections = 0
+	d.reconnections = nodes
+	// TODO d.st = 
+
+}
+
+type stamp struct {
+	// main
+	timestamp int64
+	valid bool
+	threshold int64 // time in microseconds
+
+	// meta
+}
+
+func (s stamp) init(now int64) {
+	s.timestamp = now
+	s.valid = false
+}
+
+/* for now it doesn't produce any output
+* it returns true only when the timestamp gets validated and false 
+* in ANY other case, including when it is already validated
+*
+* the caller will never know if an out-of-order log 
+* changed the value before validation
+*/
+func (s stamp) validate(now int64) bool {
+	// EVENT in case of out of order logs, check if we have
+	// missed the correct starting point
+	if s.valid {return false}
+
+	if s.timestamp > now {
+		s.timestamp = now
+		// TODO may produce a notification
+	} else if (now - s.timestamp) > s.threshold {
+		// mark it as clean-start. no chance we missed 
+		// log one second earlier
+		s.valid = true
+		return true
+	}
+	return false
+}
+
+func (d dDos) validateStart(now int64) {
+	if d.startingPoint.validate(now) {
+		fmt.Fprintln(parserOutput, now, "ddos: initial now validated")
+	}
 }
 
 func initCanary(now int64, name, node string) *canaryStamps {
@@ -191,6 +250,7 @@ func initNode(name, flow string) *nodePods {
 		flow: flow }
 
 	cluster[name] = (*nodePods)(&newNode)
+	nodes++
 	return (*nodePods)(&newNode)
 }
 
@@ -200,13 +260,18 @@ type nodePods struct {
 	flow string
 }
 
-var cluster map[string]*nodePods
+var (
+	cluster map[string]*nodePods
+	nodes int
+	attack dDos
+)
+
 
 func analyseLogs(logs chan []byte){
 
 	canaries := make(map[string]*canaryStamps)
 	detectors := make(map[string]*detectorStamps)
-	attacks := make([]dDos,0)
+	// attacks := make([]dDos,0)
 	malices := make(map[string]string)
 
 	// depr
@@ -217,16 +282,13 @@ func analyseLogs(logs chan []byte){
 		for c, cl := range cluster {
 			fmt.Fprintln(parserOutput, "node ", c, cl)
 		}
-		for i, a := range attacks {
-			fmt.Fprintln(parserOutput, "attack: ", i, a.started, a.cleanStart, a.startTime)
-		}
+		fmt.Fprintln(parserOutput, "attack: ", attack.started, attack.cleanStart, attack.startTime)
 		// TODO error checking
 		parserOutput.Sync()
 		parserOutput.Close()
 	}()
 
-	// OPT could use the length of cluster
-	nodes := 0
+	// OPT could use the length of cluster TODO move to init
 	for {
 		// log deconstruction
 		msg := <-logs
@@ -245,6 +307,7 @@ func analyseLogs(logs chan []byte){
 		if strings.Contains(pod, "flow-server") {
 			a, e := cluster[node]
 			if e {
+				// out of scenario! TODO decouple
 				if strings.Compare(a.flow, pod) != 0 {
 					// EVENT for some reason flow-server restarted
 					a.flow = pod
@@ -252,19 +315,22 @@ func analyseLogs(logs chan []byte){
 								"flow-server on node ", node, 
 								"restarted. New server: ", pod)
 				}	
+
+				// info 
 				if strings.Contains(log, "executed command") &&
 				   strings.Contains(log, "block") {
 					   fmt.Fprintln(parserOutput, timestamp, 
 									"flow-server ", pod, "blocked applied")
-				   }
+				}
+
 				//   I don't remember why the line bellow exists <--comment before refactoring
 				// now it has some value, maybe it is not needed, as the map consists of pointers
 				// I'm not sure about golang's sorcery
 				cluster[node] = a
+
 			} else {
 				// INIT EVENT a new node detected
 				initNode(node, pod)
-				nodes++
 				fmt.Fprintln(parserOutput, timestamp, 
 							"New node detected: ", node, pod)
 			}
@@ -279,29 +345,15 @@ func analyseLogs(logs chan []byte){
 			// count malices
 			_, e := malices[pod]
 			if !e {
+				// TODO change to map of structs with flag if started the attack!
 				malices[pod] = node
 			}
-			// attacks is a list, and for now it will have only one element
-			if len(attacks) == 0 {
+			if attack.started == false {
 				// EVENT new attack detected
-				d := dDos{true, false, timestamp, 0, 0, nodes, stats{0, 0, 0, 0, 0, 0, 0}}
-				attacks = append(attacks, d)
+				attack.start(timestamp)
 				fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 			} else {
-				attack := &(attacks[len(attacks) - 1])
-				// EVENT in case of out of order logs, check if we have
-				// missed the correct starting point
-				if !attack.cleanStart {
-					if attack.startTime > timestamp {
-						attack.startTime = timestamp
-						fmt.Fprintln(parserOutput, timestamp, "missed initial log of attack")
-					} else if (timestamp - attack.startTime) > 1000000 {
-						// mark it as clean-start. no chance we missed 
-						// log one second earlier
-						attack.cleanStart = true
-						fmt.Fprintln(parserOutput, timestamp, "ddos: initial timestamp validated")
-					}
-				}
+				attack.validateStart(timestamp)
 			}
 		}
 
@@ -311,13 +363,12 @@ func analyseLogs(logs chan []byte){
 			// ingore log
 			if strings.Contains(log, "SIGNAL") {continue}
 			// attacks is a list, and for now it will have only one element
-			if len(attacks) == 0 {
+			if !attack.started {
 				if strings.Contains(log, "Canary connection timeout") {
 					// canary timed out but no attack is present
 					fmt.Fprintln(parserOutput, timestamp, "canary timed out but no attack is present")
 				}
 			} else {
-				attack := &(attacks[len(attacks) - 1])
 				c, e := canaries[pod]
 				if e {
 					if attack.started {
@@ -388,7 +439,7 @@ func analyseLogs(logs chan []byte){
 		// EVENTS
 		// detector stuff
 		if strings.Contains(pod, "detector") {
-			if len(attacks) == 0 {
+			if !attack.started {
 				if strings.Contains(log, "Received IP") {
 					fmt.Fprintln(parserOutput, timestamp, "detector notified but no attack is present");
 				} else if strings.Contains(log, "new connection") {
@@ -398,7 +449,6 @@ func analyseLogs(logs chan []byte){
 				}
 			} else {
 
-				attack := &(attacks[len(attacks) - 1])
 				d, e := detectors[pod]
 				if e {
 					if strings.Contains(log, "Received IP") {
