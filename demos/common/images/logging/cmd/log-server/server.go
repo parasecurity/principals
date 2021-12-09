@@ -201,6 +201,71 @@ func initCanary(now int64, name, node string) *canaryStamps {
 	return (* canaryStamps)(&newCanarty)
 }
 
+/* use rippleStamp instead of stamp when all statements 
+* bellow are true:
+*
+*	- you are trying to detect a change of network connectivity
+*	- the sequense of logs that are tracked for that measurement
+*	  is produced by a single pod in the same thread!
+*	- last, but not least, when you want to measure both times of changing state!
+*
+*	timestampT: time without ripple from F to T
+*	timestampF: time from T to F at beggining of a possible ripple
+*
+* eg:
+* 
+*
+*
+*
+*
+*
+*
+* usefull for canaries, detectors, flow-servers
+*/
+type rippleStamp struct {
+	timestampT int64
+	timestampF int64
+	inRipple bool
+	rippleCount int
+	thr int
+	state bool
+}
+
+func (rs rippleStamp) init(now int64, thr int, state bool) {
+	if state {
+		rs.timestampT = now
+		rs.timestampF = 0
+	} else {
+		rs.timestampT = 0
+		rs.timestampF = now
+	}
+	rs.rippleCount = thr
+	rs.thr = thr
+	
+	rs.inRipple = false
+	rs.state = state
+}
+
+func (rs rippleStamp) toggle(to, check bool) bool {
+	if !check {return false}
+	if rs.state {
+		// T state
+		rs.state = to
+		return !rs.state
+	}else {
+		// F state
+		if !to {
+			rs.rippleCount = rs.thr
+		}
+		rs.rippleCount--
+		if rs.rippleCount == 0 {
+			rs.rippleCount = rs.thr
+			rs.state = true
+		}
+		return rs.state
+	}
+}
+
 type canaryStamps struct {
 	name string
 	node string
