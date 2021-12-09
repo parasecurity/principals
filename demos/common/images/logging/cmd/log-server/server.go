@@ -161,7 +161,7 @@ func (s stamp) init(now int64) {
 	s.valid = false
 }
 
-/* for now it doesn't produce any output
+/* jjjjfor now it doesn't produce any output
 * it returns true only when the timestamp gets validated and false 
 * in ANY other case, including when it is already validated
 *
@@ -187,7 +187,7 @@ func (s stamp) validate(now int64) bool {
 
 func (d dDos) validateStart(now int64) {
 	if d.startingPoint.validate(now) {
-		fmt.Fprintln(parserOutput, now, "ddos: initial now validated")
+		fmt.Fprintln(parserOutput, now, "ddos: initial timestamp validated")
 	}
 }
 
