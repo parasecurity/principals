@@ -51,6 +51,13 @@ load_vars(){
 	readonly ANTREA_POD_2=$(kubectl get -A po -o wide | grep "antrea-agent" | tail -1 | awk '{print $2}')
 	readonly API=$(kubectl get po -o wide -n security | grep "api" | awk '{print $1}')
 	readonly ALICE_POD_1=alice
+	readonly ALICE_POD_2=alice2
+	readonly ALICE_POD_3=alice3
+        readonly ALICE_POD_4=alice4
+	readonly ALICE_POD_5=alice5
+	readonly ALICE_POD_6=alice6
+	readonly ALICE_POD_7=alice7
+	readonly ALICE_POD_8=alice8
 	readonly MALICE_POD_1=malice1
 	readonly MALICE_POD_2=malice2
 	readonly MALICE_POD_3=malice3
@@ -135,6 +142,13 @@ application_level_canary()
       
       msg "Sending normal requests to http://kronos.mhl.tuc.gr:30001/ from alice" 
       kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://kronos.mhl.tuc.gr:30001/ &"
+      kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://kronos.mhl.tuc.gr:30001/ -dev=7 -s=2000 &"
+      kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://kronos.mhl.tuc.gr:30001/ -dev=7 -s=3000 &"
+      kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://kronos.mhl.tuc.gr:30001/ -dev=9 -s=2000 &"
+      kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://google.com/ -dev=9 -s=3000 &"
+      kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
+      kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
+      kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
 
       waitUntilAllPodsRun
       
