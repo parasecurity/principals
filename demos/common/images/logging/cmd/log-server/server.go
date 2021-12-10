@@ -246,21 +246,29 @@ func (rs rippleStamp) init(now int64, thr int, state bool) {
 	rs.state = state
 }
 
-func (rs rippleStamp) toggle(to, check bool) bool {
+func (rs rippleStamp) toggle(now int64, to, check bool) bool {
 	if !check {return false}
 	if rs.state {
 		// T state
+		// line bellow may break downtime measurement
+		if !to {rs.timestampF = now }
 		rs.state = to
 		return !rs.state
 	}else {
 		// F state
 		if !to {
+			//revert
 			rs.rippleCount = rs.thr
-		}
-		rs.rippleCount--
-		if rs.rippleCount == 0 {
-			rs.rippleCount = rs.thr
-			rs.state = true
+		} else {
+			// maybe is responsive again
+			if rs.rippleCount == rs.thr {
+				rs.timestampT = now
+			}
+			rs.rippleCount--
+			if rs.rippleCount == 0 {
+				rs.rippleCount = rs.thr
+				rs.state = true
+			}
 		}
 		return rs.state
 	}
@@ -336,7 +344,8 @@ func analyseLogs(logs chan []byte){
 	// depr
 	defer func() {
 		for c, can := range canaries {
-			fmt.Fprintln(parserOutput, "canary ", c, "times: ", can.firstTimeout, can.detectorEnable, can.serverUpTime)
+			fmt.Fprintln(parserOutput, "canary ", c, "times: ", 
+						can.firstTimeout, can.detectorEnable, can.serverUpTime)
 		}
 		for c, cl := range cluster {
 			fmt.Fprintln(parserOutput, "node ", c, cl)
@@ -436,30 +445,38 @@ func analyseLogs(logs chan []byte){
 							}
 							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"enabled detectors")
 						}
+
 						if !c.serverUp && 
 						   strings.Contains(log, "Response in") {
 						   // server is responve again
 						   // may be reverted if ripple
+						   //IDC
 						    if c.serverUpTime == 0 {
 								c.serverUpTime = timestamp
 							}
+							//IDC
 							c.rippleCount--
+							// IDC
 							fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again, or ripple")
 
+							// we need that
 							if attack.reconnections == nodes {
 								// a node can access the attacked server
 								// this measurement may be reverted if ripple
 								attack.st.timeUntilResponsive = timestamp - attack.downTime
 							} 
+							// reconnections sould count if stated has already changed
 							if !c.inRipple {
 								attack.reconnections--
 								c.inRipple = true
 							}
+							// measurement could be done later
 							if attack.reconnections == 0 {
 								// every node can access the attacked server
 								// this measurement may be reverted if ripple
 								attack.st.timeUntilFullyResponsive = timestamp - attack.downTime
 							} 
+							// IDC
 							if c.inRipple && c.rippleCount == 0{
 								// it is truly Up!
 								c.serverUp = true
@@ -469,6 +486,8 @@ func analyseLogs(logs chan []byte){
 							}
 						}else if !c.serverUp && 
 					          strings.Contains(log, "Canary connection timeout") {
+								  // measurements later, since measurements are not calculated
+								  // before the state changing, IDC
 							if c.inRipple {
 								// revert! we are experianing a ripple
 								attack.reconnections++
@@ -484,7 +503,11 @@ func analyseLogs(logs chan []byte){
 				} else {
 					if strings.Contains(log, "Canary connection timeout") {
 						canaries[pod] = initCanary(timestamp, pod, node)
+						// this is in the right place
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
+						// i don't know if it is the first, cause logs from different canaries
+						// may be out of order. So, this should be done after all canaries are
+						// timed out
 						if attack.st.timeUntilFirstTimeout == 0 {
 							attack.st.timeUntilFirstTimeout = timestamp - attack.startingPoint.timestamp
 							attack.downTime = timestamp
