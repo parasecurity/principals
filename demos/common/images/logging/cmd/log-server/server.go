@@ -43,8 +43,6 @@ func init() {
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
 
-	// key: node hostname 
-	// val: flow-server pod-hostname
 	cluster = make(map[string]*nodePods)
 	nodes = 0
 	canaries = make(map[string]*canaryStamps)
@@ -176,7 +174,7 @@ type stamp struct {
 	threshold int64 // time in microseconds, if zero no validation will be done
 }
 
-func (s stamp) init(now, thr int64) {
+func (s *stamp) init(now, thr int64) {
 	s.timestamp = now
 	s.valid = thr == 0
 	s.threshold = thr
@@ -209,7 +207,7 @@ func initMalice(now int64, name, node string) (m *maliceStamps){
 * the caller will never know if an out-of-order log 
 * changed the value before validation
 */
-func (s stamp) validate(now int64) bool {
+func (s *stamp) validate(now int64) bool {
 	// EVENT in case of out of order logs, check if we have
 	// missed the correct starting point
 	if s.valid {return false}
@@ -236,7 +234,7 @@ type dDos struct {
 	st stats
 }
 
-func (d dDos) start(now int64) {
+func (d *dDos) start(now int64) {
 	d.active = true
 	d.startingPoint.init(now, 1000000)
 	d.downTime = 0
@@ -246,7 +244,7 @@ func (d dDos) start(now int64) {
 
 }
 
-func (d dDos) validateStart(now int64) {
+func (d *dDos) validateStart(now int64) {
 	if d.startingPoint.validate(now) {
 		fmt.Fprintln(parserOutput, now, "ddos: initial timestamp validated")
 	}
@@ -298,7 +296,7 @@ func initCanary(now int64, name, node string) *canaryStamps {
 	return (* canaryStamps)(&newCanary)
 }
 
-func (rs rippleStamp) init(now int64, thr int, state bool) {
+func (rs *rippleStamp) init(now int64, thr int, state bool) {
 	if state {
 		rs.timestampT = now
 		rs.timestampF = 0
@@ -328,7 +326,7 @@ func (rs rippleStamp) init(now int64, thr int, state bool) {
 *     myRippleStamp.toggle(ts, false, strings.Contains(log, "we should go to false"))
 *
 */
-func (rs rippleStamp) toggle(now int64, to, check bool) bool {
+func (rs *rippleStamp) toggle(now int64, to, check bool) bool {
 	if !check {return false}
 	if rs.state {
 		// T state
