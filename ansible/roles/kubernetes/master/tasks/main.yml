@@ -36,10 +36,5 @@
   shell: kubectl label nodes {{ ansible_hostname }} dedicated=master || echo "Already labeled"
 
 - name: Setup registry on master
-  docker_container:
-    name: registry
-    image: registry:2
-    state: started
-    restart_policy: always 
-    exposed_ports: 
-      - 5000:5000
+  become_user: "{{ ansible_user }}"
+  shell: (docker ps | grep registry) || docker run -d -p 5000:5000 --restart=always --name registry registry:2
