@@ -33,7 +33,7 @@
 
 - name: Add label on master
   become_user: "{{ ansible_user }}"
-  shell: kubectl label nodes {{ ansible_hostname }} dedicated=master
+  shell: kubectl label nodes {{ ansible_hostname }} dedicated=master || echo "Already labeled"
 
 - name: Setup registry on master
   become_user: "{{ ansible_user }}"
