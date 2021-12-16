@@ -106,8 +106,8 @@ clean_cluster(){
 
 
 	msg "Removing deployed pods"
-	kubectl delete -f yamls/security
-	kubectl delete -f yamls/pods
+	kubectl delete -f yamls/security || true
+	kubectl delete -f yamls/pods || true
 
 	msg "Removing qos and queue"
 	kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true

@@ -447,7 +447,9 @@ func analyseLogs(logs chan []byte){
 		// OPT no error checking bellow! for it is ok
 		timestamp, _ := strconv.ParseInt(toks[3], 10, 64)
 		log := toks[4]
-		if strings.Contains(log, "SIGNAL") {return}
+		if strings.Contains(log, "SIGNAL") {
+			attack.st.printStats()
+			return}
 
 		// EVENTS
 		// detect how many nodes are connected to server via flow-server
