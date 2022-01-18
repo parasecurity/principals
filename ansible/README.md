@@ -16,6 +16,21 @@ ansible-playbook start.yml
 ```
 
 ## Setup Passwordless SSH Login
+
+### If you running a vagrant deployment
+
+first find the forwared ports 
+```sh
+vagrant ssh-config
+```
+
+Write down the ports and then run
+```
+ssh-copy-id vagrant@localhost <port>
+# For password use vagrant
+```
+
+### For any other VM deployment
 ssh to ansible control machine
 ```sh
 ssh-copy-id remote_username@server_ip_address
