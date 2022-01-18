@@ -32,12 +32,15 @@ func init() {
 // if limit is 0 then it sends every entry in logBuf
 func sortAndSend(a, b chan []string, limit int64) {
 
+	log.Println("first ", firstCached, " last ", lastCached, " limit ", limit)
 	if !isInOrder {
+		log.Println("...sorting...")
 		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
 		isInOrder = true
+		log.Println("...done")
 	}
 
-	del := 0
+	del := -1
 	for i, k := range keys {
 		if limit != 0 && k >= limit {
 			del = i
@@ -53,9 +56,11 @@ func sortAndSend(a, b chan []string, limit int64) {
 		}
 		delete(logBuf, k)
 	}
-	if del == 0 {
+	if del == -1 {
+		log.Print("no logs were sent")
 		keys = keys[:0]
 	} else {
+		log.Print(del, " logs were sent")
 		keys = keys[del:]
 	}
 	if len(keys) > 0 {
@@ -79,6 +84,7 @@ func sortLogs(logs chan []byte, analyser, printer chan []string){
 			logBuf[timestamp] = toks
 
 			if firstCached == 0 { firstCached = timestamp }
+			if lastCached == 0 { lastCached = timestamp }
 			if timestamp < lastCached { 
 				isInOrder = false
 			} else {
@@ -86,7 +92,7 @@ func sortLogs(logs chan []byte, analyser, printer chan []string){
 					sortAndSend(analyser, printer, timestamp - 5 * tsiSecond)
 					log.Println("Sorting by time cached")
 				} else if len(logBuf) > 600 {
-					sortAndSend(analyser, printer, lastCached - 7 * tsiSecond)
+					sortAndSend(analyser, printer, lastCached - 5 * tsiSecond)
 					log.Println("Sorting by number of logs cached")
 				} else {
 					lastCached = timestamp

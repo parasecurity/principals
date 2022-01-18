@@ -365,6 +365,7 @@ func analyseLogs(logs chan []string){
 	for {
 		// log deconstruction
 		toks := <-logs
+		continue
 
 		node := toks[0]
 		pod := toks[1]

@@ -89,15 +89,14 @@ func main() {
 				}
 				defer resp.Body.Close()
 
-				log.Println("Response status:", resp.Status)
 
 				bytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
-					log.Println(err)
+					log.Println("Response status:", resp.Status, err)
 					return
 				}
 				count++
-				log.Println("Transfers: ", count, ", bytes: ", len(bytes))
+				log.Println("Response status:", resp.Status, "Transfers: ", count, ", bytes: ", len(bytes))
 				time.Sleep(time.Duration(args.sleep) * time.Millisecond)
 			}
 		}(c, &wg)

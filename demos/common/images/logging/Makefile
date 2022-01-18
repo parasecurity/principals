@@ -1,4 +1,4 @@
-VERSION ?= v1.0.1
+VERSION ?= v1.0.2
 IMAGE ?= tsi-logging
 REMOTE_REGISTRY ?= localhost:5000
 
@@ -7,11 +7,12 @@ REMOTE_REGISTRY ?= localhost:5000
 all: server agent client
 
 clean:
-	rm -rf bin/ docker rmi $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
+	rm -rf bin/ 
+	docker rmi $(IMAGE):$(VERSION) $(REMOTE_REGISTRY)/$(IMAGE):$(VERSION)
 
 server:
 	mkdir -p bin/
-	go build -o bin/server cmd/log-server/server.go
+	go build -o bin/server cmd/log-server/server.go cmd/log-server/parser.go cmd/log-server/sorter.go
 
 agent:
 	mkdir -p bin/
