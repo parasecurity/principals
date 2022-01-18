@@ -4,14 +4,37 @@ import (
 	"fmt"
 	"strings"
 	"strconv"
+	"os"
+	"log"
 )
 
-/* parsing conventions
-*    STEPS: smallest measurable action/reaction
-*    EVENTS: consist of STEPS
-*         ^				^				^
-*		don't bother with this commend block yet
-*/
+var (
+	parserOutput *os.File
+	cluster map[string]*nodePods
+	nodes int
+	attack dDos
+	canaries map[string]*canaryStamps
+	detectors map[string]*detectorStamps
+	malices map[string]*maliceStamps
+)
+
+
+
+func init() {
+	var err error
+	parserOutput, err = os.OpenFile("/tsi/parser.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	cluster = make(map[string]*nodePods)
+	nodes = 0
+	canaries = make(map[string]*canaryStamps)
+	detectors = make(map[string]*detectorStamps)
+	attack.active = false
+	malices = make(map[string]*maliceStamps)
+}
 
 // TODO fix float printing to something more human readable
 func (s stats) printStats() {
@@ -323,17 +346,6 @@ func initNode(name, flow string) *nodePods {
 	return (*nodePods)(&newNode)
 }
 
-var (
-	cluster map[string]*nodePods
-	nodes int
-	attack dDos
-	canaries map[string]*canaryStamps
-	detectors map[string]*detectorStamps
-	malices map[string]*maliceStamps
-
-)
-
-
 func analyseLogs(logs chan []string){
 
 	// NOTE depr
@@ -415,6 +427,9 @@ func analyseLogs(logs chan []string){
 				if attack.active == false {
 					// EVENT new attack detected
 					attack.start(timestamp)
+					if attack.active == false {
+						fmt.Fprintln(parserOutput, timestamp, "[X] active state of attack did not change")
+					}
 					fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 					fmt.Fprintf(parserOutput, log)
 				} else {

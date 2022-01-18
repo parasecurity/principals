@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	parserOutput *os.File
 	logFile *os.File
 	clusterLogging *os.File
 )
@@ -27,12 +26,6 @@ func init() {
 		return
 	}
 
-	parserOutput, err = os.OpenFile("/tsi/parser.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
 	clusterLogging, err = os.OpenFile("/tsi/tsi.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
@@ -41,14 +34,6 @@ func init() {
 
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
-
-	cluster = make(map[string]*nodePods)
-	nodes = 0
-	canaries = make(map[string]*canaryStamps)
-	detectors = make(map[string]*detectorStamps)
-	attack.active = false
-	malices = make(map[string]*maliceStamps)
-
 
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
@@ -74,9 +59,7 @@ func handleConnection(c net.Conn, toSorter chan []byte){
 	log.Printf("Serving %s", c.RemoteAddr().String())
 
 	for {
-
 		str, err := reader.ReadBytes('\n')
-
 		if err != nil {
 			if err == io.EOF {
 				break;
@@ -93,7 +76,7 @@ func handleConnection(c net.Conn, toSorter chan []byte){
 * IMPORTANT! Logs may be out of order in same cases of bursting. 
 * Out of order logs do not affect the parsing system above
 */
-func printLogs(logs chan []string){
+func outputLogs(logs chan []string){
 	for {
 		msg := <-logs
 		print(strings.Join(msg, " "))
@@ -103,7 +86,6 @@ func printLogs(logs chan []string){
 
 
 func main() {
-
 	listener, err := net.Listen("tcp4", "0.0.0.0:4321")
 	if err != nil {
 		log.Fatal(err)
@@ -111,11 +93,13 @@ func main() {
 	log.Printf("Listenning on port 4321")
 
 	toSorter := make(chan []byte, 128)
-	toPrinter := make(chan []string, 128)
+	toOut := make(chan []string, 128)
 	toAnalyser := make(chan []string, 128)
-	go printLogs(toPrinter)
+
+	go outputLogs(toOut)
 	go analyseLogs(toAnalyser)
-	go sortLogs(toSorter, toAnalyser, toPrinter)
+	go sortLogs(toSorter, toAnalyser, toOut)
+
 	for {
 		cli, err := listener.Accept()
 		if err != nil {
