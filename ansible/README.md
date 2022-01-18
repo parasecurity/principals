@@ -4,6 +4,10 @@ Use this [repo](git@kition.mhl.tuc.gr:tsi-group/kubecluster.git) in order to gen
 There is a nessasary port configuration on the _VagrantFile_ and  _worker.vm.network/master.vm.network_
 in order to check there is no overlapping network.
 
+## Versions 
+Tested on ansible version 2.9.27.
+Steps to install [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+
 ## Configure ansible deployment
 
 On the group_var folder set the registry ip, pod_network_cidr, and master_ip on the correct values.
