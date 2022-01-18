@@ -54,7 +54,7 @@ func sortAndSend(a, b chan []string, limit int64) {
 		case b <- log:
 			a <- log
 		}
-		delete(logBuf, k)
+		// delete(logBuf, k)
 	}
 	if del == -1 {
 		log.Print("no logs were sent")
@@ -91,7 +91,7 @@ func sortLogs(logs chan []byte, analyser, printer chan []string){
 				if timestamp - (lastCached + firstCached)/2 > 5 * tsiSecond { 
 					sortAndSend(analyser, printer, timestamp - 5 * tsiSecond)
 					log.Println("Sorting by time cached")
-				} else if len(logBuf) > 600 {
+				} else if len(logBuf) % 512 == 0 {
 					sortAndSend(analyser, printer, lastCached - 5 * tsiSecond)
 					log.Println("Sorting by number of logs cached")
 				} else {

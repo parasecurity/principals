@@ -16,9 +16,8 @@ var (
 	canaries map[string]*canaryStamps
 	detectors map[string]*detectorStamps
 	malices map[string]*maliceStamps
+	// alices map[string]*aliceStamps
 )
-
-
 
 func init() {
 	var err error
@@ -34,28 +33,20 @@ func init() {
 	detectors = make(map[string]*detectorStamps)
 	attack.active = false
 	malices = make(map[string]*maliceStamps)
+	// alices = make(map[string]*aliceStamps)
 }
 
 // TODO fix float printing to something more human readable
 func (s stats) printStats() {
-	fmt.Fprintln(parserOutput, "=================================================================")
-	fmt.Fprintln(parserOutput, "timeUntilFirstBlock", s.timeUntilFirstBlock, "usec",						float32(s.timeUntilFirstBlock/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilLastBlock", s.timeUntilLastBlock, "usec",							float32(s.timeUntilLastBlock/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilAllDetectorsEnabled", s.timeUntilAllDetectorsEnabled, "usec", 	float32(s.timeUntilAllDetectorsEnabled/1000.0),		"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFirstDetectorsEnabled", s.timeUntilFirstDetectorsEnabled, "usec", float32(s.timeUntilFirstDetectorsEnabled/1000.0),	"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFirstTimeout", s.timeUntilFirstTimeout, "usec",					float32(s.timeUntilFirstTimeout/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilResponsive", s.timeUntilResponsive, "usec",						float32(s.timeUntilResponsive/1000.0),				"msec")
-	fmt.Fprintln(parserOutput, "timeUntilFullyResponsive", s.timeUntilFullyResponsive, "usec", 			float32(s.timeUntilFullyResponsive/1000.0),			"msec")
-	fmt.Fprintln(parserOutput, "=================================================================")
-
 	min := int64(0)
 	for _, malice := range malices {
-		stmp := malice.firstAttack.timestamp
+		stmp := malice.attackRate.firstT
 		if min == 0 || min > stmp{ min = stmp}
 	}
 	max := int64(0)
 	for _, malice := range malices {
-		stmp := malice.firstAttack.timestamp
+		stmp := malice.attackRate.firstT
+		fmt.Fprintln(parserOutput, malice, "data rate",malice.attackRate.getDataRate(), "MB/s")
 		if max == 0 || max < stmp{ max = stmp}
 	}
 	attack.st.attackInitiation = max
@@ -87,7 +78,6 @@ func (s stats) printStats() {
 		if max == 0 || max < stmp {max = stmp}
 	}
 	fmt.Fprintln(parserOutput, "last canary reconnection +", max - point0)
-
 }
 
 type stats struct {
@@ -102,44 +92,6 @@ type stats struct {
 }
 
 /*** Utils ***/
-
-
-type stamp struct {
-	// main
-	timestamp int64
-	valid bool
-	threshold int64 // time in microseconds, if zero no validation will be done
-}
-
-func (s *stamp) init(now, thr int64) {
-	s.timestamp = now
-	s.valid = thr == 0
-	s.threshold = thr
-}
-
-/* for now it doesn't produce any output
-* it returns true only when the timestamp gets validated and false 
-* in ANY other case, including when it is already validated
-*
-* the caller will never know if an out-of-order log 
-* changed the value before validation
-*/
-func (s *stamp) validate(now int64) bool {
-	// EVENT in case of out of order logs, check if we have
-	// missed the correct starting point
-	if s.valid {return false}
-
-	if s.timestamp > now {
-		s.timestamp = now
-		// NOTE may produce a notification
-	} else if (now - s.timestamp) > s.threshold {
-		// mark it as clean-start. no chance we missed 
-		// log one second earlier (or later depending on your point of view)
-		s.valid = true
-		return true
-	}
-	return false
-}
 
 /* use rippleStamp instead of stamp when all statements 
 * bellow are true:
@@ -223,12 +175,37 @@ func (rs *rippleStamp) toggle(now int64, to, check bool) bool {
 	}
 }
 
+type dataRate struct {
+	firstT int64
+	data int
+	latestT int64
+}
+
+func (dr *dataRate) init(now int64) {
+	dr.firstT = now
+	dr.latestT = now
+	dr.data = 0
+}
+
+func (dr *dataRate) dataSum(log string, now int64) {
+	words := strings.Split(log, " ")
+	data, _ := strconv.Atoi(words[len(words) - 1])
+	dr.data += data
+	dr.latestT = now
+}
+
+// returns data rate in MBi/sec
+// returns -1 if there are not enough data
+func (dr *dataRate) getDataRate() int64 {
+	if dr.latestT == dr.firstT { return -1 }
+	return (int64(dr.data) / (dr.latestT - dr.firstT))
+}
+
 /*** dDos metrics helpers ***/
 
 // Refactoring TODO include only interesting timestamps
 type dDos struct {
 	active bool
-	startingPoint stamp
 	downTime int64
 	blockedConnections int
 	reconnections int
@@ -237,7 +214,6 @@ type dDos struct {
 
 func (d *dDos) start(now int64) {
 	d.active = true
-	d.startingPoint.init(now, 1000000)
 	d.downTime = 0
 	d.blockedConnections = 0
 	d.reconnections = nodes
@@ -245,26 +221,12 @@ func (d *dDos) start(now int64) {
 
 }
 
-func (d *dDos) validateStart(now int64) {
-	if d.startingPoint.validate(now) {
-		fmt.Fprintln(parserOutput, now, "ddos: initial timestamp validated")
-	}
-}
-///////////////
-
-
+/*** ddos malice ***/
 type maliceStamps struct {
 	name string
 	node string
-
-	firstAttack stamp
-
-	// I know that I don't follow my rules, but using a big threshold it should work.
-	// All logs parsed for state changing are from many concurrent threads and at the 
-	// False state they are comming in burst, completely out of order, by a deviation
-	// of 30 - 60 logs per pod. Switching to True state is triggered by a time-out log
-	// from a random thread, so, because of the timeout being a huge time window, I do
-	// not care about out of order logs. Accuracy: 150 micro seconds worst case measured
+	attackRate dataRate
+	// NOTE logs for failure don't show up here for some reason. They should.
 	serverBlocked rippleStamp
 }
 
@@ -273,16 +235,14 @@ func initMalice(now int64, name, node string) (m *maliceStamps){
 		name: name,
 		node: node,
 	}
-	newMalice.firstAttack.init(now, 1000000)
 	newMalice.serverBlocked.init(now, 100, false)
-
 	return (*maliceStamps)(&newMalice)
 }
 
+/*** canary ***/
 type canaryStamps struct {
 	name string
 	node string
-
 	detectorEnable int64
 	serverResponsive rippleStamp
 }
@@ -300,15 +260,14 @@ func initCanary(now int64, name, node string) *canaryStamps {
 		detectorEnable: 0,
 		}
 		newCanary.serverResponsive.init(now, 2, false)
-
 	cluster[node].canary = (* canaryStamps)(&newCanary)
 	return (* canaryStamps)(&newCanary)
 }
 
+/*** detector ***/
 type detectorStamps struct {
 	name string
 	node string
-
 	// first time notified by canary after attack initiation
 	notified int64
 	firstDetection int64
@@ -320,15 +279,15 @@ func initDetector(now int64, name, node string) *detectorStamps {
 	newDetector := detectorStamps {
 		name: name,
 		node: node,
-
 		notified: now,
 		firstDetection: 0,
-		firstBlocking: 0 }
-
+		firstBlocking: 0,
+	}
 	cluster[node].detector = (* detectorStamps)(&newDetector)
 	return (* detectorStamps)(&newDetector)
 }
 
+/*** node ***/
 type nodePods struct {
 	canary *canaryStamps
 	detector *detectorStamps
@@ -339,8 +298,8 @@ func initNode(name, flow string) *nodePods {
 	newNode := nodePods{
 		canary: nil,
 		detector: nil,
-		flow: flow }
-
+		flow: flow,
+	}
 	cluster[name] = (*nodePods)(&newNode)
 	nodes++
 	return (*nodePods)(&newNode)
@@ -365,7 +324,6 @@ func analyseLogs(logs chan []string){
 	for {
 		// log deconstruction
 		toks := <-logs
-		continue
 
 		node := toks[0]
 		pod := toks[1]
@@ -382,7 +340,6 @@ func analyseLogs(logs chan []string){
 		if strings.Contains(pod, "flow-server") {
 			a, e := cluster[node]
 			if e {
-				// out of scenario! NOTE decouple
 				if strings.Compare(a.flow, pod) != 0 {
 					// EVENT for some reason flow-server restarted
 					a.flow = pod
@@ -415,30 +372,29 @@ func analyseLogs(logs chan []string){
 		// EVENTS
 		// detect starting of ddos attack
 		if strings.Contains(pod, "malice") {
-			// ingore log for now it is useless
-			if strings.Contains(log, "SIGNAL") {continue}
 			// count malices
 			m, e := malices[pod]
 			if !e {
 				// new malice detected.
-				if strings.Contains(log, "Response status") {
+				if strings.Contains(log, "OK"){
 					malices[pod] = initMalice(timestamp, pod, node)
+					malices[pod].attackRate.dataSum(log, timestamp)
+					attack.start(timestamp)
+					fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 				}
 			} else {
 				if attack.active == false {
 					// EVENT new attack detected
 					attack.start(timestamp)
 					if attack.active == false {
-						fmt.Fprintln(parserOutput, timestamp, "[X] active state of attack did not change")
+						fmt.Fprintln(parserOutput, timestamp, "ERR: [X] active state of attack did not change")
 					}
 					fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
-					fmt.Fprintf(parserOutput, log)
 				} else {
-					if strings.Contains(log, "Response status") {
-						attack.validateStart(timestamp)
-						m.firstAttack.validate(timestamp)
+					if strings.Contains(log, "OK"){
+						m.attackRate.dataSum(log, timestamp)
 					}
-					m.serverBlocked.toggle(timestamp, false, strings.Contains(log, "Response status"))
+					m.serverBlocked.toggle(timestamp, false, strings.Contains(log, "OK"))
 					m.serverBlocked.toggle(timestamp, true, strings.Contains(log, "Fail"))
 				}
 			}
@@ -452,10 +408,9 @@ func analyseLogs(logs chan []string){
 			// attack is marked as started by malices' logs
 			if !attack.active {
 				// here we produce info. TODO false detection
-				// TODO add enabling detectors out of attack
 				if strings.Contains(log, "Canary connection timeout") {
 					// canary timed out but no attack is present
-					fmt.Fprintln(parserOutput, timestamp, "canary timed out but no attack is present")
+					fmt.Fprintln(parserOutput, "WRN:", timestamp, "canary timed out but no attack is present")
 				}
 			} else {
 				c, e := canaries[pod]
@@ -470,9 +425,10 @@ func analyseLogs(logs chan []string){
 						attack.reconnections--
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again")
 						if attack.reconnections == 0 {
-							// every node can access the attacked server TODO fix out of order
+							// every node can access the attacked server
 							attack.active = false
 							attack.st.timeUntilFullyResponsive = timestamp - attack.downTime
+							attack.st.printStats()
 						} 
 					}
 
@@ -494,11 +450,11 @@ func analyseLogs(logs chan []string){
 		if strings.Contains(pod, "detector") {
 			if !attack.active {
 				if strings.Contains(log, "Received IP") {
-					fmt.Fprintln(parserOutput, timestamp, "detector notified but no attack is present");
+					fmt.Fprintln(parserOutput, timestamp, "WRN: detector notified but no attack is present");
 				} else if strings.Contains(log, "new connection") {
-					fmt.Fprintln(parserOutput, timestamp, "detector new connection detected but no attack is present")
+					fmt.Fprintln(parserOutput, timestamp, "WRN: detector new connection detected but no attack is present")
 				} else if strings.Contains(log, "block") {
-					fmt.Fprintln(parserOutput, timestamp, "detector blocking command sent but no attack is present")
+					fmt.Fprintln(parserOutput, timestamp, "WRN: detector blocking command sent but no attack is present")
 				}
 			} else {
 
@@ -511,7 +467,7 @@ func analyseLogs(logs chan []string){
 						if d.firstDetection == 0 {
 							d.firstDetection = timestamp
 						}
-						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, "detected new connection", log)
+						fmt.Fprintln(parserOutput, "WRN:", timestamp, "detector ", pod, "detected new connection", log)
 					} else if strings.Contains(log, "block") {
 						if d.firstBlocking == 0 {
 							d.firstBlocking = timestamp
@@ -534,10 +490,8 @@ func analyseLogs(logs chan []string){
 						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " notified for first time");
 					}
 				}
-
 			}
 		}
-
 	} // main loop
 }
 
