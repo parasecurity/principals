@@ -273,8 +273,8 @@ udp_flooding()
 {
       msg "Starting Udp Flooding Demo"
       
-	  canaryCommands="{\"action\":\"create\", \"target\": \"canary-link\", \"arguments\": [\"-conn=http://phobos4.astrolavos.gatech.edu\"]}"
-      detectorCommands="{\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=block\"]}"
+	  canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos4.astrolavos.gatech.edu/\"]}"
+      detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
       
 	  if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
 		  read -p "Enter canary deployment command: " canaryCommands
@@ -375,6 +375,7 @@ usage() {
 	echo "  --clean             clean the cluster from a possibly broken previous run"
 	echo "  --app-level         run ddos with application level canary with default deployment commands"
 	echo "  --link-level        run ddos with link level canary with default deployment commands"
+	echo "  --udp-flooding      run udp flooding with application level canary with default deployment commands"
 	echo "  --interactive       run demo in fully interactive mode (default action, prompt for deployment commands)"
 	echo "  --help              print this message"
 
