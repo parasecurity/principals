@@ -8,7 +8,7 @@ import (
 
 func CreateCanaryLinkDaem(args []string, registry *string) appsv1.DaemonSet {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
-	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
+	var image string = *registry + antrea_image
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{

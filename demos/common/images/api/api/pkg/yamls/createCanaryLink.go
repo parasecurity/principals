@@ -8,7 +8,7 @@ import (
 
 func CreateCanaryLinkDepl(args []string, registry *string) appsv1.Deployment {
 	var HostPathDirectoryOrCreate apiv1.HostPathType = "DirectoryOrCreate"
-	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
+	var image string = *registry + antrea_image
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{

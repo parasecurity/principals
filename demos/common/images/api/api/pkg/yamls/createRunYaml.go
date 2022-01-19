@@ -8,7 +8,7 @@ import (
 
 func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSet {
 	// Parsing the correct registry IP address
-	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
+	var image string = *registry + antrea_image
 	var sudo int64 = int64(0)
 	var trueVar bool = true
 

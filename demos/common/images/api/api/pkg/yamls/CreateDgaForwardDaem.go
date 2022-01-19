@@ -19,7 +19,7 @@ func CreateDgaForwardDaem(args []string, registry *string) appsv1.DaemonSet {
 	modArgs = append(modArgs, []string{` -arg="{\""honeypot_ip\"": \""$HONEYPOT_IP\"", \""honeypot_mac\"": \""$HONEYPOT_MAC\""}"`}...)
 	var stringArgs string = strings.Join(modArgs[:], " ")
 	var imageDga string = *registry + ":5000/tsi-dga:v1.0.0"
-	var imageAntrea string = *registry + ":5000/antrea-tsi:v1.0.0"
+	var imageAntrea string = *registry + antrea_image
 
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{

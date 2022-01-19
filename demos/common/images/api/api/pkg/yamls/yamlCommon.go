@@ -31,8 +31,10 @@ var RunAntreaVolume apiv1.Volume = apiv1.Volume{
 	},
 }
 
+var antrea_image =  ":5000/antrea-tsi:v1.0.5"
+
 func mirrorContainter(name string, registry *string) apiv1.Container {
-	var image string = *registry + ":5000/antrea-tsi:v1.0.1"
+	var image string = *registry + antrea_image
 	mc := apiv1.Container {
 		Name:  "init-mirror",
 		Image: image,

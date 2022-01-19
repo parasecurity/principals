@@ -409,8 +409,10 @@ func analyseLogs(logs chan []string){
 			if !attack.active {
 				// here we produce info. TODO false detection
 				if strings.Contains(log, "Canary connection timeout") {
-					// canary timed out but no attack is present
-					fmt.Fprintln(parserOutput, "WRN:", timestamp, "canary timed out but no attack is present")
+					canaries[pod] = initCanary(timestamp, pod, node)
+					fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
+					attack.start(timestamp)
+					fmt.Fprintln(parserOutput, timestamp, "[!] possible attack initiated")
 				}
 			} else {
 				c, e := canaries[pod]

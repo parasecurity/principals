@@ -267,15 +267,15 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 					// monitor array of ips
 					for n, ip := range monitoredIPs {
 						if n == 0 {
-							bpffilter = "(tcp and host " + ip + " )"
+							bpffilter = "((udp or tcp) and host " + ip + " )"
 						} else {
-							bpffilter = bpffilter + " or (tcp and host " + ip + " )"
+							bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
 						}
 					}
 				}
 			} else {
-				// monitor all tcp traffic
-				bpffilter = "(tcp)"
+				// monitor all tcp and udp traffic
+				bpffilter = "(udp or tcp)"
 			}
 
 			log.Println("Updating bpf: " + bpffilter)
