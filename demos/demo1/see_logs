@@ -1,3 +1,48 @@
 #!/bin/bash
+set -x
 
-tail -f $HOME/tsi/tsi.log
+LOG_FILE=$HOME/tsi/tsi.log
+TAIL_OPTS="-f "
+
+FLT=""
+GREP_COMMAND=""
+
+filter ()
+{
+	for f in $@; do
+		FLT="$FLT|$f"
+	done;
+	GREP_COMMAND="\"$FLT\""
+	#return $grep_command
+}
+
+usage ()
+{
+	echo "Usage: $0 [-b|-f<filter>]"
+	exit 2
+}
+
+while [[ $# -gt 0 ]]; do
+	case $1 in
+		-f)
+			filter $2
+			shift
+			shift
+			;;
+		-b)
+			TAIL_OPTS="-n+0 $TAIL_OPTS"
+			shift
+			;;
+		*)
+			usage
+			;;
+	esac
+done
+
+if [ -z "$GREP_COMMAND" ]; then
+	tail $TAIL_OPTS $LOG_FILE | less
+else
+	tail $TAIL_OPTS $LOG_FILE | grep -E "${FLT}" 
+fi
+
+exit

@@ -12,7 +12,12 @@ clean:
 
 server:
 	mkdir -p bin/
-	go build -o bin/server cmd/log-server/server.go cmd/log-server/parser.go cmd/log-server/sorter.go
+	go build -o bin/server \
+		cmd/log-server/server.go \
+		cmd/log-server/parser.go \
+		cmd/log-server/parser_core.go \
+		cmd/log-server/report.go \
+		cmd/log-server/sorter.go
 
 agent:
 	mkdir -p bin/
@@ -23,7 +28,7 @@ client:
 	go build -o bin/client cmd/client/client.go
 	go build -o bin/multithread_client cmd/multithread_client/multithread_client.go
 
-image: server agent client
+image: 
 	docker build . -t $(IMAGE):$(VERSION)
 
 push: image
