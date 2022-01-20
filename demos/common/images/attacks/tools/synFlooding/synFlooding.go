@@ -167,7 +167,7 @@ func setLocalIP() {
 func (tcp *TCPIP) genIP() {
 
 	tcp.SRC = localIP.To4()
-	tcp.SRC[3] = tcp.randByte()
+	//tcp.SRC[3] = tcp.randByte()
 
 	tcp.SrcPort = (uint16)(((uint16)(tcp.randByte()) << 8) | (uint16)(tcp.randByte()))
 	for tcp.SrcPort <= 0x03FF {
