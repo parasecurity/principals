@@ -88,10 +88,12 @@ func sortLogs(logs chan []byte, analyser, printer chan []string){
 			if timestamp < lastCached { 
 				isInOrder = false
 			} else {
-				if timestamp - (lastCached + firstCached)/2 > 5 * tsiSecond { 
-					sortAndSend(analyser, printer, timestamp - 5 * tsiSecond)
+				mean := (lastCached + firstCached)/2
+				if timestamp - mean > 5 * tsiSecond { 
+					sortAndSend(analyser, printer, mean)
 					log.Println("Sorting by time cached")
 				} else if len(logBuf) % 512 == 0 {
+					// NOTE possible change threshold to mean
 					sortAndSend(analyser, printer, lastCached - 5 * tsiSecond)
 					log.Println("Sorting by number of logs cached")
 				} else {

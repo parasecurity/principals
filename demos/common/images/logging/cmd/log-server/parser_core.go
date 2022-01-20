@@ -92,6 +92,8 @@ func (rs *rippleStamp) toggle(now int64, to, check bool) bool {
 type dataRate struct {
 	firstT int64
 	data int
+	packetCount int
+	packetOK int
 	latestT int64
 }
 
@@ -99,6 +101,8 @@ func (dr *dataRate) init(now int64) {
 	dr.firstT = now
 	dr.latestT = now
 	dr.data = 0
+	dr.packetCount = 0
+	dr.packetOK = 0
 }
 
 func (dr *dataRate) dataSum(msg string, now int64) {
@@ -110,6 +114,14 @@ func (dr *dataRate) dataSum(msg string, now int64) {
 	log.Println(len(words), "wordsLast", words[len(words)-1], "data sum:", data)
 	dr.data += data
 	dr.latestT = now
+}
+
+// returns data rate in KBps
+// returns -1 if there are not enough data
+func (dr *dataRate) getPercent() float64 {
+	if dr.packetCount == 0 { return -1 }
+	// NOTE maybe we need to multiply by 8
+	return (float64(dr.packetOK) / float64(dr.packetCount))*100
 }
 
 // returns data rate in KBps
