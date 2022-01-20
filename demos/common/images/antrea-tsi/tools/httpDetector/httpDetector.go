@@ -154,11 +154,9 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			applicationLayer := p.ApplicationLayer()
 			if applicationLayer != nil {
 
-				payloadStr := string(applicationLayer.Payload())
+				//payloadStr := string(applicationLayer.Payload())
 				// Search for a string inside the payload
-				if strings.Contains(payloadStr, "HTTP") && strings.Contains(payloadStr, "GET") {
-					count++
-				}
+				count++
 			}
 			//debug
 
