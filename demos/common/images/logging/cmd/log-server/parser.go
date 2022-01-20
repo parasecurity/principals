@@ -26,7 +26,6 @@ func init() {
 		log.Println(err)
 		return
 	}
-
 	cluster = make(map[string]*nodePods)
 	attack.active = false
 	attack.passed = false
@@ -35,7 +34,7 @@ func init() {
 	detectors = make(map[string]*detectorStamps)
 	attack.active = false
 	malices = make(map[string]*maliceStamps)
-	// alices = make(map[string]*aliceStamps)
+	alices = make(map[string]*aliceStamps)
 }
 
 /*** dDos metrics helpers ***/
@@ -44,6 +43,7 @@ func init() {
 type dDos struct {
 	active bool
 	passed bool
+	responding bool
 	downTime int64
 	blockedConnections int
 	reconnections int
@@ -53,11 +53,11 @@ type dDos struct {
 func (d *dDos) start(now int64) {
 	d.active = true
 	d.passed = false
+	d.responding = false
 	d.downTime = 0
 	d.blockedConnections = 0
 	d.reconnections = 0
-	// TODO d.st = 
-
+	d.st.attackInitiation = now
 }
 
 type aliceStamps struct {
@@ -82,6 +82,7 @@ type maliceStamps struct {
 	name string
 	node string
 	attackRate dataRate
+	respAttackRate dataRate
 	// NOTE logs for failure don't show up here for some reason. They should.
 	serverBlocked rippleStamp
 }
@@ -92,6 +93,7 @@ func initMalice(now int64, name, node string) (m *maliceStamps){
 		node: node,
 	}
 	newMalice.attackRate.init(now)
+	newMalice.respAttackRate.init(now)
 	newMalice.serverBlocked.init(now, 100, false)
 	return (*maliceStamps)(&newMalice)
 }
@@ -116,7 +118,7 @@ func initCanary(now int64, name, node string) *canaryStamps {
 		node: node, 
 		detectorEnable: 0,
 		}
-		newCanary.serverResponsive.init(now, 2, false)
+		newCanary.serverResponsive.init(now, 4, false)
 	cluster[node].canary = (* canaryStamps)(&newCanary)
 	return (* canaryStamps)(&newCanary)
 }
@@ -136,7 +138,7 @@ func initDetector(now int64, name, node string) *detectorStamps {
 	newDetector := detectorStamps {
 		name: name,
 		node: node,
-		notified: now,
+		notified: 0,
 		firstDetection: 0,
 		firstBlocking: 0,
 	}
@@ -196,58 +198,73 @@ func analyseLogs(logs chan []string){
 		// detect how many nodes are connected to server via flow-server
 		if strings.Contains(pod, "flow-server") {
 			a, e := cluster[node]
-			if e {
-				if strings.Compare(a.flow, pod) != 0 {
-					// EVENT for some reason flow-server restarted
-					a.flow = pod
-					fmt.Fprintln(parserOutput, timestamp, 
-								"flow-server on node ", node, 
-								"restarted. New server: ", pod)
-				}	
-				// info 
-				if strings.Contains(log, "executed command") && 
-				strings.Contains(log, "block") {
-					attack.blockedConnections++
-					if attack.blockedConnections == len(malices) {
-						attack.st.timeUntilLastBlock = timestamp - attack.downTime
-					}
-					words := strings.Split(log, "\"")
-					fmt.Fprintln(parserOutput, timestamp, 
-					"flow-server ", pod, "blocked applied", words[len(words)-2])
-				}
-				//   I don't remember why the line bellow exists <--comment before refactoring
-				// now it has some value, maybe it is not needed, as the map consists of pointers
-				// I'm not sure about golang's sorcery
-				cluster[node] = a
-			} else {
-				// INIT EVENT a new node detected
-				initNode(node, pod)
+			if ! e {
+				a = initNode(node, pod)
 				fmt.Fprintln(parserOutput, timestamp, 
 							"New node detected: ", node, pod)
 			}
+
+			if strings.Compare(a.flow, pod) != 0 {
+				// EVENT for some reason flow-server restarted
+				a.flow = pod
+				fmt.Fprintln(parserOutput, timestamp, 
+				"flow-server on node ", node, 
+				"restarted. New server: ", pod)
+			}	
+			// info 
+			if strings.Contains(log, "executed command") && 
+			strings.Contains(log, "block") {
+				attack.blockedConnections++
+				if attack.blockedConnections == len(malices) {
+					attack.st.timeUntilLastBlock = timestamp
+				}
+				words := strings.Split(log, "\"")
+				fmt.Fprintln(parserOutput, timestamp, 
+				"flow-server ", pod, "blocked applied", words[len(words)-2])
+			}
+			//   I don't remember why the line bellow exists <--comment before refactoring
+			// now it has some value, maybe it is not needed, as the map consists of pointers
+			// I'm not sure about golang's sorcery
+			cluster[node] = a
 		}
 
 		// EVENTS
 		// detect starting of ddos attack
-		if strings.Contains(pod, " alice") {
+		if strings.HasPrefix(pod, "alice") {
+			if ! strings.Contains(log, "Response") {
+				continue
+			}
 			a, e := alices[pod]
 			if !e {
-				// new malice detected.
+				// new alice detected.
+				alices[pod] = initAlice(timestamp, pod, node)
+				a, _ = alices[pod]
+			}
+			if attack.active {
+				a.attackRate.packetCount++
 				if strings.Contains(log, "OK"){
-					alices[pod] = initAlice(timestamp, pod, node)
-					alices[pod].preAttackRate.dataSum(log, timestamp)
+					a.attackRate.dataSum(log, timestamp)
+					a.attackRate.packetOK++
+					a.attackRate.dataSum(log, timestamp)
 				}
 			} else {
-				if attack.active {
-					a.attackRate.dataSum(log, timestamp)
-				} else {
-					if attack.passed {
+				if attack.passed {
+					a.postAttackRate.packetCount++
+					if strings.Contains(log, "OK"){
 						a.postAttackRate.dataSum(log, timestamp)
-					} else {
+						a.postAttackRate.packetOK++
+						a.postAttackRate.dataSum(log, timestamp)
+					}
+				} else {
+					a.preAttackRate.packetCount++
+					if strings.Contains(log, "OK"){
+						a.preAttackRate.dataSum(log, timestamp)
+						a.preAttackRate.packetOK++
 						a.preAttackRate.dataSum(log, timestamp)
 					}
 				}
 			}
+			alices[pod] = a
 		}
 
 		// EVENTS
@@ -259,27 +276,48 @@ func analyseLogs(logs chan []string){
 				// new malice detected.
 				if strings.Contains(log, "OK"){
 					malices[pod] = initMalice(timestamp, pod, node)
+					malices[pod].attackRate.packetOK++
 					malices[pod].attackRate.dataSum(log, timestamp)
 					if attack.active == false {
 						attack.start(timestamp)
 						fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 					}
 				}
+				malices[pod].attackRate.packetCount++
 			} else {
 				if attack.active == false {
 					// EVENT new attack detected
-					attack.start(timestamp)
-					if attack.active == false {
-						fmt.Fprintln(parserOutput, timestamp, "ERR: [X] active state of attack did not change")
+					if !attack.passed {
+						attack.start(timestamp)
+						fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 					}
-					fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
-				} else {
 					if strings.Contains(log, "OK"){
+						malices[pod].attackRate.packetOK++
+						malices[pod].attackRate.dataSum(log, timestamp)
+						if attack.active == false {
+							attack.start(timestamp)
+							fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
+						}
+					}
+					malices[pod].attackRate.packetCount++
+				} else {
+					if attack.responding {
+						m.respAttackRate.packetCount++
+					} else {
+						m.attackRate.packetCount++
+					}
+					if strings.Contains(log, "OK"){
+						if attack.responding {
+							m.respAttackRate.packetOK++
+						} else {
+							m.attackRate.packetOK++
+						}
 						m.attackRate.dataSum(log, timestamp)
 					}
 					m.serverBlocked.toggle(timestamp, false, strings.Contains(log, "OK"))
 					m.serverBlocked.toggle(timestamp, true, strings.Contains(log, "Fail"))
 				}
+				malices[pod] = m
 			}
 		}
 
@@ -304,6 +342,10 @@ func analyseLogs(logs chan []string){
 					if strings.Contains(log, "Enabled detectors") {
 						if c.detectorEnable == 0 {
 							c.detectorEnable = timestamp
+							if attack.st.timeUntilFirstDetectorsEnabled == 0 {
+								attack.st.timeUntilFirstDetectorsEnabled = timestamp
+								attack.responding = true
+							}
 						}
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"enabled detectors")
 					}
@@ -314,7 +356,8 @@ func analyseLogs(logs chan []string){
 							// every node can access the attacked server
 							fmt.Fprintln(parserOutput, "server fully responsive")
 							attack.active = false
-							attack.st.timeUntilFullyResponsive = timestamp - attack.downTime
+							attack.passed = true
+							attack.st.timeUntilFullyResponsive = timestamp
 							attack.st.printStats()
 						} 
 					}
@@ -347,38 +390,32 @@ func analyseLogs(logs chan []string){
 			} else {
 
 				d, e := detectors[pod]
-				if e {
+				if !e {
 					if strings.Contains(log, "Received IP") {
-						// info
-						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, "notified again");
-					} else if strings.Contains(log, "new connection") {
-						if d.firstDetection == 0 {
-							d.firstDetection = timestamp
-						}
-						fmt.Fprint(parserOutput, "WRN:", timestamp, "detector ", pod, "detected new connection", log)
-					} else if strings.Contains(log, "block") {
-						if d.firstBlocking == 0 {
-							d.firstBlocking = timestamp
-							if attack.st.timeUntilFirstBlock == 0 {
-								attack.st.timeUntilFirstBlock = timestamp - attack.downTime
-							}
-						}
-
-						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " send blocking command")
-					}
-					detectors[pod] = d
-				} else {
-					if strings.Contains(log, "Received IP") {
-						detectors[pod] = initDetector(timestamp, pod, node)
-						if attack.st.timeUntilFirstDetectorsEnabled == 0 {
-							attack.st.timeUntilFirstDetectorsEnabled = timestamp - attack.downTime
-						}
-						if len(detectors) == nodes {
-							attack.st.timeUntilAllDetectorsEnabled = timestamp - attack.downTime
-						}
-						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " notified for first time");
-					}
+						d = initDetector(timestamp, pod, node)
+					} else { continue }
 				}
+				if strings.Contains(log, "Received IP") {
+					// info
+					if d.notified == 0 {
+						fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " notified for first time");
+						d.notified = timestamp
+					}
+				} else if strings.Contains(log, "new connection") {
+					if d.firstDetection == 0 {
+						d.firstDetection = timestamp
+					}
+					// fmt.Fprint(parserOutput, "WRN:", timestamp, "detector ", pod, "detected new connection", log)
+				} else if strings.Contains(log, "block") {
+					if d.firstBlocking == 0 {
+						d.firstBlocking = timestamp
+						if attack.st.timeUntilFirstBlock == 0 {
+							attack.st.timeUntilFirstBlock = timestamp
+						}
+					}
+					fmt.Fprintln(parserOutput, timestamp, "detector ", pod, " send blocking command")
+				}
+				detectors[pod] = d
 			}
 		}
 	} // main loop
