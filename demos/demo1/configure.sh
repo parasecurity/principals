@@ -15,6 +15,7 @@ awk_script=" {
 	sub(\"%TSI_ATTACKS%\", \"$REGISTRY/$TSI_ATTACKS\", \$0);
 	sub(\"%REGISTRY%\", \"$REGISTRY\", \$0);
 	sub(\"%REGISTRY_IP%\", \"$REGISTRY_IP\", \$0);
+	sub(\"%USER%\", \"$USER\", \$0);
 	print
 } "
 

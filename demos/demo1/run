@@ -96,6 +96,8 @@ load_vars(){
 	readonly MALICE_POD_35=attack23
 	readonly MALICE_POD_36=attack24
 	readonly MALICE_POD_37=attack25
+	readonly MALICE_POD_38=attack26
+	readonly MALICE_POD_39=attack27
 }
 
 init(){
@@ -269,11 +271,11 @@ link_level_canary()
       echo -e "\n"
 }
 
-udp_flooding()
+syn_flooding()
 {
       msg "Starting Udp Flooding Demo"
       
-	  canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos4.astrolavos.gatech.edu/\"]}"
+      canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
       detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
       
 	  if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
@@ -298,31 +300,83 @@ udp_flooding()
       read -p "Press enter to continue"
 
       msg "Creating UDP flooding traffic from malicious pods"
-      kubectl exec "$MALICE_POD_13" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_14" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_15" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_16" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_17" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_18" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_19" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_20" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_21" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_22" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_23" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_24" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_25" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_26" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_27" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_28" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_29" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_30" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_31" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_32" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_33" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_34" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_35" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_36" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
-      kubectl exec "$MALICE_POD_37" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.24 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_38" -- bash -c "nohup  /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 100  &"
+      kubectl exec "$MALICE_POD_39" -- bash -c "nohup  /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 100  &"
+      sleep 2
+
+      msg "Waiting for the Web server to be responsive again" 
+      read -p "Press enter to continue"
+     
+      msg "Removing canary link deployment" 
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"canary-link\", \"arguments\": []}"
+      
+      msg "Removing detector link deployment" 
+      kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
+
+      msg "Cleaning cluster"
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+      
+      kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
+      kubectl exec -n security "$AGENT_POD_2" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
+      
+      echo -e "\n"
+}
+
+udp_flooding()
+{
+      msg "Starting Udp Flooding Demo"
+      
+      canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
+      detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+      
+	  if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
+		  read -p "Enter canary deployment command: " canaryCommands
+		  read -p "Enter detector deployment command: " detectorCommands
+	  fi; fi
+      
+      msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
+      kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
+      
+      msg "Deploying detector with mirroring but with BPF filter disabled" 
+      kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
+
+      msg "Sending normal requests to http://kronos.mhl.tuc.gr:30002/ from alice" 
+      kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://kronos.mhl.tuc.gr:30002/ -s 10 &"
+
+      CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
+      CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
+
+      msg "Please open one new terminal and execute the following command" 
+      echo "./see_logs | grep canary"
+      read -p "Press enter to continue"
+
+      msg "Creating UDP flooding traffic from malicious pods"
+      kubectl exec "$MALICE_POD_13" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_14" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_15" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_16" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_17" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_18" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_19" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_20" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_21" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_22" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_23" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_24" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_25" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_26" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_27" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_28" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_29" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_30" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_31" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_32" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_33" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_34" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_35" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_36" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+      kubectl exec "$MALICE_POD_37" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
       sleep 2
 
       msg "Waiting for the Web server to be responsive again" 
@@ -376,6 +430,7 @@ usage() {
 	echo "  --app-level         run ddos with application level canary with default deployment commands"
 	echo "  --link-level        run ddos with link level canary with default deployment commands"
 	echo "  --udp-flooding      run udp flooding with application level canary with default deployment commands"
+	echo "  --syn-flooding      run syn flooding with application level canary with default deployment commands"
 	echo "  --interactive       run demo in fully interactive mode (default action, prompt for deployment commands)"
 	echo "  --help              print this message"
 
@@ -398,6 +453,11 @@ if [ $# -eq 1 ]; then
                 check
                 init
                 udp_flooding
+                clean_cluster
+        elif [ $1 = "--syn-flooding" ]; then
+                check
+                init
+                syn_flooding
                 clean_cluster
 	elif [ $1 = "--interactive" ]; then
 		check
