@@ -1,7 +1,7 @@
 BUILD ?= $(CURDIR)/bin
 IMAGE ?= antrea-tsi
 VERSION ?= v1.0.5
-REMOTE_REGISTRY ?= 10.137.7.24:5000
+REMOTE_REGISTRY ?= localhost:5000
 
 TOOLS := $(wildcard ./tools/*)
 FLOW := $(wildcard ./flow/*)

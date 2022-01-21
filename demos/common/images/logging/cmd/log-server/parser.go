@@ -17,6 +17,7 @@ var (
 	detectors map[string]*detectorStamps
 	malices map[string]*maliceStamps
 	alices map[string]*aliceStamps
+	allAlices *aliceStamps
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	attack.active = false
 	malices = make(map[string]*maliceStamps)
 	alices = make(map[string]*aliceStamps)
+	allAlices = initAlice(0, "all", "cluster")
 }
 
 /*** dDos metrics helpers ***/
@@ -45,7 +47,7 @@ type dDos struct {
 	passed bool
 	responding bool
 	downTime int64
-	blockedConnections int
+	blockedIPs map[string]string
 	reconnections int
 	st stats
 }
@@ -55,7 +57,7 @@ func (d *dDos) start(now int64) {
 	d.passed = false
 	d.responding = false
 	d.downTime = 0
-	d.blockedConnections = 0
+	d.blockedIPs = make(map[string]string)
 	d.reconnections = 0
 	d.st.attackInitiation = now
 }
@@ -168,13 +170,6 @@ func analyseLogs(logs chan []string){
 
 	// NOTE depr
 	defer func() {
-		for c, can := range canaries {
-			fmt.Fprintln(parserOutput, "canary ", c, "times: ", 
-						can.detectorEnable)
-		}
-		for c, cl := range cluster {
-			fmt.Fprintln(parserOutput, "node ", c, cl)
-		}
 		// TODO error checking
 		parserOutput.Sync()
 		parserOutput.Close()
@@ -192,7 +187,15 @@ func analyseLogs(logs chan []string){
 		log := toks[4]
 		if strings.Contains(log, "SIGNAL") {
 			attack.st.printStats()
-			return}
+			return
+		}
+
+		// wait 10 seconds after canaries reconnections to print stats
+		if attack.passed && (timestamp - attack.st.timeUntilFullyResponsive) > 10 * tsiSecond {
+			attack.active = false
+			attack.passed = false
+			attack.st.printStats()
+		}
 
 		// EVENTS
 		// detect how many nodes are connected to server via flow-server
@@ -203,7 +206,6 @@ func analyseLogs(logs chan []string){
 				fmt.Fprintln(parserOutput, timestamp, 
 							"New node detected: ", node, pod)
 			}
-
 			if strings.Compare(a.flow, pod) != 0 {
 				// EVENT for some reason flow-server restarted
 				a.flow = pod
@@ -214,13 +216,17 @@ func analyseLogs(logs chan []string){
 			// info 
 			if strings.Contains(log, "executed command") && 
 			strings.Contains(log, "block") {
-				attack.blockedConnections++
-				if attack.blockedConnections == len(malices) {
+				words := strings.Split(log, "\"")
+				IP := words[len(words)-2]
+				_, ex := attack.blockedIPs[IP]
+				if !ex {
+					attack.blockedIPs[IP] = node
+				}
+				if len(attack.blockedIPs) == len(malices) {
 					attack.st.timeUntilLastBlock = timestamp
 				}
-				words := strings.Split(log, "\"")
 				fmt.Fprintln(parserOutput, timestamp, 
-				"flow-server ", pod, "blocked applied", words[len(words)-2])
+				"flow-server ", pod, "blocked applied", IP)
 			}
 			//   I don't remember why the line bellow exists <--comment before refactoring
 			// now it has some value, maybe it is not needed, as the map consists of pointers
@@ -242,25 +248,31 @@ func analyseLogs(logs chan []string){
 			}
 			if attack.active {
 				a.attackRate.packetCount++
+				allAlices.attackRate.packetCount++
 				if strings.Contains(log, "OK"){
 					a.attackRate.dataSum(log, timestamp)
 					a.attackRate.packetOK++
-					a.attackRate.dataSum(log, timestamp)
+					allAlices.attackRate.dataSum(log, timestamp)
+					allAlices.attackRate.packetOK++
 				}
 			} else {
 				if attack.passed {
 					a.postAttackRate.packetCount++
+					allAlices.postAttackRate.packetCount++
 					if strings.Contains(log, "OK"){
 						a.postAttackRate.dataSum(log, timestamp)
 						a.postAttackRate.packetOK++
-						a.postAttackRate.dataSum(log, timestamp)
+						allAlices.postAttackRate.dataSum(log, timestamp)
+						allAlices.postAttackRate.packetOK++
 					}
 				} else {
 					a.preAttackRate.packetCount++
+					allAlices.preAttackRate.packetCount++
 					if strings.Contains(log, "OK"){
 						a.preAttackRate.dataSum(log, timestamp)
 						a.preAttackRate.packetOK++
-						a.preAttackRate.dataSum(log, timestamp)
+						allAlices.preAttackRate.dataSum(log, timestamp)
+						allAlices.preAttackRate.packetOK++
 					}
 				}
 			}
@@ -277,27 +289,28 @@ func analyseLogs(logs chan []string){
 				if strings.Contains(log, "OK"){
 					malices[pod] = initMalice(timestamp, pod, node)
 					malices[pod].attackRate.packetOK++
-					malices[pod].attackRate.dataSum(log, timestamp)
+					// malices[pod].attackRate.dataSum(log, timestamp)
 					if attack.active == false {
 						attack.start(timestamp)
 						fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
+					} else if attack.st.attackInitiation > timestamp {
+						attack.st.attackInitiation = timestamp
 					}
 				}
 				malices[pod].attackRate.packetCount++
 			} else {
 				if attack.active == false {
 					// EVENT new attack detected
-					if !attack.passed {
-						attack.start(timestamp)
-						fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
-					}
+					// TODO clean up, do resete or nothing
 					if strings.Contains(log, "OK"){
-						malices[pod].attackRate.packetOK++
-						malices[pod].attackRate.dataSum(log, timestamp)
-						if attack.active == false {
+						if m.attackRate.firstT > timestamp {
+							m.attackRate.firstT = timestamp 
+						}
+						if !attack.passed {
 							attack.start(timestamp)
 							fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 						}
+						malices[pod].attackRate.packetOK++
 					}
 					malices[pod].attackRate.packetCount++
 				} else {
@@ -307,12 +320,17 @@ func analyseLogs(logs chan []string){
 						m.attackRate.packetCount++
 					}
 					if strings.Contains(log, "OK"){
+						if m.attackRate.firstT > timestamp {
+							m.attackRate.firstT = timestamp 
+						}
+						if attack.st.attackInitiation > timestamp {
+							attack.st.attackInitiation = timestamp
+						}
 						if attack.responding {
 							m.respAttackRate.packetOK++
 						} else {
 							m.attackRate.packetOK++
 						}
-						m.attackRate.dataSum(log, timestamp)
 					}
 					m.serverBlocked.toggle(timestamp, false, strings.Contains(log, "OK"))
 					m.serverBlocked.toggle(timestamp, true, strings.Contains(log, "Fail"))
@@ -327,22 +345,26 @@ func analyseLogs(logs chan []string){
 			// ingore log
 			if strings.Contains(log, "SIGNAL") {continue}
 			// attack is marked as started by malices' logs
-			if !attack.active {
+			if !attack.active && !attack.passed {
 				// here we produce info. TODO false detection
 				if strings.Contains(log, "Canary connection timeout") {
-					canaries[pod] = initCanary(timestamp, pod, node)
-					attack.start(timestamp)
+					_, e := canaries[pod]
+					if !e {
+						canaries[pod] = initCanary(timestamp, pod, node)
+					}
 					attack.reconnections++
 					fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
-					fmt.Fprintln(parserOutput, timestamp, "[!] possible attack initiated")
+					// attack.start(timestamp)
+					// fmt.Fprintln(parserOutput, timestamp, "[!] possible attack initiated")
 				}
-			} else {
+			} else if attack.active || attack.passed {
 				c, e := canaries[pod]
 				if e {
 					if strings.Contains(log, "Enabled detectors") {
-						if c.detectorEnable == 0 {
+						if c.detectorEnable == 0 || c.detectorEnable > timestamp{
 							c.detectorEnable = timestamp
 							if attack.st.timeUntilFirstDetectorsEnabled == 0 {
+								fmt.Fprintln(parserOutput, "[!] system is responding to attack")
 								attack.st.timeUntilFirstDetectorsEnabled = timestamp
 								attack.responding = true
 							}
@@ -354,14 +376,12 @@ func analyseLogs(logs chan []string){
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"connected to server again")
 						if attack.reconnections == 0 {
 							// every node can access the attacked server
-							fmt.Fprintln(parserOutput, "server fully responsive")
-							attack.active = false
+							fmt.Fprintln(parserOutput, "[!] server fully responsive")
 							attack.passed = true
+							attack.active = false
 							attack.st.timeUntilFullyResponsive = timestamp
-							attack.st.printStats()
 						} 
 					}
-
 					if c.serverResponsive.toggle(timestamp, false, strings.Contains(log, "Canary connection timeout")){
 						fmt.Fprintln(parserOutput, timestamp, "canary ", pod,"timed out")
 					}
@@ -379,7 +399,7 @@ func analyseLogs(logs chan []string){
 		// EVENTS
 		// detector stuff
 		if strings.Contains(pod, "detector") {
-			if !attack.active {
+			if !attack.active || !attack.passed{
 				if strings.Contains(log, "Received IP") {
 					fmt.Fprintln(parserOutput, timestamp, "WRN: detector notified but no attack is present");
 				} else if strings.Contains(log, "new connection") {
@@ -388,7 +408,6 @@ func analyseLogs(logs chan []string){
 					fmt.Fprintln(parserOutput, timestamp, "WRN: detector blocking command sent but no attack is present")
 				}
 			} else {
-
 				d, e := detectors[pod]
 				if !e {
 					if strings.Contains(log, "Received IP") {
@@ -418,6 +437,7 @@ func analyseLogs(logs chan []string){
 				detectors[pod] = d
 			}
 		}
+
 	} // main loop
 }
 
