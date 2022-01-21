@@ -320,6 +320,7 @@ func analyseLogs(logs chan []string){
 						}
 						if !attack.passed {
 							attack.start(timestamp)
+							attack.isHttp = true
 							fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
 						}
 						malices[pod].attackRate.packetOK++
