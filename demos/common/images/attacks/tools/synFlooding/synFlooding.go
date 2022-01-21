@@ -180,10 +180,10 @@ func checkInputArgs() {
 		log.Println("required argument: -t <target IP addr>")
 	}
 	if strings.Count(ip, ".") != 3 || strings.Contains(ip, ":") {
-		log.Println("invalid IPV4 address: %s", ip)
+		log.Println("invalid IPV4 address: ", ip)
 	}
 	if port > 0xFFFF {
-		log.Println("invalid port: %d", port)
+		log.Println("invalid port: ", port)
 	}
 }
 

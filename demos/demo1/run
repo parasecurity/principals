@@ -287,6 +287,7 @@ udp_flooding()
 
 	msg "Please remove speed limit from from phobos 3" 
     echo "sudo ethtool -s enp81s0f0 speed 10000 duplex full autoneg on"
+    read -p "Press enter to continue"
 
 	msg "Please review the time report"
 	cat ~/tsi/parser.log
@@ -321,7 +322,6 @@ syn_flooding()
     read -p "Press enter to continue"
 
     msg "Creating SYN flooding traffic from malicious pods"
-
     kubectl exec "$MALICE_POD_38" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
     kubectl exec "$MALICE_POD_39" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
     kubectl exec "$MALICE_POD_13" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
