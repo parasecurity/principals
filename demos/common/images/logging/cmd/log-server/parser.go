@@ -301,7 +301,7 @@ func analyseLogs(logs chan []string){
 				} else {
 					// for udp and syn flooding
 					malices[pod] = initMalice(timestamp, pod, node)
-					if attack.active == false {
+					if attack.active == false && !attack.passed {
 						attack.start(timestamp)
 						attack.isHttp = false
 						fmt.Fprintln(parserOutput, timestamp, "[!] udp/syn flooding attack initiated")
