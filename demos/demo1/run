@@ -197,7 +197,7 @@ http_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	echo "cat ~/tsi/parser.log"
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
@@ -224,7 +224,7 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please start a scp session" 
-    echo "scp gntousakis@phobos3.astrolavos.gatech.edu:/home/gntousakis/hugefile /dev/null"
+    echo "scp santonatos@phobos3.astrolavos.gatech.edu:/home/santonatos/hugefile /dev/null"
     read -p "Press enter to continue"
 
     msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
@@ -290,7 +290,7 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	echo "cat ~/tsi/parser.log"
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
@@ -349,7 +349,7 @@ syn_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 	
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	echo "cat ~/tsi/parser.log"
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
