@@ -196,6 +196,14 @@ http_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true      
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
+	msg "Please review the time report"
+	cat ~/tsi/parser.log
+    read -p "Press enter to continue"
+
+	msg "Please remove the time report"
+	echo "sudo rm ~/tsi/*.log"
+    read -p "Press enter to continue"
+
     echo -e "\n"
 }
 
@@ -278,8 +286,16 @@ udp_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
 	msg "Please remove speed limit from from phobos 3" 
-    echo "sudo ethtool -s enp81s0f0 speed 1000 duplex full autoneg on"
+    echo "sudo ethtool -s enp81s0f0 speed 10000 duplex full autoneg on"
+
+	msg "Please review the time report"
+	cat ~/tsi/parser.log
     read -p "Press enter to continue"
+
+	msg "Please remove the time report"
+	echo "sudo rm ~/tsi/*.log"
+    read -p "Press enter to continue"
+
     echo -e "\n"
 }
 
@@ -304,7 +320,7 @@ syn_flooding()
     echo "./see_logs | grep canary"
     read -p "Press enter to continue"
 
-    msg "Creating UDP flooding traffic from malicious pods"
+    msg "Creating SYN flooding traffic from malicious pods"
 
     kubectl exec "$MALICE_POD_38" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
     kubectl exec "$MALICE_POD_39" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
@@ -331,7 +347,15 @@ syn_flooding()
     msg "Cleaning cluster"
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
-      
+	
+	msg "Please review the time report"
+	cat ~/tsi/parser.log
+    read -p "Press enter to continue"
+
+	msg "Please remove the time report"
+	echo "sudo rm ~/tsi/*.log"
+    read -p "Press enter to continue"
+
     echo -e "\n"
 }
 

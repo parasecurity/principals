@@ -1,0 +1,403 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack1
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack1
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack2
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack2
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack3
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack3
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack4
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack4
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack5
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack5
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack6
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack6
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack7
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack7
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack8
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack8
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack9
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack9
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack10
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack11
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack11
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack11
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack12
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack12
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack13
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack13
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack14
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack14
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack15
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack15
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack16
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack16
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack17
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack17
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack18
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack18
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack19
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack19
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack20
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack20
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack21
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack21
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack22
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack22
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack23
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack23
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack24
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack24
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack25
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack25
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack26
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack26
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: attack27
+spec:
+  nodeSelector:
+    dedicated: master
+  containers:
+    - name: attack27
+      image: 10.137.7.24:5000/attacks:v1.0.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
