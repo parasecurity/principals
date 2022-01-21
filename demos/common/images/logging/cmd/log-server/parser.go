@@ -49,6 +49,7 @@ type dDos struct {
 	downTime int64
 	blockedIPs map[string]string
 	reconnections int
+	isHttp bool
 	st stats
 }
 
@@ -292,7 +293,18 @@ func analyseLogs(logs chan []string){
 					// malices[pod].attackRate.dataSum(log, timestamp)
 					if attack.active == false {
 						attack.start(timestamp)
-						fmt.Fprintln(parserOutput, timestamp, "[!] ddos attack initiated")
+						attack.isHttp = true
+						fmt.Fprintln(parserOutput, timestamp, "[!] http ddos attack initiated")
+					} else if attack.st.attackInitiation > timestamp {
+						attack.st.attackInitiation = timestamp
+					}
+				} else {
+					// for udp and syn flooding
+					malices[pod] = initMalice(timestamp, pod, node)
+					if attack.active == false {
+						attack.start(timestamp)
+						attack.isHttp = false
+						fmt.Fprintln(parserOutput, timestamp, "[!] udp/syn flooding attack initiated")
 					} else if attack.st.attackInitiation > timestamp {
 						attack.st.attackInitiation = timestamp
 					}

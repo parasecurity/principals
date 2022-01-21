@@ -34,6 +34,7 @@ func (s stats) printStats() {
 		sumIP[n]++
 	}
 
+	// APO EDW
 	for _, malice := range malices {
 		stmp := malice.attackRate.firstT
 		if min == 0 || min > stmp{ min = stmp}
@@ -43,33 +44,38 @@ func (s stats) printStats() {
 		stmp := malice.attackRate.firstT
 		if max == 0 || max < stmp{ max = stmp}
 	}
+
 	if attack.st.attackInitiation > min {
 		log.Println("               out of order starting point")
 		attack.st.attackInitiation = min
 	}
+	//MEXRI EDW
+
 	// attack.st.attackInitiation = max
 	// point0 := max
 	// fmt.Fprintln(parserOutput, "from first malice to last: +", max-min)
 
-	for _, malice := range malices {
-		C := malice.attackRate.packetCount
-		var P string
-		if C == 0 {
-			P = "N/A"
-		} else {
-			P =	strconv.FormatFloat(malice.attackRate.getPercent(), 'f', -1, 64)
+	if attack.isHttp {
+		for _, malice := range malices {
+			C := malice.attackRate.packetCount
+			var P string
+			if C == 0 {
+				P = "N/A"
+			} else {
+				P =	strconv.FormatFloat(malice.attackRate.getPercent(), 'f', -1, 64)
+			}
+			respC :=	malice.respAttackRate.packetCount 
+			var respP string
+			if respC == 0 {
+				respP = "N/A"
+			} else {
+				respP =	strconv.FormatFloat(malice.respAttackRate.getPercent(), 'f', -1, 64)
+			}
+			fmt.Fprintf(parserOutput, "%s bad traffic: pre %s %%(%d/%d), att %s %%(%d/%d)\n", 
+			malice.name,
+			P, malice.attackRate.packetOK, C,
+			respP, malice.respAttackRate.packetOK, respC)
 		}
-		respC :=	malice.respAttackRate.packetCount 
-		var respP string
-		if respC == 0 {
-			respP = "N/A"
-		} else {
-			respP =	strconv.FormatFloat(malice.respAttackRate.getPercent(), 'f', -1, 64)
-		}
-		fmt.Fprintf(parserOutput, "%s bad traffic: pre %s %%(%d/%d), att %s %%(%d/%d)\n", 
-					malice.name,
-					P, malice.attackRate.packetOK, C,
-					respP, malice.respAttackRate.packetOK, respC)
 	}
 
 	for _, alice := range alices {

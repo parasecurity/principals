@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"
@@ -167,7 +167,7 @@ func setLocalIP() {
 func (tcp *TCPIP) genIP() {
 
 	tcp.SRC = localIP.To4()
-	tcp.SRC[3] = tcp.randByte()
+	//tcp.SRC[3] = tcp.randByte()
 
 	tcp.SrcPort = (uint16)(((uint16)(tcp.randByte()) << 8) | (uint16)(tcp.randByte()))
 	for tcp.SrcPort <= 0x03FF {
@@ -180,10 +180,10 @@ func checkInputArgs() {
 		log.Println("required argument: -t <target IP addr>")
 	}
 	if strings.Count(ip, ".") != 3 || strings.Contains(ip, ":") {
-		log.Println("invalid IPV4 address: %s", ip)
+		log.Println("invalid IPV4 address: ", ip)
 	}
 	if port > 0xFFFF {
-		log.Println("invalid port: %d", port)
+		log.Println("invalid port: ", port)
 	}
 }
 
@@ -222,6 +222,7 @@ func main() {
 	var wg sync.WaitGroup
 	var packet = &TCPIP{}
 
+	log.Println("starting")
 	defer func() {
 		if err := recover(); err != nil {
 			log.Println("error: %v", err)

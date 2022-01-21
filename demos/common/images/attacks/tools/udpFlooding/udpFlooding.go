@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"
