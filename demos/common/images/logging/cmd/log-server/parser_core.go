@@ -91,7 +91,9 @@ func (rs *rippleStamp) toggle(now int64, to, check bool) bool {
 
 type dataRate struct {
 	firstT int64
-	data int
+	data float64
+	min float64
+	max float64
 	packetCount int
 	packetOK int
 	latestT int64
@@ -106,14 +108,28 @@ func (dr *dataRate) init(now int64) {
 }
 
 func (dr *dataRate) dataSum(msg string, now int64) {
+	log.Println("DBG: dataSum entry")
 	words := strings.Split(strings.TrimSpace(msg), " ")
-	data, err := strconv.Atoi(words[len(words) - 1])
+	log.Println("DBG: dataSum words:", words)
+	ping := words[len(words) - 1]
+	log.Println("DBG: dataSum ping:", ping)
+	data, err := strconv.ParseFloat(ping[:len(ping)-4], 64)
+	log.Println("DBG: dataSum validating float parsing")
 	if err != nil {
 		log.Println(err)
+		return
 	}
-	log.Println(len(words), "wordsLast", words[len(words)-1], "data sum:", data)
+	log.Println("DBG: dataSum validating float parsing done")
+	// log.Println(len(words), "wordsLast", words[len(words)-1], "data sum:", data)
 	dr.data += data
+	if dr.max < data {
+		dr.max = data
+	}
+	if dr.min ==0 || dr.min > data {
+		dr.min = data
+	}
 	dr.latestT = now
+	log.Println("DBG: dataSum done")
 }
 
 // returns data rate in KBps

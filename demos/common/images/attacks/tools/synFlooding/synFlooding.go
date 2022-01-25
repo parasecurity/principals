@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"
@@ -232,6 +232,7 @@ func main() {
 	packet.genIP()
 	packet.setPacket()
 
+	log.Println("Start attacking", ip, port)
 	packet.floodTarget(
 		reflect.TypeOf(packet).Elem(),
 		reflect.ValueOf(packet).Elem(),

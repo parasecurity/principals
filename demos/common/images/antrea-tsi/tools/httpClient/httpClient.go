@@ -10,6 +10,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"fmt"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 		clients int
 		logPath string
 	}
+	logFile *os.File
 )
 
 func init() {
@@ -31,7 +33,8 @@ func init() {
 	flag.Parse()
 
 	// open log file
-	logFile, err := os.OpenFile(args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	var err error
+	logFile, err = os.OpenFile(args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -85,6 +88,7 @@ func main() {
 				if err != nil {
 					failCount++
 					log.Print("Fail Count:", failCount, err)
+					fmt.Fprintln(logFile, "Fail Count:", failCount, err)
 					continue
 				}
 				defer resp.Body.Close()
@@ -93,6 +97,7 @@ func main() {
 				bytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
 					log.Println("Response status:", resp.Status, err)
+					fmt.Fprintln(logFile, "Response status:", resp.Status, err)
 					return
 				}
 				count++

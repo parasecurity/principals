@@ -125,9 +125,11 @@ func main() {
 						Timeout:   time.Duration(args.timeout) * time.Millisecond,
 						Transport: t,
 					}
+					start := time.Now()
 					resp, err := httpClient.Get(args.server)
+					interval := time.Since(start)
 					if err != nil {
-						log.Println("No Response", err)
+						log.Println("No Response", err, interval)
 						return
 					}
 					defer resp.Body.Close()
@@ -135,9 +137,10 @@ func main() {
 
 					bytes, err := ioutil.ReadAll(resp.Body)
 					if err != nil {
-						log.Println("Response status:", resp.Status, err)
+						log.Println("Response status:", resp.Status, err, interval)
 					}
-					log.Println("Response status:", resp.Status, r, conc, c, ", bytes: ", len(bytes))
+					// log.Println("Response status:", resp.Status, r, conc, c, ", bytes: ", len(bytes), interval)
+					log.Println("Response status:", resp.Status, ", bytes: ", len(bytes), interval)
 				}(repeat, conc, cl)
 			}
 			time.Sleep(time.Duration(args.sleep) * time.Millisecond)

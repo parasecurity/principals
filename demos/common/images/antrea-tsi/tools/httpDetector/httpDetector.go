@@ -151,13 +151,13 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 			used = true
-			//applicationLayer := p.ApplicationLayer()
-			//if applicationLayer != nil {
+			applicationLayer := p.ApplicationLayer()
+			if applicationLayer != nil {
 
 				//payloadStr := string(applicationLayer.Payload())
 				// Search for a string inside the payload
 				count++
-			//}
+			}
 			//debug
 
 			ipLayer := p.Layer(layers.LayerTypeIPv4)

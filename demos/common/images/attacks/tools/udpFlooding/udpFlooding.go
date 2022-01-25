@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	log "logging"
 	"net"
 	"os"
 	"os/signal"
@@ -88,7 +88,7 @@ func main() {
 	*
 	 */
 	generateServerAddress()
-	log.Println(server)
+	log.Println("Start attacking", server)
 	conn, err := net.Dial("udp", server)
 	if err != nil {
 		log.Println("There was an error", err)

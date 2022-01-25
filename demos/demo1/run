@@ -136,6 +136,19 @@ clean_cluster(){
 	exit
 }
 
+alice_trafic()
+{
+    msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ &"
+    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=2000 &"
+    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=2000 &"
+    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://google.com/ -dev=9 -s=3000 &"
+    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
+}
+
 http_flooding()
 {
 
@@ -150,15 +163,7 @@ http_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
       
-    msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ &"
-    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=2000 &"
-    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=2000 &"
-    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://google.com/ -dev=9 -s=3000 &"
-    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
+	alice_trafic
 
     waitUntilAllPodsRun
       
@@ -233,8 +238,7 @@ udp_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
-    msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -s 10 &"
+	alice_trafic
 
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
     CANARY_2=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | tail -1)
@@ -312,8 +316,7 @@ syn_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
-    msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -s 10 &"
+	alice_trafic
 
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
 
