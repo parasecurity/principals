@@ -120,7 +120,7 @@ func initCanary(now int64, name, node string) *canaryStamps {
 		node: node, 
 		detectorEnable: 0,
 		}
-		newCanary.serverResponsive.init(now, 4, false)
+		newCanary.serverResponsive.init(now, 10, false)
 	cluster[node].canary = (* canaryStamps)(&newCanary)
 	return (* canaryStamps)(&newCanary)
 }

@@ -152,6 +152,10 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			}
 			used = true
 			applicationLayer := p.ApplicationLayer()
+			// applicationLayer := p.LinkLayer()
+			// applicationLayer := p.NetworkLayer()
+			// applicationLayer := p.TransportLayer()
+
 			if applicationLayer != nil {
 
 				//payloadStr := string(applicationLayer.Payload())
