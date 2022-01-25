@@ -229,7 +229,7 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please start a scp session" 
-    echo "scp gntousakis@phobos3.astrolavos.gatech.edu:/home/gntousakis/hugefile /dev/null"
+    echo "scp gntousakis@phobos3.astrolavos.gatech.edu:/tmp/hugefile /dev/null"
     read -p "Press enter to continue"
 
     msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
@@ -306,9 +306,9 @@ udp_flooding()
 
 syn_flooding()
 {
-    msg "Starting Udp Flooding Demo"
+    msg "Starting SYN Flooding Demo"
     canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
-    detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+    detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\",\"-syn=true\"]}"
       
     msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
     kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"

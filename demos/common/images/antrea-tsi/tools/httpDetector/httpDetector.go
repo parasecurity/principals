@@ -24,6 +24,7 @@ var (
 		fname      *string
 		snaplen    *int
 		promisc    *bool
+		syn	   *bool
 		threshold  *int
 		logPath    *string
 		flowServer *string
@@ -44,6 +45,7 @@ func init() {
 	args.fname = flag.String("r", "", "Filename to read from, overrides -i")
 	args.snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 	args.threshold = flag.Int("t", 150, "Set the packet threshold, the value is packets per second")
+	args.syn = flag.Bool("syn", false, "Check if it is an syn attack")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
 	args.flowServer = flag.String("fc", "10.1.1.201:30002", "The flow server connection in format ip:port e.g. 10.1.1.101:8080")
 	args.listen = flag.String("l", "10.1.1.202:30000", "The IP and port of the secondary network that listens for connections")
@@ -155,8 +157,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			// applicationLayer := p.LinkLayer()
 			// applicationLayer := p.NetworkLayer()
 			// applicationLayer := p.TransportLayer()
-
-			if applicationLayer != nil {
+			
+			if (applicationLayer != nil || *args.syn) {
 
 				//payloadStr := string(applicationLayer.Payload())
 				// Search for a string inside the payload
