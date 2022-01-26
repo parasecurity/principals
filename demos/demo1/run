@@ -202,11 +202,15 @@ http_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    	read -p "Press enter to continue"
+    	
+    msg "Print blocked IPs"
+    ./blockedIPs.sh
     read -p "Press enter to continue"
 
-	msg "Please remove the time report"
-	echo "sudo rm ~/tsi/*.log"
+    msg "Please remove the time report"
+    echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
 
     echo -e "\n"
@@ -294,7 +298,11 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    read -p "Press enter to continue"
+    	
+    	msg "Print blocked IPs"
+	./blockedIPs.sh
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
@@ -352,7 +360,11 @@ syn_flooding()
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 	
 	msg "Please review the time report"
-	cat ~/tsi/parser.log
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    read -p "Press enter to continue"
+
+    	msg "Print blocked IPs"
+	./blockedIPs.sh
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
