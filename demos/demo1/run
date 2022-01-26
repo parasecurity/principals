@@ -68,7 +68,6 @@ load_vars(){
 	readonly MALICE_POD_10=malice10
 	readonly MALICE_POD_11=malice11
 	readonly MALICE_POD_12=malice12
-
 	readonly MALICE_POD_13=attack1
 	readonly MALICE_POD_14=attack2
 	readonly MALICE_POD_15=attack3
@@ -301,8 +300,12 @@ udp_flooding()
 	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
     read -p "Press enter to continue"
     	
-    	msg "Print blocked IPs"
+    msg "Print blocked IPs"
 	./blockedIPs.sh
+    read -p "Press enter to continue"
+
+	msg "Print attack packet statistics"
+	./printStatistics.sh
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
@@ -363,8 +366,12 @@ syn_flooding()
 	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
     read -p "Press enter to continue"
 
-    	msg "Print blocked IPs"
+    msg "Print blocked IPs"
 	./blockedIPs.sh
+    read -p "Press enter to continue"
+
+	msg "Print attack packet statistics"
+	./printStatistics.sh 
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
