@@ -405,7 +405,7 @@ func analyseLogs(logs chan []string){
 							fmt.Fprintln(parserOutput, "[!] server fully responsive")
 							attack.passed = true
 							attack.active = false
-							attack.st.timeUntilFullyResponsive = timestamp
+							attack.st.timeUntilFullyResponsive = c.serverResponsive.timestampT
 						} 
 					}
 					if c.serverResponsive.toggle(timestamp, false, strings.Contains(log, "Canary connection timeout")){

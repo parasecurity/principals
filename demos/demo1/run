@@ -138,14 +138,14 @@ clean_cluster(){
 alice_trafic()
 {
     msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ &"
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=6 -s=2000 &"
     kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=2000 &"
     kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=2000 &"
-    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://google.com/ -dev=9 -s=3000 &"
-    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
+    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=1500 &"
+    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=10 -s=2000 &"
+    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=2000 &"
+    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=12 -s=2000 &"
 }
 
 http_flooding()
@@ -196,10 +196,6 @@ http_flooding()
     msg "Removing detector deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector\", \"arguments\": []}"
 
-    msg "Cleaning cluster"
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true      
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
-
 	msg "Please review the time report"
 	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
     	read -p "Press enter to continue"
@@ -207,10 +203,18 @@ http_flooding()
     msg "Print blocked IPs"
     ./blockedIPs.sh
     read -p "Press enter to continue"
+	
+    msg "Print attack packet statistics"
+    ./printStatisticsHTTP.sh 
+    read -p "Press enter to continue"
 
     msg "Please remove the time report"
     echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
+    
+    msg "Cleaning cluster"
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true      
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
     echo -e "\n"
 }
@@ -288,9 +292,7 @@ udp_flooding()
     msg "Removing detector link deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
 
-    msg "Cleaning cluster"
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
+
 
 	msg "Please remove speed limit from from phobos 3" 
     echo "sudo ethtool -s enp81s0f0 speed 10000 duplex full autoneg on"
@@ -311,6 +313,10 @@ udp_flooding()
 	msg "Please remove the time report"
 	echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
+    
+    msg "Cleaning cluster"
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
     echo -e "\n"
 }
@@ -358,10 +364,6 @@ syn_flooding()
     msg "Removing detector link deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
 
-    msg "Cleaning cluster"
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
-	
 	msg "Please review the time report"
 	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
     read -p "Press enter to continue"
@@ -377,6 +379,10 @@ syn_flooding()
 	msg "Please remove the time report"
 	echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
+    
+    msg "Cleaning cluster"
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
     echo -e "\n"
 }

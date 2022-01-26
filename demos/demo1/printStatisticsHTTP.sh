@@ -3,10 +3,10 @@
 statistics()
 {
   ANTREA_POD=$(kubectl get -A po -o wide | grep "antrea-agent" | head -1 | awk '{print $2}')
-  PORT_NUMBERS=$(kubectl exec -n kube-system "$ANTREA_POD" -- bash -c 'ovs-ofctl dump-ports-desc br-int | grep atta ' | awk -F "(" '{print $1}')
+  PORT_NUMBERS=$(kubectl exec -n kube-system "$ANTREA_POD" -- bash -c 'ovs-ofctl dump-ports-desc br-int | grep malic ' | awk -F "(" '{print $1}')
 
   echo "Packages Transmitted"
-  for i in {1..27}
+  for i in {1..12}
     do 
       PORT=$(echo $PORT_NUMBERS | awk  -v i="$i" '{ print $i }')
       NAME=$(kubectl exec -n kube-system "$ANTREA_POD" -- bash -c 'ovs-ofctl dump-ports-desc br-int' | grep $PORT | awk '{ print $1 }' | awk -F "(" '{ print $2 }' | awk -F ")" '{ print $1 }' | awk -F "-" '{ print $1 }') 
@@ -19,7 +19,7 @@ statistics()
   kubectl exec -n kube-system "$ANTREA_POD" -- bash -c "ovs-ofctl dump-flows br-int | grep 0x0 | grep nw_src" | awk '{ print $7" "$4" "$5 }'
 }
 
-statistics
+statistics 
 
 
 
