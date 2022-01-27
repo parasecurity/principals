@@ -304,6 +304,9 @@ func analyseLogs(logs chan []string){
 			m, e := malices[pod]
 			if !e {
 				// new malice detected.
+				// init with invalide very late timestamp so it will be validated
+				// on 328 line in case of initial bad connection BUG 
+				malices[pod] = initMalice(timestamp + tsiSecond*60*60*24, pod, node)
 				if strings.Contains(log, "OK"){
 					malices[pod] = initMalice(timestamp, pod, node)
 					malices[pod].attackRate.packetOK++
