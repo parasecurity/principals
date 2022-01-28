@@ -24,7 +24,7 @@ var (
 		fname      *string
 		snaplen    *int
 		promisc    *bool
-		syn	   *bool
+		syn        *bool
 		threshold  *int
 		logPath    *string
 		flowServer *string
@@ -128,7 +128,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 }
 
 func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
-	checkTimer := time.NewTicker(500 * time.Millisecond)
+	checkTimer := time.NewTicker(2000 * time.Millisecond)
 	defer checkTimer.Stop()
 
 	timeoutTimer := time.NewTicker(10 * time.Second)
@@ -145,6 +145,10 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 	var count int
 	var used = false
 	count = 0
+	totalPackets := 0
+	tcpPackets := 0
+	udpPackets := 0
+	tcpSYNPackets := 0
 
 	for {
 		select {
@@ -157,14 +161,29 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			// applicationLayer := p.LinkLayer()
 			// applicationLayer := p.NetworkLayer()
 			// applicationLayer := p.TransportLayer()
-			
-			if (applicationLayer != nil || *args.syn) {
+
+			if applicationLayer != nil || *args.syn {
 
 				//payloadStr := string(applicationLayer.Payload())
 				// Search for a string inside the payload
 				count++
 			}
-			//debug
+
+			if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				// Get actual TCP data from this layer
+				tcp, _ := tcpLayer.(*layers.TCP)
+				if tcp.SYN {
+					tcpSYNPackets++
+				}
+				tcpPackets++
+			}
+
+			if udpLayer := p.Layer(layers.LayerTypeUDP); udpLayer != nil {
+				// Get actual TCP data from this layer
+				udpPackets++
+			}
+
+			totalPackets++
 
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
 			if ipLayer != nil {
@@ -175,12 +194,36 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			}
 
 		case <-checkTimer.C:
-			if count > *args.threshold {
-				log.Println("Warning: ", connStr, " count: ", count)
+			if totalPackets == 0 {
+				break
+			}
+
+			udpPers := (udpPackets / totalPackets) * 100
+			synPers := (tcpSYNPackets / totalPackets) * 100
+
+			// if count > *args.threshold {
+			// 	log.Println("Warning: ", connStr, " count: ", count)
+			// 	warn <- srcIP
+			// }
+			if udpPers > 15 {
+				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
 				warn <- srcIP
 			}
-			log.Println("count: ", connStr, " count: ", count)
+
+			if synPers > 30 {
+				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets)
+				warn <- srcIP
+			}
+
+			log.Println("udpPer: ", udpPers, " SynPer: ", synPers)
+			log.Println("tcp", tcpPackets, "tcpSyn", tcpSYNPackets, "udp", udpPackets, "total", totalPackets)
+
 			count = 0
+			udpPackets = 0
+			tcpSYNPackets = 0
+			udpPackets = 0
+			totalPackets = 0
+			tcpPackets = 0
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", connStr)
@@ -256,9 +299,10 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 				log.Println(err)
 				break
 			}
-
-			netIP := strings.TrimSpace(string(netData))
-			log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
+			netDataSpl := strings.Split(netData, "|")
+			netIP := strings.TrimSpace(string(netDataSpl[0]))
+			canaryIP := strings.TrimSpace(netDataSpl[1])
+			log.Println("Received IP from ", canaryIP, ": ", netIP)
 
 			if netIP == "all" {
 				monitorAll = true
@@ -277,7 +321,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 					// monitor array of ips
 					for n, ip := range monitoredIPs {
 						if n == 0 {
-							bpffilter = "((udp or tcp) and dst host  " + ip + " )"
+							bpffilter = "((udp or tcp) and not host " + canaryIP + " and dst host  " + ip + " )"
 						} else {
 							bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
 						}
@@ -294,36 +338,6 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 				log.Println("BPF filter error:", err)
 			}
 		}
-
-		/*
-
-					if action == "add" {
-						if argument == "all" {
-							monitorAll = true
-						} else {
-							//if we add an ip, should we disable all?
-							monitoredIPs = append(monitoredIPs, line.Text)
-						}
-					} else if action == "remove" {
-						if argument == "all" {
-							monitorAll = false
-						} else {
-							index := 0
-							for n, ip := range monitoredIPs {
-								if ip == argument {
-									index = n
-								}
-							}
-							//swap unneeded ip with last valid ip
-							monitoredIPs[len(monitoredIPs)-1], monitoredIPs[i] = monitoredIPs[i], monitoredIPs[len(monitoredIPs)-1]
-							//keep a new slice with n-1 ip (drop the last ip)
-			    			monitoredIPs = monitoredIPs[:len(monitoredIPs)-1]
-						}
-					} else if action == "clear" {
-						monitoredIPs = monitoredIPs[:0]
-					}
-
-		*/
 	}
 }
 

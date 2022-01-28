@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	eth0IP       string
 	server       *string
 	detectorIP   *string
 	detectorPort *int
@@ -60,7 +61,7 @@ func connectTCP() {
 }
 
 func sendIP(ip string) {
-	msg := (ip + string('\n'))
+	msg := (ip + " | " + eth0IP + string('\n'))
 
 	conn, err := net.DialTCP("tcp", &localaddr, &remoteaddr)
 	for err != nil {
@@ -168,6 +169,9 @@ func init() {
 		log.Println("RECEIVED SIGNAL:", s)
 		os.Exit(1)
 	}()
+
+	// Get eth0 IP address
+	eth0IP, _ = getInterfaceIpv4Addr("eth0")
 
 	// Connect to detector
 	connectTCP()
