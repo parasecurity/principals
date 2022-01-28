@@ -107,7 +107,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 		ip, _ := ipLayer.(*layers.IPv4)
 
 		activeConnsLock.RLock()
-		connStr := ip.SrcIP.String() + ":" + ip.DstIP.String()
+		connStr := ip.SrcIP.String() // + ":" + ip.DstIP.String()
 		conn, ok := activeConns[connStr]
 		activeConnsLock.RUnlock()
 
@@ -142,9 +142,11 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 		activeConnsLock.Unlock()
 	}()
 
-	var count int
+	// var count int
 	var used = false
-	count = 0
+	distinct_IP := -1
+	var firstIP net.IP
+	//count = 0
 	totalPackets := 0
 	tcpPackets := 0
 	udpPackets := 0
@@ -157,21 +159,21 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 			used = true
-			applicationLayer := p.ApplicationLayer()
+			// applicationLayer := p.ApplicationLayer()
 			// applicationLayer := p.LinkLayer()
 			// applicationLayer := p.NetworkLayer()
 			// applicationLayer := p.TransportLayer()
 
-			if applicationLayer != nil || *args.syn {
+			// if applicationLayer != nil || *args.syn {
 
-				//payloadStr := string(applicationLayer.Payload())
-				// Search for a string inside the payload
-				count++
-			}
-
+			// 	//payloadStr := string(applicationLayer.Payload())
+			// 	// Search for a string inside the payload
+			// 	count++
+			// }
 			if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 				// Get actual TCP data from this layer
 				tcp, _ := tcpLayer.(*layers.TCP)
+
 				if tcp.SYN {
 					tcpSYNPackets++
 				}
@@ -188,6 +190,14 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
 			if ipLayer != nil {
 				ip, _ := ipLayer.(*layers.IPv4)
+				if distinct_IP == -1 {
+					firstIP = ip.DstIP
+					distinct_IP = 0
+				} else if distinct_IP == 0 {
+					if !ip.DstIP.Equal(firstIP) {
+						distinct_IP = 1
+					}
+				}
 				if !ip.SrcIP.Equal(srcIP) {
 					log.Println("inside check connection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
 				}
@@ -205,12 +215,12 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			// 	log.Println("Warning: ", connStr, " count: ", count)
 			// 	warn <- srcIP
 			// }
-			if udpPers > 15 {
+			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 10) {
 				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
 				warn <- srcIP
 			}
 
-			if synPers > 30 {
+			if (synPers > 40) && (distinct_IP != 1) && (tcpSYNPackets > 10) {
 				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets)
 				warn <- srcIP
 			}
@@ -218,12 +228,13 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			log.Println("udpPer: ", udpPers, " SynPer: ", synPers)
 			log.Println("tcp", tcpPackets, "tcpSyn", tcpSYNPackets, "udp", udpPackets, "total", totalPackets)
 
-			count = 0
+			//count = 0
 			udpPackets = 0
 			tcpSYNPackets = 0
 			udpPackets = 0
 			totalPackets = 0
 			tcpPackets = 0
+
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", connStr)
@@ -321,7 +332,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 					// monitor array of ips
 					for n, ip := range monitoredIPs {
 						if n == 0 {
-							bpffilter = "((udp or tcp) and not host " + canaryIP + " and dst host  " + ip + " )"
+							bpffilter = "((udp or tcp) and not host " + canaryIP + " )"
 						} else {
 							bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
 						}

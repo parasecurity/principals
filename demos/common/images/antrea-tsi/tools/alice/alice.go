@@ -104,6 +104,23 @@ func (slice int64slice) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+func realGetRequest() {
+	for {
+		httpClient := &http.Client{
+			Timeout: time.Duration(args.timeout) * time.Millisecond,
+		}
+
+		resp, err := httpClient.Get("https://kition.mhl.tuc.gr")
+		if err != nil {
+			log.Println("No Response", err)
+			return
+		}
+		defer resp.Body.Close()
+
+		time.Sleep(time.Second)
+	}
+}
+
 func main() {
 	t := http.DefaultTransport.(*http.Transport).Clone()
 	// t.MaxIdleConns = 0
@@ -117,6 +134,9 @@ func main() {
 	hist, keys := getGaussian(args.mean, args.stddev)
 	printDistribution(args.displayDistr, hist, keys)
 	repeat := 0
+
+	// Start sending benigh requests to external server
+	go realGetRequest()
 
 	for {
 		for _, key := range keys {
@@ -138,7 +158,6 @@ func main() {
 						return
 					}
 					defer resp.Body.Close()
-
 
 					bytes, err := ioutil.ReadAll(resp.Body)
 					if err != nil {

@@ -148,7 +148,7 @@ alice_trafic()
     kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=10 -s=2500 -c 100 &"
     kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=1400 -c 100 &"
     kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=12 -s=2500 -c 100 &"
-	kubectl exec "$ALICE_POD_9" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=3500 -c 100 &"
+	kubectl exec "$ALICE_POD_9" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=1000 -c 100 &"
     kubectl exec "$ALICE_POD_10" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=14 -s=1000 -c 100 &"
 }
 
@@ -270,20 +270,7 @@ udp_flooding()
     kubectl exec "$MALICE_POD_21" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
     kubectl exec "$MALICE_POD_22" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
     kubectl exec "$MALICE_POD_23" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_24" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_25" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_26" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_27" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_28" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_29" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_30" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_31" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_32" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_33" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_34" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_35" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_36" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_37" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+
     
 	sleep 2
 
