@@ -128,6 +128,13 @@ kubectl delete -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-
 # wait until it is removed
 kubectl apply -f /path/to/principals/demos/demo1/yaml/multus-daemonset.yml
 ```
+## When deploying localhost
+
+```sh
+vim /etc/default/kubelet
+# Add the correct node-ip on the extra arguments
+KUBELET_EXTRA_ARGS="--node-ip=10.9.9.2"
+```
 
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
