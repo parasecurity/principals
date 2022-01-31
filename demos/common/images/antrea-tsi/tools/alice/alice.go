@@ -107,17 +107,17 @@ func (slice int64slice) Swap(i, j int) {
 func realGetRequest() {
 	for {
 		httpClient := &http.Client{
-			Timeout: time.Duration(args.timeout) * time.Millisecond,
+			Timeout: 2 * time.Second,
 		}
 
-		resp, err := httpClient.Get("https://kition.mhl.tuc.gr")
+		resp, err := httpClient.Get("http://147.27.15.134")
 		if err != nil {
 			log.Println("No Response", err)
-			return
 		}
 		defer resp.Body.Close()
+		log.Println("Normal Request to Google.com")
 
-		time.Sleep(time.Second)
+		time.Sleep(500 * time.Millisecond)
 	}
 }
 

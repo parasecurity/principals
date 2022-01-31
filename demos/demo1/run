@@ -103,28 +103,22 @@ init(){
 	msg "Adding tsi security"
 	kubectl apply -f yamls/security
 
-	msg "Adding demo pods"
-	kubectl apply -f yamls/pods
 
 	waitUntilAllPodsRun
 	load_vars
 
 	sleep 4 
 
-	msg "Adding queues on demo pods"
-	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
-		--id=@newqos create qos type=linux-htb \
-		queues:100=@queue -- \
-		--id=@queue create queue other-config:max-rate=100 &> /dev/null"
+	# msg "Adding queues on demo pods"
+	# kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
+	# 	--id=@newqos create qos type=linux-htb \
+	# 	queues:100=@queue -- \
+	# 	--id=@queue create queue other-config:max-rate=100 &> /dev/null"
 }
 
 clean_cluster(){
 	echo -e "\n\n"
 	msg "Cleaning cluster"
-
-	msg "Removing deployed pods"
-	kubectl delete -f yamls/security || true
-	kubectl delete -f yamls/pods || true
 
 	msg "Removing qos and queue"
 	kubectl exec -n kube-system "$ANTREA_POD_1" -- bash -c "ovs-vsctl --all destroy qos" &> /dev/null || true
@@ -132,6 +126,9 @@ clean_cluster(){
 
 	msg "Removing applied rules from nodes"
 	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+	msg "Removing deployed pods"
+	kubectl delete -f yamls/security || true
+	kubectl delete -f yamls/pods/ || true
 
 	msg "End of demo!"
 	exit
@@ -139,17 +136,17 @@ clean_cluster(){
 
 alice_trafic()
 {
-    msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
+ 	msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
     kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=2000 -c 100 &"
-    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=4000 -c 100 &"
-    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=1000 -c 100 &"
-    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=4000 -c 100 &"
-    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 -c 100 &"
-    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=10 -s=2500 -c 100 &"
-    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=1400 -c 100 &"
-    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=12 -s=2500 -c 100 &"
-	kubectl exec "$ALICE_POD_9" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=1000 -c 100 &"
-    kubectl exec "$ALICE_POD_10" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=14 -s=1000 -c 100 &"
+    # kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=4000 -c 100 &"
+    # kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=1000 -c 100 &"
+    # kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=4000 -c 100 &"
+    # kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 -c 100 &"
+    # kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=10 -s=2500 -c 100 &"
+    # kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=1400 -c 100 &"
+    # kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=12 -s=2500 -c 100 &"
+	# kubectl exec "$ALICE_POD_9" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=1000 -c 100 &"
+    # kubectl exec "$ALICE_POD_10" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=14 -s=1000 -c 100 &"
 }
 
 http_flooding()
@@ -324,25 +321,27 @@ syn_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
-	alice_trafic
-
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
 
     msg "Please open one new terminal and execute the following command" 
     echo "./see_logs | grep canary"
     read -p "Press enter to continue"
 
-    msg "Creating SYN flooding traffic from malicious pods"
-    kubectl exec "$MALICE_POD_38" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_39" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_13" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_14" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_15" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_16" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_17" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_18" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_19" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
-    kubectl exec "$MALICE_POD_20" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
+	msg "Adding demo pods"
+	kubectl apply -f yamls/pods/attacks.yaml
+	kubectl apply -f yamls/pods/alice.yaml
+	read -p "Press enter to continue"
+    
+	msg "Generate alice traffic"
+	alice_trafic
+	read -p "Press enter to continue"
+
+	msg "Creating SYN flooding traffic from malicious pods"
+    kubectl exec "$MALICE_POD_13" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    kubectl exec "$MALICE_POD_14" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    kubectl exec "$MALICE_POD_15" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    #kubectl exec "$MALICE_POD_16" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 20  &"
+    #kubectl exec "$MALICE_POD_17" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
     
 	sleep 2
 

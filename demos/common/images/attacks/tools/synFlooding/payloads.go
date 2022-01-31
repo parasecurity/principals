@@ -18,6 +18,7 @@ func (tcp *TCPIP) floodTarget(rType reflect.Type, rVal reflect.Value, clients in
 	var dest [4]byte
 	copy(dest[:], tcp.DST[:4])
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
+	err = syscall.BindToDevice(fd, tcp.Adapter)
 	if err != nil {
 		log.Println(err)
 	}

@@ -24,6 +24,7 @@ var (
 	ips          []net.IP
 	localaddr    net.TCPAddr
 	remoteaddr   net.TCPAddr
+	detectorOn   = false
 )
 
 func getInterfaceIpv4Addr(interfaceName string) (addr string, err error) {
@@ -96,17 +97,19 @@ func enableDetector(ip string) {
 
 func timeGet(urlC string) {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 100
-	t.MaxConnsPerHost = 100
-	t.MaxIdleConnsPerHost = 100
-
+	t.MaxIdleConns = 10000
+	t.MaxConnsPerHost = 10000
+	t.MaxIdleConnsPerHost = 10000
 	for {
 		defer func() {
 			if r := recover(); r != nil {
 				log.Println("Canary connection timeout")
 				failureCount++
 				if failureCount >= *failures {
-					enableDetector(ips[0].String())
+					if !detectorOn {
+						enableDetector(ips[0].String())
+						detectorOn = true
+					}
 					failureCount = 0
 				}
 			}
@@ -117,9 +120,9 @@ func timeGet(urlC string) {
 		}
 		start := time.Now()
 		r, err := httpClient.Get(urlC)
-		r.Body.Close()
 		interval := time.Since(start)
 		log.Println("Response in :", interval)
+		defer r.Body.Close()
 
 		if err != nil {
 			log.Println(err)
@@ -135,7 +138,6 @@ func timeGet(urlC string) {
 		} else {
 			failureCount = 0
 		}
-		httpClient.CloseIdleConnections()
 		time.Sleep(time.Second)
 	}
 }

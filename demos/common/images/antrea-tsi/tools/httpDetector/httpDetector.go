@@ -142,11 +142,9 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 		activeConnsLock.Unlock()
 	}()
 
-	// var count int
 	var used = false
 	distinct_IP := -1
-	var firstIP net.IP
-	//count = 0
+	var firstIP, firstNet net.IP
 	totalPackets := 0
 	tcpPackets := 0
 	udpPackets := 0
@@ -159,6 +157,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 			used = true
+			checkForDistict := false
+
 			// applicationLayer := p.ApplicationLayer()
 			// applicationLayer := p.LinkLayer()
 			// applicationLayer := p.NetworkLayer()
@@ -176,6 +176,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 
 				if tcp.SYN {
 					tcpSYNPackets++
+					checkForDistict = true
 				}
 				tcpPackets++
 			}
@@ -183,18 +184,23 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			if udpLayer := p.Layer(layers.LayerTypeUDP); udpLayer != nil {
 				// Get actual TCP data from this layer
 				udpPackets++
+				checkForDistict = true
 			}
 
 			totalPackets++
 
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
-			if ipLayer != nil {
+			if (ipLayer != nil) && checkForDistict {
 				ip, _ := ipLayer.(*layers.IPv4)
+				ipDst_Str := ip.DstIP.String()
 				if distinct_IP == -1 {
 					firstIP = ip.DstIP
+					firstNet = ip.DstIP.Mask(ip.DstIP.DefaultMask())
 					distinct_IP = 0
-				} else if distinct_IP == 0 {
-					if !ip.DstIP.Equal(firstIP) {
+				} else if distinct_IP == 0 && ipDst_Str != "0.0.0.0" {
+					newNet := ip.DstIP.Mask(ip.DstIP.DefaultMask())
+					if (!ip.DstIP.Equal(firstIP)) && (!newNet.Equal(firstNet)) {
+						log.Println("Pizza", ip.DstIP.String(), firstIP.String(), srcIP.String(), newNet.String(), firstNet.String())
 						distinct_IP = 1
 					}
 				}
@@ -208,25 +214,21 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 
-			udpPers := (udpPackets / totalPackets) * 100
-			synPers := (tcpSYNPackets / totalPackets) * 100
+			udpPers := (udpPackets * 100) / totalPackets
+			synPers := (tcpSYNPackets * 100) / totalPackets
 
-			// if count > *args.threshold {
-			// 	log.Println("Warning: ", connStr, " count: ", count)
-			// 	warn <- srcIP
-			// }
-			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 10) {
+			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 30) {
 				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
 				warn <- srcIP
 			}
 
-			if (synPers > 40) && (distinct_IP != 1) && (tcpSYNPackets > 10) {
+			if (synPers > 40) && (distinct_IP != 1) && (tcpSYNPackets > 30) {
 				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets)
 				warn <- srcIP
 			}
 
-			log.Println("udpPer: ", udpPers, " SynPer: ", synPers)
-			log.Println("tcp", tcpPackets, "tcpSyn", tcpSYNPackets, "udp", udpPackets, "total", totalPackets)
+			log.Println("udpPer: ", udpPers, " SynPer: ", synPers, " distinct_IP ", distinct_IP, "srcIP ", srcIP.String())
+			log.Println("tcp", tcpPackets, "tcpSyn", tcpSYNPackets, "udp", udpPackets, "total", totalPackets, "srcIP ", srcIP.String())
 
 			//count = 0
 			udpPackets = 0

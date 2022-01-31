@@ -20,6 +20,7 @@ var (
 	port    uint
 	clients int
 	logPath string
+	iface   string
 	localIP net.IP
 )
 
@@ -34,6 +35,7 @@ func setupFlags() {
 	flag.StringVar(&ip, "ip", "127.0.0.1", "Target IP address")
 	flag.UintVar(&port, "p", 6001, "Target Port")
 	flag.IntVar(&clients, "c", 1, "number of concurrent clients (default 1)")
+	flag.StringVar(&iface, "i", "eth0", "default interface name")
 	flag.StringVar(&logPath, "lp", "./synFlooding.log", "The path to the log file (default ./client.log)")
 }
 
@@ -221,6 +223,12 @@ func main() {
 
 	var wg sync.WaitGroup
 	var packet = &TCPIP{}
+	foundIfaces := packet.getInterfaces()
+	for _, name := range foundIfaces {
+		if name != iface {
+			continue
+		}
+	}
 
 	defer func() {
 		if err := recover(); err != nil {

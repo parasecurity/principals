@@ -1,29 +1,28 @@
 package logging
 
 import (
-	"net"
-	"sync"
-	"os"
-	"io"
 	"fmt"
-	"time"
+	"io"
+	"net"
+	"os"
 	"strings"
+	"sync"
+	"time"
 )
 
 //////////////////////////////////
 // helper utils
 
-func debug(format string, args ...interface{}){
+func debug(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, format, args...)
 }
 
 type buffer struct {
-	sb strings.Builder
+	sb   strings.Builder
 	next *buffer
 }
 
-
-// buffer freelist 
+// buffer freelist
 var pool *buffer
 var pmx sync.Mutex
 
@@ -53,11 +52,10 @@ func putBuff(b *buffer) {
 ///////////////////////////////////////
 // logging struct
 type logging struct {
-
-	conn *net.UnixConn
+	conn      *net.UnixConn
 	sock_addr *net.UnixAddr
 
-	host string
+	host    string
 	command string
 }
 
@@ -65,8 +63,8 @@ func (l logging) Write(p []byte) (n int, err error) {
 
 	// TODO error handling and fall-back in disconnections
 	n = len(p)
-	if p[n - 1] == p[n - 2]{
-		_, err = l.conn.Write(p[:n - 1])
+	if p[n-1] == p[n-2] {
+		_, err = l.conn.Write(p[:n-1])
 	} else {
 		_, err = l.conn.Write(p)
 	}
@@ -82,7 +80,7 @@ func (l logging) Write(p []byte) (n int, err error) {
 var log logging
 
 // for negative or 0 retries loops forever
-func connectToAgent(retries int) (err error){
+func connectToAgent(retries int) (err error) {
 	for i := retries; i != 1; i-- {
 		log.conn, err = net.DialUnix("unixpacket", nil, log.sock_addr)
 		if err == nil {
@@ -94,7 +92,7 @@ func connectToAgent(retries int) (err error){
 	return
 }
 
-func init (){
+func init() {
 
 	network := "unixpacket"
 	path := "/tmp/testlog.sock"
@@ -111,13 +109,13 @@ func init (){
 
 }
 
-func ( *logging) printf(format string, args ...interface{}) {
+func (*logging) printf(format string, args ...interface{}) {
 
-	st := append([]interface{}{log.host, log.command, time.Now().UnixNano()/1000}, args...)
+	st := append([]interface{}{log.host, log.command, time.Now().UnixNano() / 1000}, args...)
 	b := getBuff()
 	b.sb.WriteString("%s %s %d ")
 	b.sb.WriteString(format)
-	if ! strings.HasSuffix(b.sb.String(), "\n") {
+	if !strings.HasSuffix(b.sb.String(), "\n") {
 		b.sb.WriteString("\n")
 	}
 
@@ -125,62 +123,62 @@ func ( *logging) printf(format string, args ...interface{}) {
 	putBuff(b)
 }
 
-func ( *logging ) println(args ...interface{}) {
+func (*logging) println(args ...interface{}) {
 
-	st := append([]interface{}{log.host, log.command, time.Now().UnixNano()/1000}, args...)
+	st := append([]interface{}{log.host, log.command, time.Now().UnixNano() / 1000}, args...)
 	fmt.Fprintln(log, st...)
 }
 
-func ( *logging) print(args ...interface{}){
+func (*logging) print(args ...interface{}) {
 
-	st := append([]interface{}{log.host, " ", log.command, " ", time.Now().UnixNano()/1000, " "}, args...)
+	st := append([]interface{}{log.host, " ", log.command, " ", time.Now().UnixNano() / 1000, " "}, args...)
 	st = append(st, "\n")
 	fmt.Fprint(log, st...)
 }
 
-func Print(args ...interface{}){
+func Print(args ...interface{}) {
 	log.print(args...)
 }
 
 ////////////////////////////////////////
-// public 
-func Println(args ...interface{}){
+// public
+func Println(args ...interface{}) {
 	log.println(args...)
 }
 
-func Printf(format string, args ...interface{}){
+func Printf(format string, args ...interface{}) {
 	log.printf(format, args...)
 }
 
-func Panic(args ...interface{}){
+func Panic(args ...interface{}) {
 	log.print(args...)
 	s := fmt.Sprint(args...)
 	panic(s)
 }
 
-func Panicln(args ...interface{}){
+func Panicln(args ...interface{}) {
 	log.println(args...)
 	s := fmt.Sprintln(args...)
 	panic(s)
 }
 
-func Panicf(format string, args ...interface{}){
+func Panicf(format string, args ...interface{}) {
 	log.printf(format, args...)
 	s := fmt.Sprintf(format, args...)
 	panic(s)
 }
 
-func Fatal(args ...interface{}){
+func Fatal(args ...interface{}) {
 	log.print(args...)
 	os.Exit(1)
 }
 
-func Fatalln(args ...interface{}){
+func Fatalln(args ...interface{}) {
 	log.println(args...)
 	os.Exit(1)
 }
 
-func Fatalf(format string, args ...interface{}){
+func Fatalf(format string, args ...interface{}) {
 	log.printf(format, args...)
 	os.Exit(1)
 }
