@@ -1,0 +1,43 @@
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition 
+metadata:
+  name: {{ .Chart.Name }}-{{ .Values.namespace }}-net1
+spec:
+  config: '{ 
+      "cniVersion": "0.3.0",
+      "type": "macvlan",
+      "master": "antrea-gw0",
+      "mode": "bridge",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+                {
+                        "address": {{- cat .Values.multus.sgwS1uIp "/" .Values.multus.sgwS1uNetmask | nospace | quote }},
+                        "gateway": {{- cat .Values.multus.sgwSxGw | nospace | quote }}
+                }
+        ]
+      }
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: {{ .Chart.Name }}-{{ .Values.namespace }}-net2
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "macvlan",
+      "master": "antrea-gw0",
+      "mode": "bridge",
+      "ipam": {
+        "type": "static",
+        "addresses": [
+                {
+                        "address": {{- cat .Values.multus.sgwSxIp "/" .Values.multus.sgwSxNetmask | nospace | quote }},
+                        "gateway": {{- cat .Values.multus.sgwSxGw | nospace | quote }}
+                }
+        ]
+      }
+    }'
+
