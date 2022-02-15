@@ -97,7 +97,7 @@ load_vars(){
 	readonly MALICE_POD_38=attack26
 	readonly MALICE_POD_39=attack27
 
-
+    	numberofusers=20
 }
 
 init(){
@@ -107,6 +107,7 @@ init(){
 
 	msg "Starting 5G Core and RAN"
     	#read -p "Enter number of UEs: " numberofusers
+
     	numberofusers=20
    	/bin/bash ./charts/slice_confx.sh $numberofusers
 
@@ -141,7 +142,7 @@ clean_cluster(){
 	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
 
 	msg "Removing 5G Deployment"
-	/bin/bash ./charts/undeploy_all.sh $numberofusers
+	/bin/bash ./charts/undeploy_all.sh $numberofusers 
 
 	msg "End of demo!"
 	exit
