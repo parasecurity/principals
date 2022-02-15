@@ -1,0 +1,3 @@
+/home/nsslm/Documents/iottrafficmodel/tcpServerClient/build/CMakeFiles/tcpclient.dir
+/home/nsslm/Documents/iottrafficmodel/tcpServerClient/build/CMakeFiles/edit_cache.dir
+/home/nsslm/Documents/iottrafficmodel/tcpServerClient/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,32 @@
+#---------------------------------------------------------------------
+# BUILDER IMAGE
+#---------------------------------------------------------------------
+FROM golang:1.16 as gnbsim-builder
+
+RUN apt-get update
+
+COPY . /
+
+RUN cd /gnbsim/cmd && go build .
+RUN cd /example && go build .
+
+#---------------------------------------------------------------------
+# TARGET IMAGE
+#---------------------------------------------------------------------
+FROM golang:1.16 as gnbsim
+
+RUN apt update && apt install iproute2 vim iputils-ping net-tools iperf3 -y
+
+
+COPY ./docker/iottrafficmodel /gnbsim/bin/iottrafficmodel
+COPY ./docker/demo_tools /gnbsim/bin/demo_tools
+
+WORKDIR /gnbsim/bin
+COPY --from=gnbsim-builder /example/example .
+COPY --from=gnbsim-builder /docker/example.json .
+COPY --from=gnbsim-builder /docker/entrypoint.sh .
+
+ENTRYPOINT ["/gnbsim/bin/entrypoint.sh"]
+
+CMD ["/gnbsim/bin/example"]
+#CMD ["sleep", "infinity"]
