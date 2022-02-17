@@ -130,6 +130,15 @@ kubectl apply -f /path/to/principals/demos/demo1/yaml/multus-daemonset.yml
 ```
 ## When deploying localhost
 
+At the beginning modify the hosts.ini file:
+```sh
+[master]
+127.0.0.1 ansible_connection=local
+
+[kube_cluster:children]
+master
+```
+And after the installation:
 ```sh
 vim /etc/default/kubelet
 # Add the correct node-ip on the extra arguments
