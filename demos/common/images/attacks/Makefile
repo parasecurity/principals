@@ -1,7 +1,7 @@
 BUILD ?= $(CURDIR)/bin
 IMAGE ?= attacks
 VERSION ?= v1.0.0
-REMOTE_REGISTRY ?=  localhost:5000
+REMOTE_REGISTRY ?= localhost:5000
 
 TOOLS := $(wildcard ./tools/*)
 

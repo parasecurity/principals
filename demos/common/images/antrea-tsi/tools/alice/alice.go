@@ -104,8 +104,29 @@ func (slice int64slice) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
+func realGetRequest() {
+	for {
+		httpClient := &http.Client{
+			Timeout: 2 * time.Second,
+		}
+
+		resp, err := httpClient.Get("http://147.27.15.134")
+		if err != nil {
+			log.Println("No Response", err)
+		}
+		defer resp.Body.Close()
+		log.Println("Normal Request to Google.com")
+
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func main() {
 	t := http.DefaultTransport.(*http.Transport).Clone()
+	// t.MaxIdleConns = 0
+	// t.MaxConnsPerHost = 0
+	// t.MaxIdleConnsPerHost = 5000
+	// t.IdleConnTimeout = 0
 	t.MaxIdleConns = 100
 	t.MaxConnsPerHost = 100
 	t.MaxIdleConnsPerHost = 100
@@ -114,13 +135,17 @@ func main() {
 	printDistribution(args.displayDistr, hist, keys)
 	repeat := 0
 
+	// Start sending benigh requests to external server
+	go realGetRequest()
+
 	for {
 		for _, key := range keys {
 			conc := hist[key] / 20
+			conc = conc * args.clients
 
 			// log.Println(conc)
 			for cl := 0; cl < conc; cl++ {
-				go func(r int, conc int, c int) {
+				go func(r int, conc int, c int, t *http.Transport) {
 					httpClient := &http.Client{
 						Timeout:   time.Duration(args.timeout) * time.Millisecond,
 						Transport: t,
@@ -134,14 +159,13 @@ func main() {
 					}
 					defer resp.Body.Close()
 
-
 					bytes, err := ioutil.ReadAll(resp.Body)
 					if err != nil {
-						log.Println("Response status:", resp.Status, err, interval)
+						log.Println(err, interval)
 					}
 					// log.Println("Response status:", resp.Status, r, conc, c, ", bytes: ", len(bytes), interval)
 					log.Println("Response status:", resp.Status, ", bytes: ", len(bytes), interval)
-				}(repeat, conc, cl)
+				}(repeat, conc, cl, t)
 			}
 			time.Sleep(time.Duration(args.sleep) * time.Millisecond)
 		}
