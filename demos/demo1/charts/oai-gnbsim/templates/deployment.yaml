@@ -24,8 +24,16 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
     {{- end }}
+      volumes:
+      - hostPath:
+          path: /tmp
+          type: Directory
+        name: logsock
       containers:
       - name: gnbsim
+        volumeMounts:
+        - mountPath: /tmp
+          name: logsock
         image: "{{ .Values.image.repository }}:{{ .Values.image.version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         securityContext:

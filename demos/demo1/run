@@ -99,6 +99,7 @@ load_vars(){
     readonly USERS=20
     readonly ALICE_USERS=8
 
+    readonly SERVER_ADDRESS="phobos4.astrolavos.gatech.edu:30002"
 }
 
 init(){
@@ -149,10 +150,8 @@ http_flooding()
         declare GNBSIM_ATTC_$i=$(kubectl get pods -n oai  | grep gnbsim$ci | awk '{print $1}')
     done
 
-    SERVER_ADDRESS="kronos.mhl.tuc.gr:30002"
-
     msg "Starting DDoS Demo"
-    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$dnn_net1IP/\"]}"
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
 
     msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
@@ -161,15 +160,15 @@ http_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
       
-    msg "Sending normal requests to http://$dnn_net1IP:30002/ from normal 5G users" 
-    kubectl exec -n oai "$GNBSIM_NORM_1" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=6 -s=2000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_2" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=2000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_3" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=3000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_4" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=2000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_5" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=1500 &"
-    kubectl exec -n oai "$GNBSIM_NORM_6" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=10 -s=2000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_7" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=11 -s=2000 &"
-    kubectl exec -n oai "$GNBSIM_NORM_8" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$dnn_net1IP:30002/ -dev=12 -s=2000 &"
+    msg "Sending normal requests to http://$SERVER_ADDRESS/ from normal 5G users" 
+    kubectl exec -n oai "$GNBSIM_NORM_1" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=6 -s=2000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_2" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_3" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=3000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_4" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=2000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_5" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=1500 &"
+    kubectl exec -n oai "$GNBSIM_NORM_6" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=10 -s=2000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_7" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=11 -s=2000 &"
+    kubectl exec -n oai "$GNBSIM_NORM_8" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=12 -s=2000 &"
     waitUntilAllPodsRun
       
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
@@ -179,18 +178,18 @@ http_flooding()
     read -p "Press enter to continue"
 
     msg "Creating DDoS traffic from malicious 5G Users"
-    kubectl exec -n oai "$GNBSIM_ATTC_1" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_2" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_3" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_4" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_5" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_6" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_7" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_8" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_9" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_10" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_11" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
-    kubectl exec -n oai "$GNBSIM_ATTC_12" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$dnn_net1IP:30002/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_1" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_2" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_3" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_4" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_5" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_6" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_7" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_8" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_9" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_10" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_11" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
+    kubectl exec -n oai "$GNBSIM_ATTC_12" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
 
     sleep 2
 
@@ -222,7 +221,7 @@ udp_flooding()
 {
     msg "Starting Udp Flooding Demo"
     
-    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$dnn_net1IP:30002/\"]}"
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
       
 	if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
@@ -235,7 +234,7 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please start a scp session" 
-    echo "scp santonatos@$dnn_net1IP:/home/santonatos/hugefile /dev/null"
+    echo "scp santonatos@$SERVER_ADDRESS:/home/santonatos/hugefile /dev/null"
     read -p "Press enter to continue"
 
     msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
@@ -244,24 +243,24 @@ udp_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
-    msg "Sending normal requests to http://$dnn_net1IP:30002/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ &"
-    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=2000 &"
-    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=2000 &"
+    msg "Sending normal requests to http://$SERVER_ADDRESS/ from alice" 
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ &"
+    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
+    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=2000 &"
     kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://youtube.com/ -dev=9 -s=3000 &"
     kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=6 -s=2000 &"
-    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=2000 &"
-    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=2000 &"
-    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=1500 &"
-    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=10 -s=2000 &"
-    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=11 -s=2000 &"
-    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=12 -s=2000 &"
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=6 -s=2000 &"
+    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
+    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=2000 &"
+    kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=1500 &"
+    kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=10 -s=2000 &"
+    kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=11 -s=2000 &"
+    kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=12 -s=2000 &"
 
     waitUntilAllPodsRun
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
@@ -331,7 +330,7 @@ udp_flooding()
 syn_flooding()
 {
     msg "Starting Udp Flooding Demo"
-    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$dnn_net1IP:30002/\"]}"
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
       
     msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
@@ -340,11 +339,11 @@ syn_flooding()
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
-    msg "Sending normal requests to http://$dnn_net1IP:30002/ from alice" 
-    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ &"
-    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=2000 &"
-    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=7 -s=3000 &"
-    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$dnn_net1IP:30002/ -dev=9 -s=2000 &"
+    msg "Sending normal requests to http://$SERVER_ADDRESS/ from alice" 
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ &"
+    kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
+    kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=3000 &"
+    kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=9 -s=2000 &"
     kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://youtube.com/ -dev=9 -s=3000 &"
     kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
