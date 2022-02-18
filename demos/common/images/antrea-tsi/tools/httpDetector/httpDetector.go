@@ -24,6 +24,7 @@ var (
 		fname      *string
 		snaplen    *int
 		promisc    *bool
+		syn        *bool
 		threshold  *int
 		logPath    *string
 		flowServer *string
@@ -44,6 +45,7 @@ func init() {
 	args.fname = flag.String("r", "", "Filename to read from, overrides -i")
 	args.snaplen = flag.Int("s", 65536, "Snap length (number of bytes max to read per packet")
 	args.threshold = flag.Int("t", 150, "Set the packet threshold, the value is packets per second")
+	args.syn = flag.Bool("syn", false, "Check if it is an syn attack")
 	args.logPath = flag.String("lp", "./detector.log", "The path to the log file")
 	args.flowServer = flag.String("fc", "10.1.1.201:30002", "The flow server connection in format ip:port e.g. 10.1.1.101:8080")
 	args.listen = flag.String("l", "10.1.1.202:30000", "The IP and port of the secondary network that listens for connections")
@@ -105,7 +107,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 		ip, _ := ipLayer.(*layers.IPv4)
 
 		activeConnsLock.RLock()
-		connStr := ip.SrcIP.String() + ":" + ip.DstIP.String()
+		connStr := ip.SrcIP.String() // + ":" + ip.DstIP.String()
 		conn, ok := activeConns[connStr]
 		activeConnsLock.RUnlock()
 
@@ -126,7 +128,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 }
 
 func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
-	checkTimer := time.NewTicker(500 * time.Millisecond)
+	checkTimer := time.NewTicker(2000 * time.Millisecond)
 	defer checkTimer.Stop()
 
 	timeoutTimer := time.NewTicker(10 * time.Second)
@@ -140,9 +142,13 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 		activeConnsLock.Unlock()
 	}()
 
-	var count int
 	var used = false
-	count = 0
+	distinct_IP := -1
+	var firstIP, firstNet net.IP
+	totalPackets := 0
+	tcpPackets := 0
+	udpPackets := 0
+	tcpSYNPackets := 0
 
 	for {
 		select {
@@ -151,30 +157,86 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 			used = true
-			//applicationLayer := p.ApplicationLayer()
-			//if applicationLayer != nil {
+			checkForDistict := false
 
-				//payloadStr := string(applicationLayer.Payload())
-				// Search for a string inside the payload
-				count++
-			//}
-			//debug
+			// applicationLayer := p.ApplicationLayer()
+			// applicationLayer := p.LinkLayer()
+			// applicationLayer := p.NetworkLayer()
+			// applicationLayer := p.TransportLayer()
+
+			// if applicationLayer != nil || *args.syn {
+
+			// 	//payloadStr := string(applicationLayer.Payload())
+			// 	// Search for a string inside the payload
+			// 	count++
+			// }
+			if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+				// Get actual TCP data from this layer
+				tcp, _ := tcpLayer.(*layers.TCP)
+
+				if tcp.SYN {
+					tcpSYNPackets++
+					checkForDistict = true
+				}
+				tcpPackets++
+			}
+
+			if udpLayer := p.Layer(layers.LayerTypeUDP); udpLayer != nil {
+				// Get actual TCP data from this layer
+				udpPackets++
+				checkForDistict = true
+			}
+
+			totalPackets++
 
 			ipLayer := p.Layer(layers.LayerTypeIPv4)
-			if ipLayer != nil {
+			if (ipLayer != nil) && checkForDistict {
 				ip, _ := ipLayer.(*layers.IPv4)
+				ipDst_Str := ip.DstIP.String()
+				if distinct_IP == -1 {
+					firstIP = ip.DstIP
+					firstNet = ip.DstIP.Mask(ip.DstIP.DefaultMask())
+					distinct_IP = 0
+				} else if distinct_IP == 0 && ipDst_Str != "0.0.0.0" {
+					newNet := ip.DstIP.Mask(ip.DstIP.DefaultMask())
+					if (!ip.DstIP.Equal(firstIP)) && (!newNet.Equal(firstNet)) {
+						log.Println("Pizza", ip.DstIP.String(), firstIP.String(), srcIP.String(), newNet.String(), firstNet.String())
+						distinct_IP = 1
+					}
+				}
 				if !ip.SrcIP.Equal(srcIP) {
 					log.Println("inside check connection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
 				}
 			}
 
 		case <-checkTimer.C:
-			if count > *args.threshold {
-				log.Println("Warning: ", connStr, " count: ", count)
+			if totalPackets == 0 {
+				break
+			}
+
+			udpPers := (udpPackets * 100) / totalPackets
+			synPers := (tcpSYNPackets * 100) / totalPackets
+
+			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 30) {
+				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
 				warn <- srcIP
 			}
-			log.Println("count: ", connStr, " count: ", count)
-			count = 0
+
+			if (synPers > 40) && (distinct_IP != 1) && (tcpSYNPackets > 30) {
+				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets)
+				warn <- srcIP
+			}
+
+			log.Println("udpPer: ", udpPers, " SynPer: ", synPers, " distinct_IP ", distinct_IP, "srcIP ", srcIP.String())
+			log.Println("tcp", tcpPackets, "tcpSyn", tcpSYNPackets, "udp", udpPackets, "total", totalPackets, "srcIP ", srcIP.String())
+
+			//count = 0
+			udpPackets = 0
+			tcpSYNPackets = 0
+			udpPackets = 0
+			totalPackets = 0
+			tcpPackets = 0
+
 		case <-timeoutTimer.C:
 			if !used {
 				log.Println("Connection Timeout, closing: ", connStr)
@@ -250,9 +312,10 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 				log.Println(err)
 				break
 			}
-
-			netIP := strings.TrimSpace(string(netData))
-			log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
+			netDataSpl := strings.Split(netData, "|")
+			netIP := strings.TrimSpace(string(netDataSpl[0]))
+			canaryIP := strings.TrimSpace(netDataSpl[1])
+			log.Println("Received IP from ", canaryIP, ": ", netIP)
 
 			if netIP == "all" {
 				monitorAll = true
@@ -271,7 +334,7 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 					// monitor array of ips
 					for n, ip := range monitoredIPs {
 						if n == 0 {
-							bpffilter = "((udp or tcp) and dst host  " + ip + " )"
+							bpffilter = "((udp or tcp) and not host " + canaryIP + " )"
 						} else {
 							bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
 						}
@@ -288,36 +351,6 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 				log.Println("BPF filter error:", err)
 			}
 		}
-
-		/*
-
-					if action == "add" {
-						if argument == "all" {
-							monitorAll = true
-						} else {
-							//if we add an ip, should we disable all?
-							monitoredIPs = append(monitoredIPs, line.Text)
-						}
-					} else if action == "remove" {
-						if argument == "all" {
-							monitorAll = false
-						} else {
-							index := 0
-							for n, ip := range monitoredIPs {
-								if ip == argument {
-									index = n
-								}
-							}
-							//swap unneeded ip with last valid ip
-							monitoredIPs[len(monitoredIPs)-1], monitoredIPs[i] = monitoredIPs[i], monitoredIPs[len(monitoredIPs)-1]
-							//keep a new slice with n-1 ip (drop the last ip)
-			    			monitoredIPs = monitoredIPs[:len(monitoredIPs)-1]
-						}
-					} else if action == "clear" {
-						monitoredIPs = monitoredIPs[:0]
-					}
-
-		*/
 	}
 }
 
