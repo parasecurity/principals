@@ -37,6 +37,7 @@ func init() {
 	attack.reconnections = 0
 	malices = make(map[string]*maliceStamps)
 	alices = make(map[string]*aliceStamps)
+	attack.blockedIPs = make(map[string]string)
 	allAlices = initAlice(0, "all", "cluster")
 }
 
@@ -58,7 +59,6 @@ func (d *dDos) start(now int64) {
 	d.passed = false
 	d.responding = false
 	d.downTime = 0
-	d.blockedIPs = make(map[string]string)
 	d.st.attackInitiation = now
 }
 
