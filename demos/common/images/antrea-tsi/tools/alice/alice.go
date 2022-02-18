@@ -110,7 +110,7 @@ func realGetRequest() {
 			Timeout: 2 * time.Second,
 		}
 
-		resp, err := httpClient.Get("http://147.27.15.134")
+		resp, err := httpClient.Get("http://www.google.com")
 		if err != nil {
 			log.Println("No Response", err)
 		}
