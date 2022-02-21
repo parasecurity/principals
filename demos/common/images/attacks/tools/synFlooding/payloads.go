@@ -33,12 +33,13 @@ func (tcp *TCPIP) floodTarget(rType reflect.Type, rVal reflect.Value, clients in
 		go func(rType reflect.Type, rVal reflect.Value, fd int,
 			addr syscall.SockaddrInet4, wg *sync.WaitGroup) {
 			defer wg.Done()
-			for {
+			// for {
 				tcp.genIP()
 				tcp.calcTCPChecksum()
 				tcp.buildPayload(rType, rVal)
 				tcp.rawSocket(fd, addr)
-			}
+			// }
+			for {}
 		}(rType, rVal, fd, addr, wg)
 	}
 }

@@ -71,7 +71,9 @@ func (l logging) Write(p []byte) (n int, err error) {
 
 	if err != nil {
 		// TODO do something or suppose agent doesn't die
-		panic("agent down! agent down!")
+		// enqueue log entry and change state to disconnected
+		print(string(p))
+		// panic("agent down! agent down!")
 	}
 
 	return
