@@ -149,6 +149,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 	tcpPackets := 0
 	udpPackets := 0
 	tcpSYNPackets := 0
+	httpPackets := 0
 
 	for {
 		select {
@@ -158,18 +159,16 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			}
 			used = true
 			checkForDistict := false
+			applicationLayer := p.ApplicationLayer()
 
-			// applicationLayer := p.ApplicationLayer()
-			// applicationLayer := p.LinkLayer()
-			// applicationLayer := p.NetworkLayer()
-			// applicationLayer := p.TransportLayer()
+			if applicationLayer != nil {
+				payloadStr := string(applicationLayer.Payload())
+				// Search for a string inside the payload
+				if strings.Contains(payloadStr, "HTTP") && strings.Contains(payloadStr, "GET") {
+					httpPackets++
+				}
+			}
 
-			// if applicationLayer != nil || *args.syn {
-
-			// 	//payloadStr := string(applicationLayer.Payload())
-			// 	// Search for a string inside the payload
-			// 	count++
-			// }
 			if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 				// Get actual TCP data from this layer
 				tcp, _ := tcpLayer.(*layers.TCP)
@@ -214,10 +213,16 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				break
 			}
 
+			httpPers := (httpPackets * 100) / totalPackets
 			udpPers := (udpPackets * 100) / totalPackets
 			synPers := (tcpSYNPackets * 100) / totalPackets
 
-			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 30) {
+			if (httpPers > 30) && (distinct_IP != 1) && (httpPackets > 15) {
+				log.Println("Http Attack: ", httpPers, "Packets: ", httpPackets)
+				warn <- srcIP
+			}
+
+			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 250) {
 				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
 				warn <- srcIP
 			}
@@ -236,6 +241,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			udpPackets = 0
 			totalPackets = 0
 			tcpPackets = 0
+			httpPackets = 0
 
 		case <-timeoutTimer.C:
 			if !used {
