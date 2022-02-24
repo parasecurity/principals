@@ -24,6 +24,7 @@ var (
 	ips          []net.IP
 	localaddr    net.TCPAddr
 	remoteaddr   net.TCPAddr
+	sipp_server  *bool
 	detectorOn   = false
 )
 
@@ -97,9 +98,9 @@ func enableDetector(ip string) {
 
 func timeGet(urlC string) {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 10000
-	t.MaxConnsPerHost = 10000
-	t.MaxIdleConnsPerHost = 10000
+	t.MaxIdleConns = 100
+	t.MaxConnsPerHost = 100
+	t.MaxIdleConnsPerHost = 100
 	for {
 		defer func() {
 			if r := recover(); r != nil {
@@ -115,7 +116,7 @@ func timeGet(urlC string) {
 			}
 		}()
 		httpClient := &http.Client{
-			Timeout:   1 * time.Second,
+			Timeout:   500 * time.Millisecond,
 			Transport: t,
 		}
 		start := time.Now()
@@ -142,6 +143,24 @@ func timeGet(urlC string) {
 	}
 }
 
+func check_sipp(urlC string) {
+
+	timeout := 500 * time.Millisecond
+	for {
+		_, err := net.DialTimeout("tcp", urlC, timeout)
+		if err != nil {
+			log.Println("Site unreachable, error: ", err)
+			failureCount++
+			if failureCount >= *failures {
+				enableDetector(ips[0].String())
+				failureCount = 0
+			}
+		} else {
+			failureCount = 0
+		}
+	}
+}
+
 func init() {
 	server = flag.String("conn", "http://kronos.mhl.tuc.gr:30001/health/", "The server url e.g. http://147.27.39.116:8080/health/")
 	detectorIP = flag.String("d", "10.1.1.202", "The detector IP address e.g. 10.1.1.202")
@@ -149,6 +168,7 @@ func init() {
 	threshold = flag.Int("t", 1000, "The time threshold in ms")
 	failures = flag.Int("f", 4, "The number of failures before we spawn a detector")
 	logPath = flag.String("lp", "./canary.log", "The path to the log file")
+	sipp_server = flag.Bool("sipp", false, "If we check a sipp server")
 	flag.Parse()
 
 	// open log file
@@ -197,6 +217,10 @@ func init() {
 func main() {
 	failureCount = 0
 	for {
-		timeGet(*server)
+		if *sipp_server == true {
+			check_sipp(*server)
+		} else {
+			timeGet(*server)
+		}
 	}
 }

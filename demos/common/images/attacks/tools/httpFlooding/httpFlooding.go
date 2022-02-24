@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
-	"log"
+	log "logging"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ var (
 		clients int
 		logPath string
 	}
+	logFile *os.File
 )
 
 func init() {
@@ -31,7 +33,8 @@ func init() {
 	flag.Parse()
 
 	// open log file
-	logFile, err := os.OpenFile(args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	var err error
+	logFile, err = os.OpenFile(args.logPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -54,18 +57,20 @@ func init() {
 
 func main() {
 	t := http.DefaultTransport.(*http.Transport).Clone()
-	t.MaxIdleConns = 100
-	t.MaxConnsPerHost = 100
-	t.MaxIdleConnsPerHost = 100
+	t.MaxIdleConns = 10000
+	t.MaxConnsPerHost = 10000
+	t.MaxIdleConnsPerHost = 10000
 
 	var wg sync.WaitGroup
 
 	for c := 0; c < args.clients; c++ {
 		wg.Add(1)
 		go func(c int, wg *sync.WaitGroup) {
+			// this code will never run
+			// TODO clean up
 			defer func() {
 				if r := recover(); r != nil {
-					log.Println("client ", c, " closed")
+					log.Println("client ", c, " closed. Error: ", r)
 				}
 			}()
 			defer wg.Done()
@@ -75,23 +80,27 @@ func main() {
 			}
 
 			var count uint64
+			var failCount uint64
 			count = 0
+			failCount = 0
 			for {
 				resp, err := httpClient.Get(args.server)
 				if err != nil {
-					panic(err)
+					failCount++
+					log.Print("Fail Count:", failCount, err)
+					fmt.Fprintln(logFile, "Fail Count:", failCount, err)
+					continue
 				}
 				defer resp.Body.Close()
 
-				log.Println("Response status:", resp.Status)
-
 				bytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
-					log.Println(err)
+					log.Println("Response status:", resp.Status, err)
+					fmt.Fprintln(logFile, "Response status:", resp.Status, err)
 					return
 				}
 				count++
-				log.Println("Transfers: ", count, ", bytes: ", len(bytes))
+				log.Println("Response status:", resp.Status, "Transfers: ", count, ", bytes: ", len(bytes))
 				time.Sleep(time.Duration(args.sleep) * time.Millisecond)
 			}
 		}(c, &wg)

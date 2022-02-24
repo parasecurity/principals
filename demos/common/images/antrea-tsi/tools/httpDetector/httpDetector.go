@@ -149,6 +149,7 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 	tcpPackets := 0
 	udpPackets := 0
 	tcpSYNPackets := 0
+	httpPackets := 0
 
 	for {
 		select {
@@ -159,17 +160,16 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			used = true
 			checkForDistict := false
 
-			// applicationLayer := p.ApplicationLayer()
-			// applicationLayer := p.LinkLayer()
-			// applicationLayer := p.NetworkLayer()
-			// applicationLayer := p.TransportLayer()
+			applicationLayer := p.ApplicationLayer()
 
-			// if applicationLayer != nil || *args.syn {
+			if applicationLayer != nil {
+				payloadStr := string(applicationLayer.Payload())
+				// Search for a string inside the payload
+				if strings.Contains(payloadStr, "HTTP") && strings.Contains(payloadStr, "POST") {
+					httpPackets++
+				}
+			}
 
-			// 	//payloadStr := string(applicationLayer.Payload())
-			// 	// Search for a string inside the payload
-			// 	count++
-			// }
 			if tcpLayer := p.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 				// Get actual TCP data from this layer
 				tcp, _ := tcpLayer.(*layers.TCP)
@@ -200,12 +200,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				} else if distinct_IP == 0 && ipDst_Str != "0.0.0.0" {
 					newNet := ip.DstIP.Mask(ip.DstIP.DefaultMask())
 					if (!ip.DstIP.Equal(firstIP)) && (!newNet.Equal(firstNet)) {
-						log.Println("Pizza", ip.DstIP.String(), firstIP.String(), srcIP.String(), newNet.String(), firstNet.String())
 						distinct_IP = 1
 					}
-				}
-				if !ip.SrcIP.Equal(srcIP) {
-					log.Println("inside check connection: IPs", ip.SrcIP.String(), " and ", srcIP.String(), " differ")
 				}
 			}
 
@@ -213,17 +209,28 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			if totalPackets == 0 {
 				break
 			}
+			// TODO: Remove the coredns from here
+			// pass it from the canary
+			if srcIP.String() == "10.10.0.96" || srcIP.String() == "10.10.0.67" || srcIP.String() == "130.207.39.90" {
+				break
+			}
 
+			httpPers := (httpPackets * 100) / totalPackets
 			udpPers := (udpPackets * 100) / totalPackets
 			synPers := (tcpSYNPackets * 100) / totalPackets
 
+			if (httpPers > 30) && (httpPackets > 30) {
+				log.Println("Http Attack: ", httpPers, "Packets: ", httpPackets, "Ip to block: ", srcIP.String())
+				warn <- srcIP
+			}
+
 			if (udpPers > 15) && (distinct_IP != 1) && (udpPackets > 30) {
-				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets)
+				log.Println("Udp Attack: ", udpPers, "Packets: ", udpPackets, "Ip to block: ", srcIP.String())
 				warn <- srcIP
 			}
 
 			if (synPers > 40) && (distinct_IP != 1) && (tcpSYNPackets > 30) {
-				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets)
+				log.Println("Syn Attack: ", synPers, "Packets: ", tcpSYNPackets, "Ip to block: ", srcIP.String())
 				warn <- srcIP
 			}
 

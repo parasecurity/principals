@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	log "logging"
 	"net/http"
@@ -10,7 +12,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"fmt"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 		timeout int
 		clients int
 		logPath string
+		post    bool
 	}
 	logFile *os.File
 )
@@ -30,6 +32,7 @@ func init() {
 	flag.IntVar(&args.timeout, "t", 1000, "timeout in ms (default 1000)")
 	flag.IntVar(&args.clients, "c", 1, "number of concurrent clients (default 1)")
 	flag.StringVar(&args.logPath, "lp", "./client.log", "The path to the log file (default ./client.log)")
+	flag.BoolVar(&args.post, "post", false, "Pass the post request")
 	flag.Parse()
 
 	// open log file
@@ -60,7 +63,7 @@ func main() {
 	t.MaxIdleConns = 10000
 	t.MaxConnsPerHost = 10000
 	t.MaxIdleConnsPerHost = 10000
-
+	singleMb := make([]byte, 1000000)
 	var wg sync.WaitGroup
 
 	for c := 0; c < args.clients; c++ {
@@ -84,15 +87,19 @@ func main() {
 			count = 0
 			failCount = 0
 			for {
-				resp, err := httpClient.Get(args.server)
+				var resp *http.Response
+				var err error
+
+				if args.post == true {
+					resp, err = httpClient.Post(args.server, "application/json", bytes.NewBuffer(singleMb))
+				} else {
+					resp, err = httpClient.Get(args.server)
+				}
 				if err != nil {
 					failCount++
-					log.Print("Fail Count:", failCount, err)
-					fmt.Fprintln(logFile, "Fail Count:", failCount, err)
 					continue
 				}
 				defer resp.Body.Close()
-
 
 				bytes, err := ioutil.ReadAll(resp.Body)
 				if err != nil {
