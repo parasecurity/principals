@@ -45,7 +45,7 @@ func fixit() {
 	<-control.ans
 }
 
-var ping_timeout time.Duration = 1
+var ping_timeout time.Duration = 5
 
 func checkConnection() {
 	serverUp = true

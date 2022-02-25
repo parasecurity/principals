@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"flag"
 	"io"
 	"strconv"
 	"time"
@@ -21,6 +22,10 @@ var (
 	toAnalyser chan []string
 	sigs chan os.Signal
 	sorter chan struct{}
+	attackPodName *string
+	attackInitLog *string
+	localLogFile *string
+	clusterLogFile *string
 )
 
 func init_channels() {
@@ -38,14 +43,20 @@ func init_channels() {
 
 func init() {
 
+	attackPodName = flag.String("attack-pod-name", "attack", "the prefix of the name of attackers")
+	attackInitLog = flag.String("attack-init-log", "Start attacking", "The exact log entry an attacker sends just before start attacking")
+	localLogFile = flag.String("server-log-file", "/tsi/logging-server.log", "File where server logs are saved")
+	clusterLogFile = flag.String("cluster-log-file", "/tsi/tsi.log", "File where all cluster logs are saved")
+	flag.Parse()
 	// Open log file
-	logFile, err := os.OpenFile("/tsi/logging-server.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	logFile, err := os.OpenFile(*localLogFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	log.SetFlags(log.Ldate|log.Lmicroseconds|log.LUTC)
 
-	clusterLogging, err = os.OpenFile("/tsi/tsi.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	clusterLogging, err = os.OpenFile(*clusterLogFile, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println(err)
 		return
@@ -53,8 +64,6 @@ func init() {
 
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.LUTC)
 	log.SetOutput(logFile)
-
-
 }
 
 func handleConnection(c net.Conn, toSorter chan []byte){
@@ -108,9 +117,9 @@ func outputLogs(logs chan []string){
 	for {
 		msg := <-logs
 		timestamp, _ := strconv.ParseInt(msg[3], 10, 64)
-		tt := time.Unix(timestamp / 1000000, timestamp % 1000000)
-		print(tt.String(), strings.Join(msg[:3], " "), " ", strings.Join(msg[4:], " "))
-		fmt.Fprint(clusterLogging, tt.String(), strings.Join(msg[:3], " "), " ", strings.Join(msg[4:], " "))
+		tt := time.Unix(timestamp / 1000000, 1000*(timestamp % 1000000))
+		print(tt.UTC().Format(time.StampMicro), " ", strings.Join(msg[:3], " "), " ", strings.Join(msg[4:], " "))
+		fmt.Fprint(clusterLogging, tt.UTC().Format(time.StampMicro), " ", strings.Join(msg[:3], " "), " ", strings.Join(msg[4:], " "))
 	}
 }
 

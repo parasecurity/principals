@@ -35,6 +35,7 @@ func init() {
 	detectors = make(map[string]*detectorStamps)
 	attack.active = false
 	attack.reconnections = 0
+	attack.blockedIPs = make(map[string]string)
 	malices = make(map[string]*maliceStamps)
 	alices = make(map[string]*aliceStamps)
 	allAlices = initAlice(0, "all", "cluster")
@@ -58,7 +59,6 @@ func (d *dDos) start(now int64) {
 	d.passed = false
 	d.responding = false
 	d.downTime = 0
-	d.blockedIPs = make(map[string]string)
 	d.st.attackInitiation = now
 }
 
@@ -282,10 +282,10 @@ func analyseLogs(logs chan []string){
 
 		// EVENTS
 		// detect starting of ddos attack (udp/syn)
-		if strings.Contains(pod, "attack") {
+		if strings.HasPrefix(pod, *attackPodName) {
 			_, e := malices[pod]
 			if !e {
-				if strings.Contains(log, "Start attacking") {
+				if strings.Contains(log, *attackInitLog) {
 					malices[pod] = initMalice(timestamp, pod, node)
 					if !attack.active && !attack.passed {
 						attack.start(timestamp)

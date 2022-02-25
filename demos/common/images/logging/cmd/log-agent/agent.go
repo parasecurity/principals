@@ -32,6 +32,7 @@ func handleConnection(c *net.UnixConn, logs chan []byte){
 
 		switch err {
 		case nil:
+			log.Println(string(data))
 			logs<- data
 		case io.EOF:
 			// if len(data) != 0 {
@@ -54,6 +55,7 @@ func init() {
 	args.sockPath = flag.String("sockpath", "/tmp/testlog.sock", "path to agent's socket")
 	flag.Parse()
 
+	log.SetFlags(log.Ldate|log.Lmicroseconds|log.LUTC)
 	// Setup signal catching
 	sigs := make(chan os.Signal, 1)
 	// Catch all signals since not explicitly listing
