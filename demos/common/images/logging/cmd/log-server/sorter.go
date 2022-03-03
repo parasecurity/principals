@@ -31,8 +31,9 @@ func init() {
 // sorts logBuf and sends all logs until limit time. 
 // if limit is 0 then it sends every entry in logBuf
 func sortAndSend(a, b chan []string, limit int64) {
+	sorter<- struct{}{}
 
-	log.Println("first ", firstCached, " last ", lastCached, " limit ", limit)
+	// log.Println("first ", firstCached, " last ", lastCached, " limit ", limit)
 	if !isInOrder {
 		log.Println("...sorting...")
 		sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
@@ -40,23 +41,25 @@ func sortAndSend(a, b chan []string, limit int64) {
 		log.Println("...done")
 	}
 
-	del := -1
+	del := 0
 	for i, k := range keys {
 		if limit != 0 && k >= limit {
 			del = i
 			break
 		}
-		log := logBuf[k]
+		del++
+		logEntry := logBuf[k]
+		log.Println("Internal send: ", logEntry)
 		// select for efficiency
 		select {
-		case a <- log:
-			b <- log
-		case b <- log:
-			a <- log
+		case a <- logEntry:
+			b <- logEntry
+		case b <- logEntry:
+			a <- logEntry
 		}
 		// delete(logBuf, k)
 	}
-	if del == -1 {
+	if del == 0 {
 		log.Print("no logs were sent")
 		keys = keys[:0]
 	} else {
@@ -70,6 +73,7 @@ func sortAndSend(a, b chan []string, limit int64) {
 		firstCached = 0
 		lastCached = 0
 	}
+	<-sorter
 }
 
 func sortLogs(logs chan []byte, analyser, printer chan []string){
