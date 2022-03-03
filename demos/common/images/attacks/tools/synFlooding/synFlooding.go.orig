@@ -3,7 +3,12 @@ package main
 import (
 	"crypto/rand"
 	"flag"
+<<<<<<< HEAD
 	log "logging"
+=======
+	"log"
+	// log "logging"
+>>>>>>> fall_back
 	"net"
 	"os"
 	"os/signal"
@@ -27,6 +32,7 @@ var (
 func isRoot() {
 	user, err := user.Current()
 	if err != nil || user.Username != "root" {
+		log.Println(user.Username)
 		log.Println("Root privileges required for execution")
 	}
 }

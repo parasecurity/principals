@@ -3,7 +3,10 @@ package logging
 import (
 	"fmt"
 	"io"
+<<<<<<< HEAD
+=======
 	"errors"
+>>>>>>> fall_back
 	"net"
 	"os"
 	"strings"
@@ -66,12 +69,17 @@ func (l logging) Write(p []byte) (n int, err error) {
 
 	// TODO error handling and fall-back in disconnections
 	n = len(p)
+<<<<<<< HEAD
+	if p[n-1] == p[n-2] {
+		_, err = l.conn.Write(p[:n-1])
+=======
 	np := n
 	if p[n-1] == p[n-2] {
 		np = n-1
 	} 
 	if l.conn == nil { 
 		err = net.ErrClosed 
+>>>>>>> fall_back
 	} else {
 		err = l.conn.SetWriteDeadline(time.Now().Add(time.Second))
 	}
@@ -104,7 +112,10 @@ var log logging
 
 // for negative or 0 retries loops forever
 func connectToAgent(retries int) (err error) {
+<<<<<<< HEAD
+=======
 	println("Connecting to logging agent")
+>>>>>>> fall_back
 	for i := retries; i != 1; i-- {
 		log.conn, err = net.DialUnix("unixpacket", nil, log.sock_addr)
 		if err == nil {
@@ -124,10 +135,14 @@ func connectToAgent(retries int) (err error) {
 	return
 }
 
+<<<<<<< HEAD
+func init() {
+=======
 var control struct {
 	req chan struct{}
 	ans chan struct{}
 }
+>>>>>>> fall_back
 
 func fixit() {
 	agMx.Lock()

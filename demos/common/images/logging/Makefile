@@ -12,16 +12,11 @@ clean:
 
 server:
 	mkdir -p bin/
-	go build -o bin/server \
-		cmd/log-server/server.go \
-		cmd/log-server/parser.go \
-		cmd/log-server/parser_core.go \
-		cmd/log-server/report.go \
-		cmd/log-server/sorter.go
+	go build -o bin/server cmd/log-server/*.go 
 
 agent:
 	mkdir -p bin/
-	go build -o bin/agent cmd/log-agent/agent.go
+	go build -o bin/agent cmd/log-agent/*.go
 
 client:
 	mkdir -p bin/

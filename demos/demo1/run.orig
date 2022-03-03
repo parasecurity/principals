@@ -55,6 +55,8 @@ load_vars(){
 	readonly ALICE_POD_6=alice6
 	readonly ALICE_POD_7=alice7
 	readonly ALICE_POD_8=alice8
+	readonly ALICE_POD_9=alice9
+	readonly ALICE_POD_10=alice10
 	readonly MALICE_POD_1=malice1
 	readonly MALICE_POD_2=malice2
 	readonly MALICE_POD_3=malice3
@@ -108,9 +110,23 @@ init(){
     load_vars
     waitUntilAllPodsRun
 
+<<<<<<< HEAD
 	msg "Starting 5G Core and RAN"
    	/bin/bash ./charts/slice_confx.sh $USERS
 	waitUntilAllPodsRun
+=======
+
+	waitUntilAllPodsRun
+	load_vars
+
+	sleep 4 
+
+	# msg "Adding queues on demo pods"
+	# kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl list-ports br-int | egrep 'alice|malice' | xargs -d '\n' -I{} ovs-vsctl set port {} qos=@newqos -- \
+	# 	--id=@newqos create qos type=linux-htb \
+	# 	queues:100=@queue -- \
+	# 	--id=@queue create queue other-config:max-rate=100 &> /dev/null"
+>>>>>>> fall_back
 }
 
 clean_cluster(){
@@ -123,12 +139,30 @@ clean_cluster(){
 
 	msg "Removing applied rules from nodes"
 	kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true
+	msg "Removing deployed pods"
+	kubectl delete -f yamls/security || true
+	kubectl delete -f yamls/pods/ || true
 
 	msg "Removing 5G Deployment"
 	/bin/bash ./charts/undeploy_all.sh $USERS 
 
 	msg "End of demo!"
 	exit
+}
+
+alice_trafic()
+{
+ 	msg "Sending normal requests to http://phobos3.astrolavos.gatech.edu:8080/ from alice" 
+    kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=2000 -c 100 &"
+    # kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=4000 -c 100 &"
+    # kubectl exec "$ALICE_POD_3" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=1000 -c 100 &"
+    # kubectl exec "$ALICE_POD_4" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=9 -s=4000 -c 100 &"
+    # kubectl exec "$ALICE_POD_5" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=7 -s=3000 -c 100 &"
+    # kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=10 -s=2500 -c 100 &"
+    # kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=11 -s=1400 -c 100 &"
+    # kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=12 -s=2500 -c 100 &"
+	# kubectl exec "$ALICE_POD_9" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=13 -s=1000 -c 100 &"
+    # kubectl exec "$ALICE_POD_10" -- bash -c "nohup /home/tsi/bin/alice -conn=http://phobos3.astrolavos.gatech.edu:8080/ -dev=14 -s=1000 -c 100 &"
 }
 
 http_flooding()
@@ -146,15 +180,22 @@ http_flooding()
     done
 
     msg "Starting DDoS Demo"
+<<<<<<< HEAD
     canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+=======
+     	 
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
+	detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\",\"-t=3000\"]}"
+>>>>>>> fall_back
 
-    msg "Deploying canary client to monitor the health of the website (4 failures to spawn detector)" 
+    msg "Deploying canary client to monitor the health of the website" 
     kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
       
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
       
+<<<<<<< HEAD
     msg "Sending normal requests to http://$SERVER_ADDRESS/ from normal 5G users" 
     kubectl exec -n oai "$GNBSIM_NORM_1" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=6 -s=2000 &"
     kubectl exec -n oai "$GNBSIM_NORM_2" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
@@ -164,6 +205,10 @@ http_flooding()
     kubectl exec -n oai "$GNBSIM_NORM_6" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=10 -s=2000 &"
     kubectl exec -n oai "$GNBSIM_NORM_7" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=11 -s=2000 &"
     kubectl exec -n oai "$GNBSIM_NORM_8" -- bash -c "nohup /gnbsim/bin/demo_tools/alice -conn=http://$SERVER_ADDRESS/ -dev=12 -s=2000 &"
+=======
+	alice_trafic
+
+>>>>>>> fall_back
     waitUntilAllPodsRun
       
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
@@ -172,6 +217,7 @@ http_flooding()
     echo "./see_parser"
     read -p "Press enter to continue"
 
+<<<<<<< HEAD
     msg "Creating DDoS traffic from malicious 5G Users"
     kubectl exec -n oai "$GNBSIM_ATTC_1" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
     kubectl exec -n oai "$GNBSIM_ATTC_2" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
@@ -186,6 +232,21 @@ http_flooding()
     kubectl exec -n oai "$GNBSIM_ATTC_11" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
     kubectl exec -n oai "$GNBSIM_ATTC_12" -- bash -c "nohup /gnbsim/bin/demo_tools/client -conn=http://$SERVER_ADDRESS/ -c 100 -s 0 -t 0  &"
 
+=======
+    msg "Creating DDoS traffic from malicious pods"
+    kubectl exec "$MALICE_POD_1" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_2" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_3" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_4" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_5" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_6" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+	kubectl exec "$MALICE_POD_7" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_8" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_9" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_10" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+	kubectl exec "$MALICE_POD_11" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+    kubectl exec "$MALICE_POD_12" -- bash -c "nohup /home/tsi/bin/client -conn=http://phobos3.astrolavos.gatech.edu:8080/ -c 400 -s 0 -t 0  &"
+>>>>>>> fall_back
     sleep 2
 
     msg "Waiting for the Web server to be responsive again" 
@@ -197,10 +258,27 @@ http_flooding()
     msg "Removing detector deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector\", \"arguments\": []}"
 
+	msg "Please review the time report"
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    	read -p "Press enter to continue"
+    	
+    msg "Print blocked IPs"
+    ./blockedIPs.sh
+    read -p "Press enter to continue"
+	
+    msg "Print attack packet statistics"
+    ./printStatisticsHTTP.sh 
+    read -p "Press enter to continue"
+
+    msg "Please remove the time report"
+    echo "sudo rm ~/tsi/*.log"
+    read -p "Press enter to continue"
+    
     msg "Cleaning cluster"
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1" &> /dev/null || true      
     kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
+<<<<<<< HEAD
 	msg "Please review the time report"
 	echo "cat ~/tsi/parser.log"
     read -p "Press enter to continue"
@@ -209,6 +287,8 @@ http_flooding()
 	echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
 
+=======
+>>>>>>> fall_back
     echo -e "\n"
 }
 
@@ -216,8 +296,13 @@ udp_flooding()
 {
     msg "Starting Udp Flooding Demo"
     
+<<<<<<< HEAD
     canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+=======
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
+    detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\",\"-t=3000\"]}"
+>>>>>>> fall_back
       
 	if [ $# -eq 1 ]; then if [ $1 = "-i" ]; then
 		read -p "Enter canary deployment command: " canaryCommands
@@ -229,15 +314,20 @@ udp_flooding()
     read -p "Press enter to continue"
 
 	msg "Please start a scp session" 
+<<<<<<< HEAD
     echo "scp santonatos@$SERVER_ADDRESS:/home/santonatos/hugefile /dev/null"
+=======
+    echo "scp gntousakis@phobos3.astrolavos.gatech.edu:/tmp/hugefile /dev/null"
+>>>>>>> fall_back
     read -p "Press enter to continue"
 
-    msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
+    msg "Deploying link canary client to monitor the health of the website" 
     kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
       
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
+<<<<<<< HEAD
     msg "Sending normal requests to http://$SERVER_ADDRESS/ from alice" 
     kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ &"
     kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
@@ -247,6 +337,9 @@ udp_flooding()
     kubectl exec "$ALICE_POD_6" -- bash -c "nohup /home/tsi/bin/alice -conn=http://amazon.com/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_7" -- bash -c "nohup /home/tsi/bin/alice -conn=http://facebook.com/ -dev=7 -s=3000 &"
     kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
+=======
+	alice_trafic
+>>>>>>> fall_back
 
     kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=6 -s=2000 &"
     kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
@@ -277,20 +370,7 @@ udp_flooding()
     kubectl exec "$MALICE_POD_21" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
     kubectl exec "$MALICE_POD_22" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
     kubectl exec "$MALICE_POD_23" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_24" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_25" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_26" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_27" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_28" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_29" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_30" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_31" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_32" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_33" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_34" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_35" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_36" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
-    kubectl exec "$MALICE_POD_37" -- bash -c "nohup ./home/tsi/bin/udpFlooding -ip 10.137.7.23 -p 6002 -c 1000000 -s 1400  &"
+
     
 	sleep 2
 
@@ -303,37 +383,58 @@ udp_flooding()
     msg "Removing detector link deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
 
-    msg "Cleaning cluster"
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
+
 
 	msg "Please remove speed limit from from phobos 3" 
     echo "sudo ethtool -s enp81s0f0 speed 10000 duplex full autoneg on"
     read -p "Press enter to continue"
 
 	msg "Please review the time report"
+<<<<<<< HEAD
 	echo "cat ~/tsi/parser.log"
+=======
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    read -p "Press enter to continue"
+    	
+    msg "Print blocked IPs"
+	./blockedIPs.sh
+    read -p "Press enter to continue"
+
+	msg "Print attack packet statistics"
+	./printStatistics.sh
+>>>>>>> fall_back
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
 	echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
+    
+    msg "Cleaning cluster"
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
     echo -e "\n"
 }
 
 syn_flooding()
 {
+<<<<<<< HEAD
     msg "Starting Udp Flooding Demo"
     canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://$SERVER_ADDRESS/\"]}"
     detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\"]}"
+=======
+    msg "Starting SYN Flooding Demo"
+    canaryCommands="{\"action\":\"create\", \"target\": \"canary\", \"arguments\": [\"-conn=http://phobos3.astrolavos.gatech.edu:8080/\"]}"
+    detectorCommands="{\"action\":\"create\", \"target\": \"detector\", \"arguments\": [\"-c=block\",\"-syn=true\"]}"
+>>>>>>> fall_back
       
-    msg "Deploying link canary client to monitor the health of the website (4 failures to spawn detector)" 
+    msg "Deploying link canary client to monitor the health of the website" 
     kubectl exec -it "$API" -n security -- ./client -arg "$canaryCommands"
       
     msg "Deploying detector with mirroring but with BPF filter disabled" 
     kubectl exec -it "$API" -n security -- ./client -arg "$detectorCommands"
 
+<<<<<<< HEAD
     msg "Sending normal requests to http://$SERVER_ADDRESS/ from alice" 
     kubectl exec "$ALICE_POD_1" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ &"
     kubectl exec "$ALICE_POD_2" -- bash -c "nohup /home/tsi/bin/alice -conn=http://$SERVER_ADDRESS/ -dev=7 -s=2000 &"
@@ -345,12 +446,15 @@ syn_flooding()
     kubectl exec "$ALICE_POD_8" -- bash -c "nohup /home/tsi/bin/alice -conn=http://apple.com/ -dev=9 -s=3000 &"
 
     waitUntilAllPodsRun
+=======
+>>>>>>> fall_back
     CANARY_1=$(kubectl get po -o wide -n security | grep "canary" | awk '{print $1}' | head -1)
 
     msg "Please open one new terminal and execute the following command" 
     echo "./see_parser"
     read -p "Press enter to continue"
 
+<<<<<<< HEAD
     msg "Creating SYN flooding traffic from malicious pods"
     kubectl exec "$MALICE_POD_38" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 30002 -c 10  &"
     kubectl exec "$MALICE_POD_39" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 30002 -c 10  &"
@@ -362,6 +466,23 @@ syn_flooding()
     kubectl exec "$MALICE_POD_18" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 30002 -c 10  &"
     kubectl exec "$MALICE_POD_19" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 30002 -c 10  &"
     kubectl exec "$MALICE_POD_20" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 30002 -c 10  &"
+=======
+	msg "Adding demo pods"
+	kubectl apply -f yamls/pods/attacks.yaml
+	kubectl apply -f yamls/pods/alice.yaml
+	read -p "Press enter to continue"
+    
+	msg "Generate alice traffic"
+	alice_trafic
+	read -p "Press enter to continue"
+
+	msg "Creating SYN flooding traffic from malicious pods"
+    kubectl exec "$MALICE_POD_13" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    kubectl exec "$MALICE_POD_14" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    kubectl exec "$MALICE_POD_15" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 5  &"
+    #kubectl exec "$MALICE_POD_16" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 20  &"
+    #kubectl exec "$MALICE_POD_17" -- bash -c "nohup /home/tsi/bin/synFlooding -ip 10.137.7.23 -p 8080 -c 10  &"
+>>>>>>> fall_back
     
 	sleep 2
 
@@ -374,17 +495,29 @@ syn_flooding()
     msg "Removing detector link deployment" 
     kubectl exec -it "$API" -n security -- ./client -arg "{\"action\":\"delete\", \"target\": \"detector-link\", \"arguments\": []}"
 
-    msg "Cleaning cluster"
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
-    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
-	
 	msg "Please review the time report"
+<<<<<<< HEAD
 	echo "cat ~/tsi/parser.log"
+=======
+	cat ~/tsi/parser.log | grep -v "applied" | grep -v "command" | grep -v "enabled"
+    read -p "Press enter to continue"
+
+    msg "Print blocked IPs"
+	./blockedIPs.sh
+    read -p "Press enter to continue"
+
+	msg "Print attack packet statistics"
+	./printStatistics.sh 
+>>>>>>> fall_back
     read -p "Press enter to continue"
 
 	msg "Please remove the time report"
 	echo "sudo rm ~/tsi/*.log"
     read -p "Press enter to continue"
+    
+    msg "Cleaning cluster"
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-ofctl del-flows br-int cookie=0x0/-1 | true" &> /dev/null || true      
+    kubectl exec -n security "$AGENT_POD_1" -- bash -c "ovs-vsctl clear bridge br-int mirrors"
 
     echo -e "\n"
 }

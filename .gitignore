@@ -9,6 +9,7 @@ tags
 *results*.txt
 *.swp
 demos/demo1/yamls/pods/malice.yaml
+demos/demo1/yamls/pods/attacks.yaml
 demos/demo1/yamls/pods/alice.yaml
 demos/demo1/yamls/pods/attacks.yaml
 demos/demo1/yamls/security/security.yaml

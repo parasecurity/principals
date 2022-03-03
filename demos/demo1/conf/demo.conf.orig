@@ -11,7 +11,11 @@ TSI_API="tsi-api:v1.0.1"
 TSI_ATTACKS="attacks:v1.0.0"
 
 # Username
+<<<<<<< HEAD
+USER="vagrant"
+=======
 USER=$USER
+>>>>>>> fall_back
 
 # Default deployments to generate
 # DO NOT include file extention. In order for this 
