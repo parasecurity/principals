@@ -34,6 +34,7 @@ var (
 		serverCIDR  *string
 		broadcaster *string
 		logPath     *string
+		noNtpSync     *bool
 	}
 	subnet *net.IPNet
 )
@@ -43,6 +44,7 @@ func init() {
 	args.serverCIDR = flag.String("s", "10.0.0.0/24", "The subnet the server belongs to")
 	args.broadcaster = flag.String("bc", "localhost:23456", "The broadcaster connection that the server will connect to in format ip:port")
 	args.logPath = flag.String("lp", "./server.log", "The path to the log file")
+	args.noNtpSync = flag.Bool("no-ntp", false, "Do ntp sync")
 	flag.Parse()
 
 	// open log file
@@ -273,6 +275,10 @@ func main() {
 
 	var retries int = 0
 	var connBroadcaster net.Conn
+
+	if !(*args.noNtpSync) {
+		ntpSync()
+	}
 
 	for retries < 10 {
 		connBroadcaster, err = net.Dial("tcp4", *args.broadcaster)
