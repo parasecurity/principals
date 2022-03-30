@@ -14,3 +14,4 @@ demos/demo1/yamls/pods/alice.yaml
 demos/demo1/yamls/pods/attacks.yaml
 demos/demo1/yamls/security/security.yaml
 demos/demo1/yamls/security/logging.yaml
+.DS_Store
