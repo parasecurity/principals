@@ -1,0 +1,13 @@
+---
+
+- name: Install Antrea CNI
+  become: yes
+  become_user: "{{ ansible_user }}" 
+  shell: kubectl apply -f https://github.com/antrea-io/antrea/releases/download/v1.3.0/antrea.yml
+
+- name: Install Multus daemonset
+  become: yes
+  become_user: "{{ ansible_user }}" 
+  shell: kubectl apply -f https://raw.githubusercontent.com/k8snetworkplumbingwg/multus-cni/master/deployments/multus-daemonset.yml
+
+

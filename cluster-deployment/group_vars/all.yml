@@ -1,0 +1,16 @@
+# Ansible user
+ansible_user: vagrant 
+
+# Docker registry IP
+registry_ip: "10.9.9.2:5000"
+
+# Networks for kubernetes deployment
+pod_network_cidr: "10.9.0.0/16"
+
+# Extra variables
+systemd_dir: /lib/systemd/system
+system_env_dir: /etc/sysconfig
+network_dir: /etc/kubernetes/network
+kubeadmin_config: /etc/kubernetes/admin.conf
+kube_addon_dir: /etc/kubernetes/addon
+ansible_python_interpreter: "/usr/bin/python3"
