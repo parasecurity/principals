@@ -8,6 +8,8 @@ func Execute(command Command, registry *string) string {
 		Delete(command)
 	} else if command.Action == "execute" {
 		Run(command, registry)
+	} else if command.Action == "statistics" {
+		Statistics(command)
 	}
 	result = "ok"
 	return result
