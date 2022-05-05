@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dns-stitching
+spec:
+  containers:
+    - name: dns-stitching
+      image: 10.8.8.2:5000/dns-stitching:v0.1.0
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: IfNotPresent
