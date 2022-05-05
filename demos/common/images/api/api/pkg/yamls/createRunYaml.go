@@ -18,30 +18,30 @@ func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSe
 	 */
 	daemonSet := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "executor",
+			Name:      "tamelet-handler",
 			Namespace: "security",
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":       "security",
-					"component": "executor",
+					"component": "tamelet-handler",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						"kubectl.kubernetes.io/default-container": "executor",
+						"kubectl.kubernetes.io/default-container": "tamelet-handler",
 					},
 					Labels: map[string]string{
 						"app":       "security",
-						"component": "executor",
+						"component": "tamelet-handler",
 					},
 				},
 				Spec: apiv1.PodSpec{
 					Containers: []apiv1.Container{
 						{
-							Name:  "executor",
+							Name:  "tamelet-handler",
 							Image: image,
 							Command: []string{
 								"/home/tsi/bin/executor",
@@ -63,7 +63,7 @@ func CreateRunYaml(code string, args []string, registry *string) appsv1.DaemonSe
 						},
 					},
 					InitContainers: []apiv1.Container{
-						mirrorContainter( "executor", registry),
+						mirrorContainter( "tamelet", registry),
 					},
 					Volumes: []apiv1.Volume{
 						RunAntreaVolume,

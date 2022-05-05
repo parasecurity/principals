@@ -40,7 +40,8 @@ func Delete(command Command) {
 		command.Target == "analyser" ||
 		command.Target == "snort" ||
 		command.Target == "honeypot" || 
-		command.Target == "dns-stitching" {
+		command.Target == "dns-stitching" ||
+		command.Target == "tamelet-handler" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return
