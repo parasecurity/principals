@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
-	log "logging"
+	"log"
 	"net"
 
 	kubernetes "api/pkg/kubernetes"

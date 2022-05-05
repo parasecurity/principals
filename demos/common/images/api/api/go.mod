@@ -11,5 +11,4 @@ require (
 	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.19.2
 	k8s.io/utils v0.0.0-20210517184530-5a248b5acedc // indirect
-	logging v0.0.0-00010101000000-000000000000
 )

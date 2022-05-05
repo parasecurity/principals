@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	log "logging"
+	"log"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -39,7 +39,8 @@ func Delete(command Command) {
 		command.Target == "dga" ||
 		command.Target == "analyser" ||
 		command.Target == "snort" ||
-		command.Target == "honeypot" {
+		command.Target == "honeypot" || 
+		command.Target == "dns-stitching" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

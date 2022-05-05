@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	log "logging"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"

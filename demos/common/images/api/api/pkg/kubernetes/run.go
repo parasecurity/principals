@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	log "logging"
+	"log"
 
 	"api/pkg/yamls"
 

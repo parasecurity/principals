@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"context"
-	log "logging"
+	"log"
 	"strings"
 
 	"api/pkg/yamls"
@@ -57,6 +57,8 @@ func getDaemonSet(name string, args []string, registry *string) appsv1.DaemonSet
 		daemonSet = yamls.CreateSnortDaem(args, registry)
 	} else if name == "honeypot" {
 		daemonSet = yamls.CreateHoneypotDaem(args, registry)
+	} else if name == "dns-stitching" {
+		daemonSet = yamls.CreateDnsStitchingDaem(args, registry)
 	}
 
 	return daemonSet
@@ -92,7 +94,8 @@ func Create(command Command, registry *string) {
 		command.Target == "dga" ||
 		command.Target == "analyser" ||
 		command.Target == "snort" ||
-		command.Target == "honeypot" {
+		command.Target == "honeypot" ||
+		command.Target == "dns-stitching" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

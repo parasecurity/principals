@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
-	log "logging"
+	"log"
 	"net"
 	"os"
 	"os/signal"
