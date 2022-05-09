@@ -151,6 +151,9 @@ KUBELET_EXTRA_ARGS="--node-ip=10.9.9.2"
 gather_subset=!hardware
 ```
 
+## TODO
+- Make deployment install kubernetes version 1.23.1 and not the latest. Kubernetes drops docker support on version 1.24.
+
 ## References
 - https://www.digitalocean.com/community/tutorials/how-to-create-a-kubernetes-cluster-using-kubeadm-on-centos-7
 - https://linuxize.com/post/how-to-add-and-delete-users-on-ubuntu-18-04/
