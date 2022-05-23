@@ -41,7 +41,8 @@ func Delete(command Command) {
 		command.Target == "snort" ||
 		command.Target == "honeypot" || 
 		command.Target == "dns-stitching" ||
-		command.Target == "tamelet-handler" {
+		command.Target == "tamelet-handler" ||
+		command.Target == "tls-fingerprint" {
 		_, err := loadDaemonSet()
 		if err != nil {
 			return

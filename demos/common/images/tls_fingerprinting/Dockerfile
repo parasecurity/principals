@@ -1,3 +1,11 @@
-FROM alpine:3.15.4
+FROM golang:1.16-alpine 
 
-COPY bin/ /home/tsi/bin
+COPY  . /home/tsi/
+WORKDIR /home/tsi/
+
+RUN apk update
+RUN apk add build-base
+RUN apk add libpcap-dev
+
+RUN go mod download
+RUN go build -o "./bin/tls-fingerprint"

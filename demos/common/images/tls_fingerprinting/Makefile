@@ -1,11 +1,11 @@
 BUILD ?= $(CURDIR)/bin
 IMAGE ?= tls-fingerprint
-VERSION ?= v1.0.0
+VERSION ?= v0.1.0
 REMOTE_REGISTRY ?= localhost:5000
 
 .PHONY: all tool push clean
 
-all: tool
+all: 
 	docker build . -t $(IMAGE):$(VERSION)
 
 tool: 
