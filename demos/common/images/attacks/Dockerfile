@@ -1,9 +1,7 @@
-FROM ubuntu:20.04
+FROM alpine:3.15.4
 
-RUN apt-get update && apt-get install -y \
-    iperf3 \
+RUN apk add \
     libpcap-dev \
- && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 COPY bin/ /home/tsi/bin
-#COPY scripts/ /home/tsi/scripts
