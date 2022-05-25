@@ -23,6 +23,7 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
+	"tls_fingerprinting/pkg/statistics"
 )
 
 var (
@@ -37,9 +38,11 @@ var (
 	flagOnlyJa3S  = flag.Bool("ja3s-only", false, "dump ja3s only")
 	flagSnaplen   = flag.Int("snaplen", 1514, "default snap length for ethernet frames")
 	flagPromisc   = flag.Bool("promisc", true, "capture in promiscuous mode (requires root)")
-	// https://godoc.org/github.com/google/gopacket/pcap#hdr-PCAP_Timeouts
 	flagTimeout   = flag.Duration("timeout", pcap.BlockForever, "timeout for collecting packet batches")
-	flagLogPath   = flag.String("logpath", "./tls_fingerprint.log", "the path to the logfile")
+	flagLogPath   = flag.String("logpath", "./tls_fingerprinting_statistics.log", "the path to the logfile")
+	flagServerIp  = flag.String("serverIp", "10.1.1.205", "the statistics server ip")
+	flagServerPort= flag.String("serverPort", "30000", "the statistics server port")
+	flagPollingRate= flag.Int("pollingRate", 5, "The rate in which is going to check for new data")
 	logFile 	  = os.Stdout
 )
 
@@ -47,8 +50,12 @@ var (
 func init() {
 	flag.Parse()
 
-	// open log file
+	// open log files
 	logFile, _ = os.OpenFile(*flagLogPath, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+	errlogFile, _ := os.OpenFile("tls_fingerprinting_err.log", os.O_APPEND|os.O_RDWR|os.O_CREATE, 0644)
+
+	log.SetFlags(log.Ldate | log.Ltime)
+	log.SetOutput(errlogFile)
 
 	// setup signal catching
 	sigs := make(chan os.Signal, 1)
@@ -65,6 +72,7 @@ func init() {
 func main() {
 
 	flag.Parse()
+	go statistics.HandleStatistics(flagServerIp, flagServerPort, flagLogPath, *flagPollingRate)
 
 	ja3.Debug = *flagDebug
 
