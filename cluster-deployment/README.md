@@ -30,7 +30,7 @@ vagrant ssh-config
 
 Write down the ports and then run
 ```
-ssh-copy-id vagrant@localhost <port>
+ssh-copy-id vagrant@localhost -p <port>
 # For password use vagrant
 ```
 

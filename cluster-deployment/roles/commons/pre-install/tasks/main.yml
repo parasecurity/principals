@@ -39,9 +39,9 @@
 - name: Installing kubernetes cluster packages
   apt: 
     name:
-      - kubeadm
-      - kubectl
-      - kubelet
+      - kubeadm=1.23.1-00
+      - kubectl=1.23.1-00
+      - kubelet=1.23.1-00
 
 - name: Start kubelet
   service:
