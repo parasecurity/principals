@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: security
+    component: statistics-server
+  name: statistics-server
+  namespace: security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: statistics-server
+  template:
+    metadata:
+      labels:
+        app: security
+        component: statistics-server
+    spec:
+      containers:
+      - name: statistics-server
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+        command:
+          - /home/tsi/bin/statisticsServer
+        args:
+          - -c
+          - $(IP):30000
+          - -ac
+          - $(IP):30001
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /tmp
+            name: logsock
+        ports:
+          - containerPort: 30000
+          - containerPort: 30001
+      volumes:
+      - hostPath:
+          path: /tmp
+          type: Directory
+        name: logsock
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statistics-server
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: statistics-server
+  ports:
+    - port: 30000
+      targetPort: 30000
+      name: client
+    - port: 30001
+      targetPort: 30001
+      name: api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: security
+  name: statistics-client
+  namespace: security
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: statistics-client
+  name: statistics-client
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: statistics-client
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: statistics-client
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.205/24" ],
+          "mac": "c2:b0:57:49:47:f1",
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: security
+        component: statistics-client
+    spec:
+      containers:
+      - name: statistics-client
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+        command: ['bash', '-c', "/home/tsi/bin/statisticsClient -bc $(STATISTICS_SERVER_SERVICE_HOST):$(STATISTICS_SERVER_SERVICE_PORT) -c 10.1.1.205:30002"]
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 30002
+        securityContext:
+          privileged: true
+  updateStrategy:
+    type: RollingUpdate

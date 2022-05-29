@@ -6,7 +6,13 @@ import (
 	"github.com/hpcloud/tail"
 	"sync"
 	"time"
+	"encoding/json"
 )
+
+type receivedData struct {
+	Primitive string  `json:"primitive"`
+	Data 	string   `json:"data"`
+}
 
 func connectServer(ip *string, port *string) net.Conn {
 	serverAddress := *ip + ":" + *port
@@ -19,8 +25,16 @@ func connectServer(ip *string, port *string) net.Conn {
 	return connection
 }
 
-func sendStatistics(connection net.Conn, statistics *string) {
-	_, err := connection.Write([]byte(*statistics))
+func sendStatistics(primitive *string, connection net.Conn, statistics *string) {
+	msg := receivedData{
+		*primitive,
+		*statistics,
+	}
+	jsonMsg, _ := json.Marshal(msg)
+	jsonMsg = append(jsonMsg, []byte("\n")...)
+	log.Println(string(jsonMsg))
+
+	_, err := connection.Write(jsonMsg)
 	if err != nil {
 		log.Println(err)
 		return
@@ -40,7 +54,7 @@ func trackStatistics(logFile *string, data *string, mutex *sync.Mutex) {
 	}
 }
 
-func HandleStatistics(ip *string, port *string, logFile *string, pollingRate int) {
+func HandleStatistics(primitive *string, ip *string, port *string, logFile *string, pollingRate int) {
 	var mutex sync.Mutex
 	data:= ""
 	conn := connectServer(ip, port)
@@ -49,7 +63,7 @@ func HandleStatistics(ip *string, port *string, logFile *string, pollingRate int
 	for {
 		mutex.Lock()
 		if data != "" {
-			sendStatistics(conn, &data)
+			sendStatistics(primitive, conn, &data)
 			data = ""
 		}
 		mutex.Unlock()

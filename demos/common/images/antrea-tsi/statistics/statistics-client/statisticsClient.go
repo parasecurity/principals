@@ -2,44 +2,41 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
-	log "logging"
+	"log"
 	"net"
 	"os"
-	"os/exec"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 )
 
-type command struct {
-	Action   string   `json:"action"`
-	Argument argument `json:"argument"`
-}
-
-type argument struct {
+type sendData struct {
 	NodeName     string `json:"nodename"`
 	Primitive    string `json:"primitive"`
 	Data         string `json:"data"`
 }
 
+type receivedData struct {
+	Primitive string  `json:"primitive"`
+	Data 	string   `json:"data"`
+}
+
 var (
 	args struct {
 		server      *string
-		serverCIDR  *string
 		broadcaster *string
 		logPath     *string
 		noNtpSync     *bool
 	}
 	subnet *net.IPNet
+	nodeName string
+	primitive string 
 )
 
 func init() {
 	args.server = flag.String("c", "localhost:12345", "The server listening connection in format ip:port")
-	args.serverCIDR = flag.String("s", "10.0.0.0/24", "The subnet the server belongs to")
 	args.broadcaster = flag.String("bc", "localhost:23456", "The statistics broadcaster connection that the server will connect to in format ip:port")
 	args.logPath = flag.String("lp", "./statisticsServer.log", "The path to the log file")
 	args.noNtpSync = flag.Bool("no-ntp", false, "Do ntp sync")
@@ -99,8 +96,22 @@ func connectionReader(c net.Conn, toBroadcaster chan []byte) {
 			break
 		}
 
-		log.Println("received data from ", c.RemoteAddr().String(), ": ", string(netData))
-		toBroadcaster <- netData
+		var rData receivedData
+		err = json.Unmarshal(netData, &rData)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		
+		sData := sendData{
+			"node1",
+			rData.Primitive,
+			rData.Data,
+		}
+		jsonMsg, _ := json.Marshal(sData)
+		jsonMsg = append(jsonMsg, []byte("\n")...)
+		log.Println(string(jsonMsg))
+		toBroadcaster <- jsonMsg
 	}
 }
 

@@ -41,7 +41,7 @@ var (
 	flagTimeout   = flag.Duration("timeout", pcap.BlockForever, "timeout for collecting packet batches")
 	flagLogPath   = flag.String("logpath", "./tls_fingerprinting_statistics.log", "the path to the logfile")
 	flagServerIp  = flag.String("serverIp", "10.1.1.205", "the statistics server ip")
-	flagServerPort= flag.String("serverPort", "30000", "the statistics server port")
+	flagServerPort= flag.String("serverPort", "30002", "the statistics server port")
 	flagPollingRate= flag.Int("pollingRate", 5, "The rate in which is going to check for new data")
 	logFile 	  = os.Stdout
 )
@@ -72,7 +72,8 @@ func init() {
 func main() {
 
 	flag.Parse()
-	go statistics.HandleStatistics(flagServerIp, flagServerPort, flagLogPath, *flagPollingRate)
+	primitive:="tls-fingerprinting"
+	go statistics.HandleStatistics(&primitive, flagServerIp, flagServerPort, flagLogPath, *flagPollingRate)
 
 	ja3.Debug = *flagDebug
 

@@ -3,11 +3,12 @@ package main
 import (
 	"bufio"
 	"flag"
-	log "logging"
+	"log"
 	"net"
 	"os"
 	"os/signal"
 	"sync"
+	"encoding/json"
 )
 
 type connections struct {
@@ -25,12 +26,7 @@ var (
 	}
 )
 
-type command struct {
-	Action   string   `json:"action"`
-	Argument argument `json:"argument"`
-}
-
-type argument struct {
+type receivedData struct {
 	NodeName     string `json:"nodename"`
 	Primitive    string `json:"primitive"`
 	Data         string `json:"data"`
@@ -97,22 +93,27 @@ func handleConnection(c net.Conn, c_idx int, connList *connections) {
 	log.Printf("Serving %s, idx %d\n", c.RemoteAddr(), c_idx)
 	reader := bufio.NewReader(c)
 	for {
-		netData := make([]byte, 4096)
-		n, err := reader.Read(netData)
+		netData, err := reader.ReadBytes('\n')
 		if err != nil {
 			log.Println(err)
 			break
 		}
-		log.Println("from ", c.RemoteAddr(), " (", c_idx, ")", ": ", string(netData[:n]))
 
-		connList.l.Lock()
+		var cmd receivedData
+		err = json.Unmarshal(netData, &cmd)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		log.Printf("The received data are" + cmd.NodeName + cmd.Primitive + cmd.Data)
+		// connList.l.Lock()
 
-		connList.l.Unlock()
+		// connList.l.Unlock()
 
 	}
 	c.Close()
 	log.Println("Connection closed ", c.RemoteAddr())
-	closeOutConn(c_idx, connList.c[c_idx], connList)
+	//closeOutConn(c_idx, connList.c[c_idx], connList)
 }
 
 func main() {

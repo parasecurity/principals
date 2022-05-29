@@ -1,7 +1,7 @@
 package main
 
 import (
-	log "logging"
+	"log"
 	"os/exec"
 	"bytes"
 )
