@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
-
+	"time"
 	kubernetes "api/pkg/kubernetes"
 )
 
@@ -61,6 +61,27 @@ func CreateTCP(url *string) net.Listener {
 	return listener
 }
 
+func ConnectServer(url *string) net.Conn {
+	retries := 0
+	for retries < 10 {
+		c, err := net.Dial("tcp4", *url)
+		if err == nil {
+			return c
+		}
+
+		log.Println(err)
+		retries++
+		if retries < 10 {
+			log.Println("Retrying")
+		} else {
+			log.Println("Failed to connect to statistics server")
+		}
+		time.Sleep(5 * time.Second)
+	}
+
+	return nil
+}
+
 func PrintTLSState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State <<<<<<<<<<<<<<<<")
 	state := conn.ConnectionState()
@@ -81,7 +102,7 @@ func PrintTLSState(conn *tls.Conn) {
 	log.Print(">>>>>>>>>>>>>>>> State End <<<<<<<<<<<<<<<<")
 }
 
-func handleConnection(c net.Conn, registry *string) {
+func handleConnection(c net.Conn, registry *string, conn net.Conn) {
 	var result string
 	// Recieve data from client
 	reader := bufio.NewReader(c)
@@ -96,7 +117,7 @@ func handleConnection(c net.Conn, registry *string) {
 	log.Println("Command received:", dataString)
 	command := kubernetes.ProcessInput(netData[:size])
 	if command.Action != "Error" {
-		result = kubernetes.Execute(command, registry)
+		result = kubernetes.Execute(command, registry, conn)
 	} else {
 		result = "fail"
 	}
@@ -110,7 +131,7 @@ func handleConnection(c net.Conn, registry *string) {
 	c.Close()
 }
 
-func ListenAndServer(ln net.Listener, registry *string) {
+func ListenAndServer(ln net.Listener, registry *string, conn net.Conn) {
 	defer ln.Close()
 	for {
 		c, err := ln.Accept()
@@ -119,6 +140,6 @@ func ListenAndServer(ln net.Listener, registry *string) {
 			break
 		}
 		log.Printf("Connection open: %s", c.RemoteAddr())
-		go handleConnection(c, registry)
+		go handleConnection(c, registry, conn)
 	}
 }

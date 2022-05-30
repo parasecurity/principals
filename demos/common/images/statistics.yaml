@@ -108,6 +108,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         imagePullPolicy: Always
         ports:
           - containerPort: 30002
@@ -115,3 +119,75 @@ spec:
           privileged: true
   updateStrategy:
     type: RollingUpdate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: security
+  labels:
+    app: security
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: api
+  template:
+    metadata:
+      labels:
+        app: security
+        component: api
+    spec:
+      containers:
+      - env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        name: api
+        image: 10.8.8.2:5000/tsi-api:v1.0.1
+        imagePullPolicy: Always 
+        volumeMounts:
+          - mountPath: /home/.kube/
+            name: kubeconfig
+          - mountPath: /tmp
+            name: logsock
+        command:
+          - ./server
+        args:
+          - -ll=$(IP):8001
+          - -r=10.8.8.2
+          - -sa=$(STATISTICS_SERVER_SERVICE_HOST):30001
+        ports:
+        - containerPort: 8000
+        - containerPort: 8001
+      nodeSelector:
+        dedicated: master
+      volumes:
+      - hostPath:
+          path: /home/vagrant/.kube/
+          type: Directory
+        name: kubeconfig
+      - hostPath:
+          path: /tmp
+          type: Directory
+        name: logsock
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: api
+  clusterIP: 10.104.54.11
+  ports:
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+      name: local-api

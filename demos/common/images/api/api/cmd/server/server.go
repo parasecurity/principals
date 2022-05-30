@@ -18,11 +18,13 @@ var (
 	key       *string
 	logPath   *string
 	registry  *string
+	statisticsAddress *string 
 )
 
 func init() {
 	listen = flag.String("l", "localhost:8000", "The server url to listen e.g. localhost:8000")
 	listenTCP = flag.String("ll", "10.244.0.9:8001", "The ip to listen requests from inside the cluster")
+	statisticsAddress = flag.String("sa", "1.1.1.1:30001", "The ip and port address of the statistics server")
 	ca = flag.String("ca", "./internal/ca.crt", "The file path to ca certificate e.g. ./ca.crt")
 	crt = flag.String("crt", "./internal/server.crt", "The file path to server crt certificate e.g. ./server.crt")
 	key = flag.String("key", "./internal/server.key", "The file path to server key e.g. ./server.key")
@@ -56,7 +58,8 @@ func main() {
 
 	listenerTLS := utils.CreateTLS(ca, crt, key, listen)
 	listenerTCP := utils.CreateTCP(listenTCP)
+	statisticsConn := utils.ConnectServer(statisticsAddress)
 
-	go utils.ListenAndServer(listenerTLS, registry)
-	utils.ListenAndServer(listenerTCP, registry)
+	go utils.ListenAndServer(listenerTLS, registry, statisticsConn)
+	utils.ListenAndServer(listenerTCP, registry, statisticsConn)
 }

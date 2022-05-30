@@ -1,6 +1,10 @@
 package kubernetes
 
-func Execute(command Command, registry *string) string {
+import (
+	"net"
+)
+
+func Execute(command Command, registry *string, conn net.Conn) string {
 	var result string
 	if command.Action == "create" {
 		Create(command, registry)
@@ -9,7 +13,7 @@ func Execute(command Command, registry *string) string {
 	} else if command.Action == "execute" {
 		Run(command, registry)
 	} else if command.Action == "statistics" {
-		Statistics(command)
+		Statistics(command, conn)
 	}
 	result = "ok"
 	return result

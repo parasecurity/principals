@@ -72,7 +72,7 @@ func init() {
 func main() {
 
 	flag.Parse()
-	primitive:="tls-fingerprinting"
+	primitive:="tls-fingerprint"
 	go statistics.HandleStatistics(&primitive, flagServerIp, flagServerPort, flagLogPath, *flagPollingRate)
 
 	ja3.Debug = *flagDebug

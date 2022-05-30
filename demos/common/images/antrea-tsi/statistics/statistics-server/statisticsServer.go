@@ -11,11 +11,17 @@ import (
 	"encoding/json"
 )
 
-type connections struct {
-	c map[int]net.Conn
-	data map[int]string
-	i int
-	l sync.RWMutex
+type nodesData struct {
+	nodes map[string]bool
+	data map[string]string
+	nodeCounter int
+}
+
+type primitiveData struct {
+	primitives map[string]bool
+	data map[string]nodesData
+	primitiveCounter int
+	mutex sync.RWMutex
 }
 
 var (
@@ -26,10 +32,46 @@ var (
 	}
 )
 
-type receivedData struct {
+type statisticsData struct {
 	NodeName     string `json:"nodename"`
 	Primitive    string `json:"primitive"`
 	Data         string `json:"data"`
+}
+
+type APIcommand struct {
+	NodeName     string `json:"nodename"`
+	Primitive    string `json:"primitive"`
+}
+
+func sendData(c net.Conn, cmd APIcommand, data string) {
+	resp := statisticsData{
+		cmd.NodeName,
+		cmd.Primitive,
+		data,
+	}
+	jsonMsg, err := json.Marshal(resp)
+	if err != nil {
+		log.Println(err)
+	}
+	jsonMsg = append(jsonMsg, []byte("\n")...)
+	log.Println(string(jsonMsg))
+	_, err = c.Write(jsonMsg)
+	if err != nil {
+		log.Println(err)
+	}
+}
+
+func initNodeData(nodeName string, data string) nodesData {
+	var tmpNodeData nodesData
+
+	tmpNodeData.nodes = make(map[string]bool)
+	tmpNodeData.data = make(map[string]string)
+	tmpNodeData.nodeCounter = 0
+
+	tmpNodeData.nodes[nodeName] = true
+	tmpNodeData.data[nodeName] = data
+	tmpNodeData.nodeCounter += 1
+	return tmpNodeData
 }
 
 func init() {
@@ -60,7 +102,7 @@ func init() {
 	}()
 }
 
-func handleAPIConnection(c net.Conn, connList *connections) {
+func handleAPIConnection(c net.Conn, primitiveList *primitiveData) {
 	log.Printf("Serving API %s\n", c.RemoteAddr())
 	reader := bufio.NewReader(c)
 	for {
@@ -71,26 +113,38 @@ func handleAPIConnection(c net.Conn, connList *connections) {
 		}
 		log.Println("from API ", c.RemoteAddr(), ": ", string(netData))
 
+		var cmd APIcommand
+		err = json.Unmarshal(netData, &cmd)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
 		// whenever the API server sends data we reply with all the statistics
-		// connList.l.RLock()
-		// for idx, conn := range connList.c {
-		// 	_, err := conn.Write([]byte(netData))
-		// 	if err != nil {
-		// 		connList.l.RUnlock()
-		// 		connList.l.Lock()
-		// 		connList.l.Unlock()
-		// 		connList.l.RLock()
-		// 	}
-		// }
-		// connList.l.RUnlock()
+		primitiveList.mutex.Lock()
+		found := false
+		if primitiveList.primitives[cmd.Primitive] {
+			reqPrimitive := primitiveList.data[cmd.Primitive]
+			for node, data := range reqPrimitive.data {
+				if node == cmd.NodeName {
+					sendData(c, cmd, data)
+					found = true
+					break
+				}
+			}
+		}
+		if !found {
+			sendData(c, cmd, "")
+		}
+		primitiveList.mutex.Unlock()
 	}
 	c.Close()
 	log.Println("API Connection closed ", c.RemoteAddr())
 	// if the API server connection is closed we let the handler terminate
 }
 
-func handleConnection(c net.Conn, c_idx int, connList *connections) {
-	log.Printf("Serving %s, idx %d\n", c.RemoteAddr(), c_idx)
+func handleConnection(c net.Conn, primitiveList *primitiveData) {
+	log.Printf("Serving %s, idx\n", c.RemoteAddr())
 	reader := bufio.NewReader(c)
 	for {
 		netData, err := reader.ReadBytes('\n')
@@ -99,21 +153,33 @@ func handleConnection(c net.Conn, c_idx int, connList *connections) {
 			break
 		}
 
-		var cmd receivedData
+		var cmd statisticsData
 		err = json.Unmarshal(netData, &cmd)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		log.Printf("The received data are" + cmd.NodeName + cmd.Primitive + cmd.Data)
-		// connList.l.Lock()
-
-		// connList.l.Unlock()
+		log.Printf("The received data are " + cmd.NodeName + " " + cmd.Primitive + " " + cmd.Data)
+		
+		primitiveList.mutex.Lock()
+		// if this primitive type exists
+		if primitiveList.primitives[cmd.Primitive] {
+			if primitiveList.data[cmd.Primitive].nodes[cmd.NodeName] {
+				primitiveList.data[cmd.Primitive].data[cmd.NodeName] += cmd.Data
+			} else {
+				primitiveList.data[cmd.Primitive] = initNodeData(cmd.NodeName, cmd.Data)
+			}
+		} else {
+			primitiveList.primitives[cmd.Primitive] = true
+			primitiveList.data[cmd.Primitive] = initNodeData(cmd.NodeName, cmd.Data)
+			primitiveList.primitiveCounter++;
+		}
+		primitiveList.mutex.Unlock()
 
 	}
 	c.Close()
 	log.Println("Connection closed ", c.RemoteAddr())
-	//closeOutConn(c_idx, connList.c[c_idx], connList)
+	//closeOutConn(c_idx, nodeList.c[c_idx], nodeList)
 }
 
 func main() {
@@ -124,11 +190,11 @@ func main() {
 	}
 	defer listener.Close()
 
-	// map of all flow server connections
-	connList := new(connections)
-	connList.c = make(map[int]net.Conn)
-	connList.i = 0
-
+	primitiveList := new(primitiveData)
+	primitiveList.primitives = make(map[string]bool)
+	primitiveList.data = make(map[string]nodesData)
+	primitiveList.primitiveCounter = 0
+	
 	go func() {
 		for {
 			c, err := listener.Accept()
@@ -137,15 +203,11 @@ func main() {
 				return
 			}
 
-			connList.l.Lock()
-			connList.c[connList.i] = c
-			go handleConnection(c, connList.i, connList)
-			connList.i++
-			connList.l.Unlock()
+			go handleConnection(c, primitiveList)
 		}
 	}()
 
-	// port to listen to input connections (API server)
+	// port to listen to input nodesData (API server)
 	APIlistener, err := net.Listen("tcp4", *args.APIstatisticsAddress)
 	if err != nil {
 		log.Println(err)
@@ -161,6 +223,6 @@ func main() {
 			return
 		}
 
-		go handleAPIConnection(c, connList)
+		go handleAPIConnection(c, primitiveList)
 	}
 }

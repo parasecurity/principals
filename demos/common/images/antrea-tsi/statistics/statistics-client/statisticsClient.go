@@ -62,6 +62,9 @@ func init() {
 		log.Printf("RECEIVED SIGNAL: %s", s)
 		os.Exit(1)
 	}()
+
+	// get node name
+	nodeName = os.Getenv("NODE_NAME")
 }
 
 func connectionWriter(c net.Conn, toBroadcaster chan []byte) {
@@ -76,7 +79,6 @@ func connectionWriter(c net.Conn, toBroadcaster chan []byte) {
 		_, err := c.Write(message)
 		if err != nil {
 			log.Println(err)
-			os.Exit(1)
 		}
 	}
 }
@@ -104,7 +106,7 @@ func connectionReader(c net.Conn, toBroadcaster chan []byte) {
 		}
 		
 		sData := sendData{
-			"node1",
+			nodeName,
 			rData.Primitive,
 			rData.Data,
 		}
