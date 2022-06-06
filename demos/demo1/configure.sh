@@ -11,6 +11,7 @@ REGISTRY=$REGISTRY_IP:$REGISTRY_PORT
 awk_script=" {
 	sub(\"%ANTREA_TSI%\", \"$REGISTRY/$ANTREA_TSI\", \$0);
 	sub(\"%TSI_LOGGING%\", \"$REGISTRY/$TSI_LOGGING\", \$0);
+	sub(\"%TSI_STATISTICS%\", \"$REGISTRY/$TSI_LOGGING\", \$0);
 	sub(\"%TSI_API%\", \"$REGISTRY/$TSI_API\", \$0);
 	sub(\"%TSI_ATTACKS%\", \"$REGISTRY/$TSI_ATTACKS\", \$0);
 	sub(\"%REGISTRY%\", \"$REGISTRY\", \$0);
