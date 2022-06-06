@@ -1,0 +1,364 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: security
+  name: flow-server
+  namespace: security
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-host-local
+  namespace: security
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "macvlan",
+      "master": "enp1s0",
+      "mode": "bridge",
+      "ipam": {
+          "type": "host-local",
+          "subnet": "10.1.1.0/24",
+          "rangeStart": "10.1.1.10",
+          "rangeEnd": "10.1.1.200"      
+        }
+    }'
+---
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: macvlan-conf
+  namespace: security
+spec:
+  config: '{
+    "cniVersion": "0.3.1",
+    "type": "macvlan",
+    "capabilities": { "ips": true },
+    "master": "enp1s0",
+    "mode": "bridge",
+    "ipam": {
+    "type": "static",
+    "routes": [
+    {
+    "dst": "0.0.0.0/0",
+    "gw": "10.1.1.1"
+    }
+    ]
+    }
+    }'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: security
+    component: flow-broadcaster
+  name: flow-broadcaster
+  namespace: security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: flow-broadcaster
+  template:
+    metadata:
+      labels:
+        app: security
+        component: flow-broadcaster
+    spec:
+      containers:
+      - name: flow-broadcaster
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+        command:
+          - /home/tsi/bin/broadcaster
+        args:
+          - -c
+          - $(IP):30000
+          - -ac
+          - $(IP):30001
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 30000
+          - containerPort: 30001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flow-broadcaster
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: flow-broadcaster
+  ports:
+    - port: 30000
+      targetPort: 30000
+      name: flow
+    - port: 30001
+      targetPort: 30001
+      name: api
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: flow-server
+  name: flow-server
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: flow-server
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: flow-server
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.201/24" ],
+          "mac": "c2:b0:57:49:47:f1",
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: security
+        component: flow-server
+    spec:
+      containers:
+      - name: flow-server
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.0
+        command: ['bash', '-c', "/home/tsi/bin/server -bc $(FLOW_BROADCASTER_SERVICE_HOST):$(FLOW_BROADCASTER_SERVICE_PORT_FLOW) -c 10.1.1.201:30002 -s $(ip a | grep inet | head -2 | tail -1 | awk '{print $2}')"]
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 30002
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - mountPath: /var/run/openvswitch
+            name: host-var-run-antrea
+            subPath: openvswitch
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      serviceAccountName: flow-server
+      tolerations:
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+      volumes:
+        - hostPath:
+            path: /var/run/antrea
+            type: DirectoryOrCreate
+          name: host-var-run-antrea
+  updateStrategy:
+    type: RollingUpdate
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: security
+  labels:
+    app: security
+    component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: api
+  template:
+    metadata:
+      labels:
+        app: security
+        component: api
+    spec:
+      containers:
+      - env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        name: api
+        image: 10.8.8.2:5000/tsi-api:v1.0.0
+        imagePullPolicy: Always 
+        volumeMounts:
+          - mountPath: /home/.kube/
+            name: kubeconfig
+        command:
+          - ./server
+        args:
+          - -ll=$(IP):8001
+          - -r=147.27.39.116
+        ports:
+        - containerPort: 8000
+        - containerPort: 8001
+      nodeSelector:
+        dedicated: master
+      volumes:
+      - hostPath:
+          path: /home/gntousakis/.kube/
+          type: DirectoryOrCreate
+        name: kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: api
+  clusterIP: 10.104.54.11
+  ports:
+    - port: 8001
+      targetPort: 8001
+      protocol: TCP
+      name: local-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: security
+    component: statistics-server
+  name: statistics-server
+  namespace: security
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security
+      component: statistics-server
+  template:
+    metadata:
+      labels:
+        app: security
+        component: statistics-server
+    spec:
+      containers:
+      - name: statistics-server
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+        command:
+          - /home/tsi/bin/statisticsServer
+        args:
+          - -c
+          - $(IP):30000
+          - -ac
+          - $(IP):30001
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        imagePullPolicy: Always
+        volumeMounts:
+          - mountPath: /tmp
+            name: logsock
+        ports:
+          - containerPort: 30000
+          - containerPort: 30001
+      volumes:
+      - hostPath:
+          path: /tmp
+          type: Directory
+        name: logsock
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statistics-server
+  namespace: security
+spec:
+  type: ClusterIP
+  selector:
+    app: security
+    component: statistics-server
+  ports:
+    - port: 30000
+      targetPort: 30000
+      name: client
+    - port: 30001
+      targetPort: 30001
+      name: api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: security
+  name: statistics-client
+  namespace: security
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: security
+    component: statistics-client
+  name: statistics-client
+  namespace: security
+spec:
+  selector:
+    matchLabels:
+      app: security
+      component: statistics-client
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: statistics-client
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.205/24" ],
+          "mac": "c2:b0:57:49:47:f1",
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: security
+        component: statistics-client
+    spec:
+      containers:
+      - name: statistics-client
+        image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+        command: ['bash', '-c', "/home/tsi/bin/statisticsClient -bc $(STATISTICS_SERVER_SERVICE_HOST):$(STATISTICS_SERVER_SERVICE_PORT) -c 10.1.1.205:30002"]
+        env:
+        - name: IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 30002
+        securityContext:
+          privileged: true
+  updateStrategy:
+    type: RollingUpdate
