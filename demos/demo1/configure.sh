@@ -13,6 +13,7 @@ awk_script=" {
 	sub(\"%TSI_LOGGING%\", \"$REGISTRY/$TSI_LOGGING\", \$0);
 	sub(\"%TSI_STATISTICS%\", \"$REGISTRY/$TSI_STATISTICS\", \$0);
 	sub(\"%TSI_API%\", \"$REGISTRY/$TSI_API\", \$0);
+	sub(\"%TSI_API_CLIENT%\", \"$REGISTRY/$TSI_API_CLIENT\", \$0);
 	sub(\"%TSI_ATTACKS%\", \"$REGISTRY/$TSI_ATTACKS\", \$0);
 	sub(\"%REGISTRY%\", \"$REGISTRY\", \$0);
 	sub(\"%REGISTRY_IP%\", \"$REGISTRY_IP\", \$0);
