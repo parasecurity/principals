@@ -9,11 +9,11 @@ app.get('/', function (req, res) {
     res.render("index")
 });
 
-app.get('/form', function (req, res) {
-    res.render("form")
+app.get('/command', function (req, res) {
+    res.render("command")
 });
 
-app.post('/form', urlencodedParser, function (req, res) {
+app.post('/command', urlencodedParser, function (req, res) {
     res.render("finish", {data: req.body});
 });
 

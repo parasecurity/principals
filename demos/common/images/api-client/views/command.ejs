@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tamelet Handler</title>
+    <link rel="stylesheet" href="/form.css">
+</head>
+
+<body>
+
+    <div class="content">
+        <div id="conference-logo">
+            <div class="dot"></div>
+            <div class="half-circle"></div>
+        </div>
+
+        <h1>Tamelet Handler</h1>
+        <p>Create and send the command for the execution on the handler.</p>
+
+        <form method="post" action="/command">
+            <fieldset>
+                <legend>Command</legend>
+                <div class="box1">
+                    <label for="action">Action</label>
+                    <select class="selectpicker" name="action">
+                        <optgroup label="Select Table">
+                            <option name="" value="0">Select table</option>
+                            <option name="table1" value="create">Create</option>
+                            <option name="table2" value="delete">Delete</option>
+                            <option name="table3" value="execute">Execute</option>
+                            <option name="table4" value="statistics">Statistics</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="box1">
+                    <label for="primitive">Primitive</label>
+                    <select class="selectpicker" name="primitive">
+                        <optgroup label="Select Table">
+                            <option name="" value="0">Select table</option>
+                            <option name="table1" value="canary">Canary</option>
+                            <option name="table2" value="detector">Detector</option>
+                            <option name="table3" value="dga">DGA</option>
+                            <option name="table4" value="honeypot">Honeypot</option>
+                            <option name="table5" value="snort">Snort</option>
+                            <option name="table6" value="analyser">Analyser</option>
+                            <option name="table7" value="dns-stitching">DNS Flow-Stiching</option>
+                            <option name="table8" value="tls-fingerprint">TLS Fingerprinting</option>
+
+                        </optgroup>
+                    </select>
+                </div>
+                <legend>Arguments (Optional) in JSON format</legend>
+                <textarea id="message" name="arguments" cols="50" rows="4"  tabindex="9"></textarea>
+            </fieldset>
+            <button type="submit" id="submit" name="submit" tabindex="10">Submit</button>
+        </form>
+    </div>
+
+    <script src="/validate.js"></script>
+</body>
+
+</html>
