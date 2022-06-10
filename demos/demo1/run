@@ -5,7 +5,7 @@
 #
 # 
 set -euo pipefail
-source ../common/scripts/funcs.sh
+source ../../scripts/funcs.sh
 
 check() {
 	msg "Checking requirements"

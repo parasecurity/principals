@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source ../common/scripts/funcs.sh
+source ../../scripts/funcs.sh
 
 CONF_DIR=conf
 ROOT_DIR=`git rev-parse --show-toplevel`
