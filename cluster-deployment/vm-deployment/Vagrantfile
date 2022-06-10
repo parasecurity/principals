@@ -1,0 +1,61 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Define number of worker nodes.
+workerNodes = 1
+
+# Initial port to check for ssh port forwarding
+basePort = 62222
+
+# Generate unique IPs for worker nodes.
+# The network is 10.8.8.0/24
+# IPs start from 10.8.8.10 for worker nodes
+# No check is added for more than 245 worker nodes...
+def genIP(index)
+  return "10.8.8.%d" % (10 + index)
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "bento/ubuntu-20.04"
+  config.vm.usable_port_range = (62222..65535) # Solve used port issue
+  config.vm.network "forwarded_port", guest: 22, host: basePort, id: "ssh", auto_correct: true
+
+  # Configure VM resources
+  # This is provider specific!
+  # See also, https://www.vagrantup.com/docs/providers/virtualbox
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "8192"
+    vb.cpus = 8
+  end
+
+  # Master node unique setup:
+  #
+  # - hostname
+  # - Fixed IP for the private network, 10.8.8.2
+  config.vm.define "master" do |master|
+    master.vm.hostname = "k8s-master"
+    master.vm.network "private_network", ip: "10.8.8.2"
+  end
+
+  # Worker nodes unique setup:
+  #
+  # - hostname
+  # - Fixed IP for the private network
+  (0..(workerNodes - 1)).each do |i|
+    config.vm.define "worker#{i}" do |worker|
+      worker.vm.hostname = "k8s-worker#{i}"
+      worker.vm.network "private_network", ip: genIP(i)
+    end
+  end
+ 
+  # VM provisioning using ansible
+  # In ubuntu 20.04 there is no /usr/bin/python, added extra var to fix this
+  # Note that it is better to also install ansible at host using pip3 to avoid
+  # other problems also... I guess we would not even need the extra var.
+  config.vm.provision :ansible do |ansible|
+    ansible.playbook = "provision.yml"
+    ansible.extra_vars = {
+      ansible_python_interpreter: "/usr/bin/python3"
+    }
+  end
+end

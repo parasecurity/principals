@@ -1,0 +1,19 @@
+---
+
+- name: Initial setup
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+
+    - name: Install dev utils
+      apt:
+        name:
+          - git
+          - tig
+          - vim
+          - htop
+          - jq
+          - libpcap-dev
+        state: latest
+        update_cache: yes
