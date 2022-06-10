@@ -11,18 +11,20 @@ PRINCIPALS runs over kubernetes. It has multiple images that contain cybersecuri
 ### Kubernetes deployment
 
 To deploy kubernetes you need to have some VMs or physical machines available. 
-For the kubernete deployment we use ansible.
+If you do not have some running VMs or physical machines check out the following guide [README](https://github.com/parasecurity/principals/blob/main/cluster-deployment/vm-deployment/README.md) in the [vm-deployment](https://github.com/parasecurity/principals/tree/main/cluster-deployment/vm-deployment) folder.
+
+For the kubernetes deployment we use ansible.
 
 ```Shell
 git clone git@github.com:parasecurity/principals.git
 cd principals
-cd kubernetes-deployment
+cd cluster-deployment/kubernetes-deployment
 vim hosts.ini # Configure the IP addresses for master/workers nodes
 vim group_vars/all.yml # Configure variables for deployment
 vim group_vars/kube_cluster.yml # Configure the master node IP address
 ansible-playbook start.yml
 ```
 
-For a more detailed guide check out the following [README](https://github.com/parasecurity/principals/blob/main/cluster-deployment/README.md).
+For a more detailed guide check out the following [README](https://github.com/parasecurity/principals/blob/main/cluster-deployment/kubernetes-deployment/README.md).
 
 
