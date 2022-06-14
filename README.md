@@ -2,7 +2,7 @@
 
 > Presenting PRINCIPALS a novel architecture for introducing safe programmability and adaptability in 5G networks, enabling more secure networks and endpoints relative to the current state of the art.
 
-Quick Jump: [Installation](#installation)
+Quick Jump: [Installation](#installation) | [Primitives](#primitives)
 
 ## Installation
 
@@ -27,4 +27,4 @@ ansible-playbook start.yml
 
 For a more detailed guide check out the following [README](https://github.com/parasecurity/principals/blob/main/cluster-deployment/kubernetes-deployment/README.md).
 
-
+## Primitives
