@@ -2,7 +2,7 @@
 
 > Presenting PRINCIPALS a novel architecture for introducing safe programmability and adaptability in 5G networks, enabling more secure networks and endpoints relative to the current state of the art.
 
-Quick Jump: [Installation](#installation) | [Primitives](#primitives)
+Quick Jump: [Installation](#installation) | [Primitives](#primitives) | [Demos](#demos)
 
 ## Installation
 
@@ -28,3 +28,12 @@ ansible-playbook start.yml
 For a more detailed guide check out the following [README](https://github.com/parasecurity/principals/blob/main/cluster-deployment/kubernetes-deployment/README.md).
 
 ## Primitives
+
+It contains a list of different security primitives packaged in a docker container, bundled with yamls to deploy on a 5G installation quickly.
+
+### Domain Analyser
+
+The domain [analyzer](https://github.com/parasecurity/principals/tree/main/images/analyser) primitive contains a python script that analyses incoming traffic. The analyzer checks against a list a provider list of domains, and when a domain match occurs, it forwards it to a third server.
+ 
+
+## Demos
