@@ -37,6 +37,15 @@ For the _DDoS with link level canary demo_, pass the following arguments:
 {\"action\":\"create\", \"target\": \"detector-link\", \"arguments\": [\"-c=block\"]}
 
 ```
+## For 5G demo
+```sh
+# Build the gnbsim image and the oai-dnn images
+# And run
+./charts/slice_confx.sh 1 # The 1 is in the number of users
+
+# To remove 
+./charts/undeploy_all.sh 
+```
 
 For more information run:
 ```sh
