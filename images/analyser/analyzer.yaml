@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: myanalyzerpod
+  name: analyzer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: myanalyzerpod
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: flow-server
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.202/24" ],
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels:
+        app: myanalyzerpod
+    spec:
+      containers:
+        -
+          command: ['sleep','infinity']
+          image: 10.10.8.2:5000/analyzer
+          imagePullPolicy: Always
+          name: analyzer
+          ports:
+            -
+              containerPort: 8080
+      initContainers:
+        -
+          command: ['sh','-c','node /home/mirroring.js']
+          image: 10.10.8.2:5000/mirroringjs
+          name: init-mirroring
+          volumeMounts:
+          - mountPath: /var/run/openvswitch
+            name : host-var-run-antrea
+            subPath: openvswitch

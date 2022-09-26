@@ -1,0 +1,47 @@
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  labels: 
+    app: mydgapod
+  name: dgadtctr
+spec: 
+  replicas: 1
+  selector: 
+    matchLabels: 
+      app: mydgapod
+  template: 
+    metadata: 
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "macvlan-conf",
+          "ips": [ "10.1.1.205/24" ],
+          "gateway": [ "10.1.1.1" ]
+          }]'
+      labels: 
+        app: mydgapod
+    spec:
+      volumes:
+      - hostPath:
+          path: /var/run/antrea
+          type: DirectoryOrCreate
+        name: host-var-run-antrea 
+      containers: 
+        - 
+          command: ['sleep','infinity']
+          image: 10.10.8.2:5000/upddgajs
+          imagePullPolicy: Always
+          name: dgadtctr
+          ports: 
+            - 
+              containerPort: 8080
+      initContainers: 
+        - 
+          command: ['sh','-c','node /home/mirroring.js']
+          image: 10.10.8.2:5000/dgamirr
+          name: init-mirroring
+          volumeMounts: 
+          - mountPath: /var/run/openvswitch
+            name : host-var-run-antrea
+            subPath: openvswitch
+
