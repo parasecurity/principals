@@ -19,5 +19,5 @@ image: server client
 	docker build . -t tsi-api:v1.0.1
 
 push:
-	docker tag tsi-api:v1.0.1 localhost:5000/tsi-api:v1.0.1
-	docker push localhost:5000/tsi-api:v1.0.1
+	docker tag tsi-api:v1.0.1 10.4.1.2:5000/tsi-api:v1.0.1
+	docker push 10.4.1.2:5000/tsi-api:v1.0.1

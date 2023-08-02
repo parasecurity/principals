@@ -12,6 +12,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"context"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -36,6 +37,10 @@ var (
 	activeConnsLock sync.RWMutex
 	monitoredIPs    []string
 	monitorAll      bool
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
 )
 
 type message map[string]interface{}
@@ -100,21 +105,18 @@ func deviceExists(name string) bool {
 	return false
 }
 
-func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
-
+func getPacketInfo(packet gopacket.Packet, warn chan net.IP ,ctx context.Context) {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
 
-		activeConnsLock.RLock()
 		connStr := ip.SrcIP.String() + ":" + ip.DstIP.String()
 		conn, ok := activeConns[connStr]
-		activeConnsLock.RUnlock()
 
 		if !ok {
 			log.Println("new connection: ", connStr)
 			newconn := make(chan gopacket.Packet)
-			go checkConnection(newconn, warn, ip.SrcIP, connStr)
+			go checkConnection(ctx, newconn, warn, ip.SrcIP, connStr)
 
 			activeConnsLock.Lock()
 			activeConns[connStr] = newconn
@@ -127,8 +129,8 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP) {
 	}
 }
 
-func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
-	checkTimer := time.NewTicker(500 * time.Millisecond)
+func checkConnection(ctx context.Context, conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
+	checkTimer := time.NewTicker(200 * time.Millisecond)
 	defer checkTimer.Stop()
 
 	timeoutTimer := time.NewTicker(10 * time.Second)
@@ -154,14 +156,8 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			}
 			used = true
 			applicationLayer := p.ApplicationLayer()
-			// applicationLayer := p.LinkLayer()
-			// applicationLayer := p.NetworkLayer()
-			// applicationLayer := p.TransportLayer()
 			
 			if (applicationLayer != nil || *args.syn) {
-
-				//payloadStr := string(applicationLayer.Payload())
-				// Search for a string inside the payload
 				count++
 			}
 			//debug
@@ -175,9 +171,10 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 			}
 
 		case <-checkTimer.C:
-			if count > *args.threshold {
+			if float64(count) * 2.5 > float64(*args.threshold) {
 				log.Println("Warning: ", connStr, " count: ", count)
 				warn <- srcIP
+				return
 			}
 			log.Println("count: ", connStr, " count: ", count)
 			count = 0
@@ -187,11 +184,15 @@ func checkConnection(conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, 
 				return
 			}
 			used = false
+		case <-ctx.Done():
+            // If the context is cancelled, return from the goroutine
+            log.Println("Context cancelled, stopping checkConnection goroutine...")
+            return
 		}
 	}
 }
 
-func flowServer(warn chan net.IP) {
+func flowServer(ctx context.Context, warn chan net.IP) {
 	conn, err := net.Dial("tcp", *args.flowServer)
 	if err != nil {
 		log.Println(err)
@@ -199,34 +200,42 @@ func flowServer(warn chan net.IP) {
 	}
 	defer conn.Close()
 
-	for srcIP := range warn {
-		msg := &message{
-			"Action": *args.command,
-			"Argument": map[string]interface{}{
-				"Ip": srcIP.String(),
-			},
-		}
-		jsonMsg, _ := json.Marshal(msg)
-		jsonMsg = append(jsonMsg, []byte("\n")...)
-
-		log.Println(string(jsonMsg))
-
-		_, err := conn.Write(jsonMsg)
-		for err != nil {
-			log.Println(err)
-			log.Println("Reopening connection")
-			conn.Close()
-			conn, err = net.Dial("tcp", *args.flowServer)
-			if err != nil {
-				log.Println(err)
-				continue
+	for {
+		select {
+		case srcIP := <-warn:
+			msg := &message{
+				"Action": *args.command,
+				"Argument": map[string]interface{}{
+					"Ip": srcIP.String(),
+				},
 			}
-			_, err = conn.Write(jsonMsg)
+			jsonMsg, _ := json.Marshal(msg)
+			jsonMsg = append(jsonMsg, []byte("\n")...)
+
+			log.Println(string(jsonMsg))
+
+			_, err := conn.Write(jsonMsg)
+			for err != nil {
+				log.Println(err)
+				log.Println("Reopening connection")
+				conn.Close()
+				conn, err = net.Dial("tcp", *args.flowServer)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+				_, err = conn.Write(jsonMsg)
+			}
+		case <-ctx.Done():
+			// If the context is cancelled, return from the goroutine
+			log.Println("Context cancelled, stopping flowServer goroutine...")
+			return
 		}
 	}
 }
 
-func updateMonitoredIPs(handle *pcap.Handle) {
+
+func updateMonitoredIPs(ctx context.Context, handle *pcap.Handle) {
 	// Initialy BPF filter to track the `lo` network
 	var bpffilter string = "net 127.0.0.0"
 	if err := handle.SetBPFFilter(bpffilter); err != nil {
@@ -251,88 +260,82 @@ func updateMonitoredIPs(handle *pcap.Handle) {
 		}
 		reader := bufio.NewReader(c)
 		for {
-			netData, err := reader.ReadString('\n')
-			if err != nil {
-				log.Println(err)
-				break
-			}
-
-			netIP := strings.TrimSpace(string(netData))
-			log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
-
-			if netIP == "all" {
-				monitorAll = true
-			} else {
-				if !arrayContains(monitoredIPs, netIP) {
-					monitorAll = false
-					monitoredIPs = append(monitoredIPs, netIP)
+			select {
+			case <-ctx.Done():
+				// If the context is cancelled, return from the goroutine
+				return
+			default:
+				netData, err := reader.ReadString('\n')
+				if err != nil {
+					log.Println(err)
+					break
 				}
-			}
-			bpffilter = ""
-			if !monitorAll {
-				if len(monitoredIPs) == 0 {
-					// monitor loopback, zero traffic inside container
-					bpffilter = "net 127.0.0.0"
+
+				// Print the current time in milliseconds when a message is received
+				currentTime := time.Now()
+				log.Println("Received message at: ", currentTime.UnixNano()/int64(time.Millisecond))
+
+				netIP := strings.TrimSpace(string(netData))
+				log.Println("Received IP from ", c.RemoteAddr().String(), ": ", netIP)
+
+				if netIP == "all" {
+					monitorAll = true
 				} else {
-					// monitor array of ips
-					for n, ip := range monitoredIPs {
-						if n == 0 {
-							bpffilter = "((udp or tcp) and dst host  " + ip + " )"
-						} else {
-							bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
-						}
+					if !arrayContains(monitoredIPs, netIP) {
+						monitorAll = false
+						monitoredIPs = append(monitoredIPs, netIP)
 					}
 				}
-			} else {
-				// monitor all tcp and udp traffic
-				bpffilter = "(udp or tcp)"
-			}
+				bpffilter = ""
+				if !monitorAll {
+					if len(monitoredIPs) == 0 {
+						// monitor loopback, zero traffic inside container
+						bpffilter = "net 127.0.0.0"
+					} else {
+						// monitor array of ips
+						for n, ip := range monitoredIPs {
+							if n == 0 {
+								bpffilter = "((udp or tcp) and dst host  " + ip + " )"
+							} else {
+								bpffilter = bpffilter + " or ((udp or tcp) and host " + ip + " )"
+							}
+						}
+					}
+				} else {
+					// monitor all tcp and udp traffic
+					bpffilter = "(udp or tcp)"
+				}
 
-			log.Println("Updating bpf: " + bpffilter)
+				log.Println("Updating bpf: " + bpffilter)
 
-			if err = handle.SetBPFFilter(bpffilter); err != nil {
-				log.Println("BPF filter error:", err)
+				if err = handle.SetBPFFilter(bpffilter); err != nil {
+					log.Println("BPF filter error:", err)
+				}
+
+				// Work for 1 second
+				time.Sleep(1 * time.Second)
+
+				// Cancel the context, stopping all goroutines
+				cancel()
+
+				// Put the program into an infinite sleep state
+				log.Println("Putting the program into an infinite sleep state...")
+				select {}
 			}
 		}
-
-		/*
-
-					if action == "add" {
-						if argument == "all" {
-							monitorAll = true
-						} else {
-							//if we add an ip, should we disable all?
-							monitoredIPs = append(monitoredIPs, line.Text)
-						}
-					} else if action == "remove" {
-						if argument == "all" {
-							monitorAll = false
-						} else {
-							index := 0
-							for n, ip := range monitoredIPs {
-								if ip == argument {
-									index = n
-								}
-							}
-							//swap unneeded ip with last valid ip
-							monitoredIPs[len(monitoredIPs)-1], monitoredIPs[i] = monitoredIPs[i], monitoredIPs[len(monitoredIPs)-1]
-							//keep a new slice with n-1 ip (drop the last ip)
-			    			monitoredIPs = monitoredIPs[:len(monitoredIPs)-1]
-						}
-					} else if action == "clear" {
-						monitoredIPs = monitoredIPs[:0]
-					}
-
-		*/
 	}
 }
 
+
 func main() {
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel() 
+
 	flag.Parse()
 	activeConns = make(map[string]chan gopacket.Packet)
 	//open flow client to send warnings
 	warn := make(chan net.IP)
-	go flowServer(warn)
+	go flowServer(ctx,warn)
 
 	//open pcap to get packets
 	var handle *pcap.Handle
@@ -355,10 +358,11 @@ func main() {
 		defer handle.Close()
 	}
 
-	go updateMonitoredIPs(handle)
+	go updateMonitoredIPs(ctx,handle)
 
 	source := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range source.Packets() {
-		getPacketInfo(packet, warn)
+		getPacketInfo(packet, warn, ctx)
 	}
 }
+

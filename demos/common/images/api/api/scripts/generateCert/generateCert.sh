@@ -62,7 +62,7 @@ generate() {
     openssl req -new -nodes -key server.key -out server.csr -subj /C=CN/ST=Greece/L=Athens/O="Server"/CN=localhost
 
     msg "Generating server certificate: server.crt"
-    openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+    openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -extensions SAN -extfile <(cat /etc/ssl/openssl.cnf <(printf "\n[SAN]\nsubjectAltName=DNS:localhost"))
 
     msg " >>>>>>>>>>>>>>>>>> Generate client certificate <<<<<<<<<<<<<<<<<<<<<<"
     msg "Generating client certificate private key: client.key"
@@ -79,3 +79,5 @@ generate() {
 
 prerequisites
 generate
+
+
