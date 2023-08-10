@@ -105,7 +105,7 @@ func deviceExists(name string) bool {
 	return false
 }
 
-func getPacketInfo(packet gopacket.Packet, warn chan net.IP ,ctx context.Context) {
+func getPacketInfo(packet gopacket.Packet, warn chan net.IP ) {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer != nil {
 		ip, _ := ipLayer.(*layers.IPv4)
@@ -116,7 +116,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP ,ctx context.Context
 		if !ok {
 			log.Println("new connection: ", connStr)
 			newconn := make(chan gopacket.Packet)
-			go checkConnection(ctx, newconn, warn, ip.SrcIP, connStr)
+			go checkConnection( newconn, warn, ip.SrcIP, connStr)
 
 			activeConnsLock.Lock()
 			activeConns[connStr] = newconn
@@ -129,7 +129,7 @@ func getPacketInfo(packet gopacket.Packet, warn chan net.IP ,ctx context.Context
 	}
 }
 
-func checkConnection(ctx context.Context, conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
+func checkConnection( conn chan gopacket.Packet, warn chan net.IP, srcIP net.IP, connStr string) {
 	checkTimer := time.NewTicker(200 * time.Millisecond)
 	defer checkTimer.Stop()
 
@@ -174,7 +174,6 @@ func checkConnection(ctx context.Context, conn chan gopacket.Packet, warn chan n
 			if float64(count) * 2.5 > float64(*args.threshold) {
 				log.Println("Warning: ", connStr, " count: ", count)
 				warn <- srcIP
-				return
 			}
 			log.Println("count: ", connStr, " count: ", count)
 			count = 0
@@ -184,10 +183,6 @@ func checkConnection(ctx context.Context, conn chan gopacket.Packet, warn chan n
 				return
 			}
 			used = false
-		case <-ctx.Done():
-            // If the context is cancelled, return from the goroutine
-            log.Println("Context cancelled, stopping checkConnection goroutine...")
-            return
 		}
 	}
 }
@@ -362,7 +357,6 @@ func main() {
 
 	source := gopacket.NewPacketSource(handle, handle.LinkType())
 	for packet := range source.Packets() {
-		getPacketInfo(packet, warn, ctx)
+		getPacketInfo(packet, warn)
 	}
 }
-
