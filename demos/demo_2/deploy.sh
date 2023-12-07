@@ -44,6 +44,61 @@ for arg in "$@"; do
     fi
 done
 
+for arg in "$@"; do
+	if [ "$arg" == "gnbsim_only" ]; then
+		for ((s=10;s<=$slice;s++))
+		do
+			amfpod=$(kubectl get pods -n oai  | grep amf$s | awk '{print $1}')
+			amfeth0=$(kubectl exec -n oai $amfpod -c amf -- ifconfig | grep "inet 10.8" | awk '{print $2}')
+			upfpod=$(kubectl get pods -n oai  | grep spgwu-tiny$s | awk '{print $1}')
+			upfeth0=$(kubectl exec -n oai $upfpod -c spgwu -- ifconfig | grep "inet 10.8" | awk '{print $2}')
+			((z=$s-9))
+				ip=2
+				for ((ut=0;ut<$3;ut++))
+				do
+					#-----------------------------GNBSIM Deployment----------------------------------------
+					sed -i "2s/.*/name: gnbsim$u/" gnbsim/Chart.yaml
+					sed -i "6s/.*/  version: ${gnbsimim}/" gnbsim/values.yaml
+					sed -i "28s/.*/  name: \"gnbsim-sa$u\"/" gnbsim/values.yaml
+					sed -i "/ngappeeraddr/c\  ngappeeraddr: \"$amfeth0\"" gnbsim/values.yaml
+					sed -i "/gnbid/c\  gnbid: \"$u\"" gnbsim/values.yaml
+					sed -i "/msin/c\  msin: \"00000000$u\"" gnbsim/values.yaml
+					sed -i "/key/c\  key: \"0C0A34601D4F07677303652C046253$u\"" gnbsim/values.yaml
+					sed -i "/sst/c\  sst: \"2$s\"" gnbsim/values.yaml
+
+					helm install gnb$u gnbsim/ -n oai 
+					sleep 10
+					echo -e "${BLUE} ${bold} GNBSIM$u deployed ${NC} ${NORMAL}"
+					gnbsimpod=$(kubectl get pods -n oai  | grep gnbsim$u | awk '{print $1}')
+					gnbsimeth0=$(kubectl exec -n oai $gnbsimpod -c gnbsim -- ifconfig | grep "inet 10.8" | awk '{print $2}')
+
+
+					#-----------------------------DNN Deployment-------------------------------------------
+					sed -i "4s/.*/  name: oai-dnn$u/" oai-dnn/02_deployment.yaml
+					sed -i "6s/.*/    app: oai-dnn$u/" oai-dnn/02_deployment.yaml
+					sed -i "11s/.*/      app: oai-dnn$u/" oai-dnn/02_deployment.yaml
+					sed -i "17s/.*/        app: oai-dnn$u/" oai-dnn/02_deployment.yaml
+					#sed -i "28s/.*/        image: tolgaomeratalay\/oai-dnn:${dnnim}/" oai-dnn/02_deployment.yaml
+					#sed -i "22s/.*/        type: az$z/" oai-dnn/02_deployment.yaml
+
+					kubectl apply -k oai-dnn/
+					sleep 2
+					echo -e "${BLUE} ${bold} DNN$u deployed ${NC} ${NORMAL}"
+					dnnpod=$(kubectl get pods -n oai  | grep oai-dnn$u | awk '{print $1}')
+					dnneth0=$(kubectl exec -n oai $dnnpod -- ifconfig | grep "inet 10.8" | awk '{print $2}')
+					
+					kubectl exec -it -n oai $dnnpod -- iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+					kubectl exec -it -n oai $dnnpod -- ip route add 12.1.1.0/24 via $upfeth0 dev eth0
+					kubectl exec -it -n oai $gnbsimpod -c gnbsim -- ip route replace $dnneth0 via 0.0.0.0 dev eth0 src 12.1.1.$ip
+					((ip+=1))
+					((u+=1))
+					echo "-------------------------------------------------"
+				done
+		done
+		exit 0
+	fi
+done
+
 for ((s=10;s<=$slice;s++))
 do
 	((z=$s-9))
