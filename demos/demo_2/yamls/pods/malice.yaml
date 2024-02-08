@@ -1,0 +1,252 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice1
+spec:
+  containers:
+    - name: malice1
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice2
+spec:
+  containers:
+    - name: malice2
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice3
+spec:
+  containers:
+    - name: malice3
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice4
+spec:
+  containers:
+    - name: malice4
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice5
+spec:
+  containers:
+    - name: malice5
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice6
+spec:
+  containers:
+    - name: malice6
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice7
+spec:
+  containers:
+    - name: malice7
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice8
+spec:
+  containers:
+    - name: malice8
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice9
+spec:
+  containers:
+    - name: malice9
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice10
+spec:
+  containers:
+    - name: malice11
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice11
+spec:
+  containers:
+    - name: malice11
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: malice12
+spec:
+  containers:
+    - name: malice12
+      image: 10.8.8.2:5000/antrea-tsi:v1.0.5
+      command:
+        - sleep
+        - infinity
+      imagePullPolicy: Always
+      volumeMounts:
+        - mountPath: /tmp
+          name: logsock
+  volumes:
+  - hostPath:
+      path: /tmp
+      type: Directory
+    name: logsock
