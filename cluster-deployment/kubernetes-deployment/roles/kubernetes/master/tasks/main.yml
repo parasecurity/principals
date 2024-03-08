@@ -29,7 +29,7 @@
 
 - name: Remove taint from master
   become_user: "{{ ansible_user }}"
-  shell: kubectl taint nodes {{ ansible_hostname }} node-role.kubernetes.io/master:NoSchedule- || echo "no taint found"
+  shell: kubectl taint nodes {{ ansible_hostname }} node-role.kubernetes.io/control-plane- || echo "no taint found"
 
 - name: Add label on master
   become_user: "{{ ansible_user }}"
