@@ -1,29 +1,29 @@
 package logging
 
 import (
-	"fmt"
-	"io"
-	"errors"
 	"net"
-	"os"
-	"strings"
 	"sync"
+	"os"
+	"io"
+	"fmt"
 	"time"
+	"strings"
 )
 
 //////////////////////////////////
 // helper utils
 
-func debug(format string, args ...interface{}) {
+func debug(format string, args ...interface{}){
 	fmt.Fprintf(os.Stderr, format, args...)
 }
 
 type buffer struct {
-	sb   strings.Builder
+	sb strings.Builder
 	next *buffer
 }
 
-// buffer freelist
+
+// buffer freelist 
 var pool *buffer
 var pmx sync.Mutex
 
@@ -53,48 +53,27 @@ func putBuff(b *buffer) {
 ///////////////////////////////////////
 // logging struct
 type logging struct {
-	conn      *net.UnixConn
+
+	conn *net.UnixConn
 	sock_addr *net.UnixAddr
 
-	host    string
+	host string
 	command string
 }
-
-var missedLogs int = 0
 
 func (l logging) Write(p []byte) (n int, err error) {
 
 	// TODO error handling and fall-back in disconnections
 	n = len(p)
-	np := n
-	if p[n-1] == p[n-2] {
-		np = n-1
-	} 
-	if l.conn == nil { 
-		err = net.ErrClosed 
+	if p[n - 1] == p[n - 2]{
+		_, err = l.conn.Write(p[:n - 1])
 	} else {
-		err = l.conn.SetWriteDeadline(time.Now().Add(time.Second))
-	}
-
-	if err == nil {
-		_, err = l.conn.Write(p[:np])
+		_, err = l.conn.Write(p)
 	}
 
 	if err != nil {
-		print(string(p[:np]))
-		missedLogs++
-		if !err.(net.Error).Timeout() {
-			// reconnect to agent
-			fixit()
-		}
-		// panic("agent down! agent down!")
-	} else { 
-		if missedLogs != 0 {
-			st := fmt.Sprintf("%s %s %d at least %d logs were missed\n", log.host, log.command, 
-								time.Now().UnixNano() / 1000, missedLogs)
-			l.conn.Write([]byte(st))
-		}
-		missedLogs = 0 
+		// TODO do something or suppose agent doesn't die
+		panic("agent down! agent down!")
 	}
 
 	return
@@ -103,20 +82,11 @@ func (l logging) Write(p []byte) (n int, err error) {
 var log logging
 
 // for negative or 0 retries loops forever
-func connectToAgent(retries int) (err error) {
-	println("Connecting to logging agent")
+func connectToAgent(retries int) (err error){
 	for i := retries; i != 1; i-- {
 		log.conn, err = net.DialUnix("unixpacket", nil, log.sock_addr)
 		if err == nil {
 			break
-		} else {
-			var enof *net.OpError
-			if errors.As(err, &enof) {
-				if !errors.Is(enof.Err, os.ErrNotExist) {
-					// discard printing file not fount for closed socket - not interesting
-					println(err.Error())
-				}
-			}
 		}
 		// TODO log the error maybe
 		time.Sleep(1 * time.Second)
@@ -124,43 +94,8 @@ func connectToAgent(retries int) (err error) {
 	return
 }
 
-var control struct {
-	req chan struct{}
-	ans chan struct{}
-}
+func init (){
 
-func fixit() {
-	agMx.Lock()
-	if !tryingToConnect{
-		agMx.Unlock()
-		control.req<- struct{}{}
-		<-control.ans
-	} else { agMx.Unlock() }
-}
-
-var agMx sync.Mutex
-var tryingToConnect bool = false
-
-func stateCheck() {
-	for {
-		<-control.req
-		control.ans<- struct{}{}
-		agMx.Lock()
-		if !tryingToConnect { 
-			tryingToConnect = true
-			agMx.Unlock()
-			connectToAgent(0)
-			agMx.Lock()
-			tryingToConnect=false
-		}
-		agMx.Unlock()
-	}
-}
-
-func init() {
-
-	control.req = make(chan struct{})
-	control.ans = make(chan struct{})
 	network := "unixpacket"
 	path := "/tmp/testlog.sock"
 	//TODO error handling
@@ -173,17 +108,16 @@ func init() {
 	}
 	log.host, err = os.Hostname()
 	log.command = os.Args[0]
-	go stateCheck()
 
 }
 
-func (*logging) printf(format string, args ...interface{}) {
+func ( *logging) printf(format string, args ...interface{}) {
 
-	st := append([]interface{}{log.host, log.command, time.Now().UnixNano() / 1000}, args...)
+	st := append([]interface{}{log.host, log.command, time.Now().UnixNano()/1000}, args...)
 	b := getBuff()
 	b.sb.WriteString("%s %s %d ")
 	b.sb.WriteString(format)
-	if !strings.HasSuffix(b.sb.String(), "\n") {
+	if ! strings.HasSuffix(b.sb.String(), "\n") {
 		b.sb.WriteString("\n")
 	}
 
@@ -191,62 +125,62 @@ func (*logging) printf(format string, args ...interface{}) {
 	putBuff(b)
 }
 
-func (*logging) println(args ...interface{}) {
+func ( *logging ) println(args ...interface{}) {
 
-	st := append([]interface{}{log.host, log.command, time.Now().UnixNano() / 1000}, args...)
+	st := append([]interface{}{log.host, log.command, time.Now().UnixNano()/1000}, args...)
 	fmt.Fprintln(log, st...)
 }
 
-func (*logging) print(args ...interface{}) {
+func ( *logging) print(args ...interface{}){
 
-	st := append([]interface{}{log.host, " ", log.command, " ", time.Now().UnixNano() / 1000, " "}, args...)
+	st := append([]interface{}{log.host, " ", log.command, " ", time.Now().UnixNano()/1000, " "}, args...)
 	st = append(st, "\n")
 	fmt.Fprint(log, st...)
 }
 
-func Print(args ...interface{}) {
+func Print(args ...interface{}){
 	log.print(args...)
 }
 
 ////////////////////////////////////////
-// public
-func Println(args ...interface{}) {
+// public 
+func Println(args ...interface{}){
 	log.println(args...)
 }
 
-func Printf(format string, args ...interface{}) {
+func Printf(format string, args ...interface{}){
 	log.printf(format, args...)
 }
 
-func Panic(args ...interface{}) {
+func Panic(args ...interface{}){
 	log.print(args...)
 	s := fmt.Sprint(args...)
 	panic(s)
 }
 
-func Panicln(args ...interface{}) {
+func Panicln(args ...interface{}){
 	log.println(args...)
 	s := fmt.Sprintln(args...)
 	panic(s)
 }
 
-func Panicf(format string, args ...interface{}) {
+func Panicf(format string, args ...interface{}){
 	log.printf(format, args...)
 	s := fmt.Sprintf(format, args...)
 	panic(s)
 }
 
-func Fatal(args ...interface{}) {
+func Fatal(args ...interface{}){
 	log.print(args...)
 	os.Exit(1)
 }
 
-func Fatalln(args ...interface{}) {
+func Fatalln(args ...interface{}){
 	log.println(args...)
 	os.Exit(1)
 }
 
-func Fatalf(format string, args ...interface{}) {
+func Fatalf(format string, args ...interface{}){
 	log.printf(format, args...)
 	os.Exit(1)
 }

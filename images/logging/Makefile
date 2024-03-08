@@ -1,4 +1,4 @@
-VERSION ?= v1.0.2
+VERSION ?= v1.0.3
 IMAGE ?= tsi-logging
 REMOTE_REGISTRY ?= localhost:5000
 
@@ -12,11 +12,16 @@ clean:
 
 server:
 	mkdir -p bin/
-	go build -o bin/server cmd/log-server/*.go 
+	go build -o bin/server \
+		cmd/log-server/server.go \
+		cmd/log-server/parser.go \
+		cmd/log-server/parser_core.go \
+		cmd/log-server/report.go \
+		cmd/log-server/sorter.go
 
 agent:
 	mkdir -p bin/
-	go build -o bin/agent cmd/log-agent/*.go
+	go build -o bin/agent cmd/log-agent/agent.go
 
 client:
 	mkdir -p bin/
