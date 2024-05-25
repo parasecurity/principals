@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: 5g-traffic-detection
-        image: 192.168.56.2:5000/5g-detector:v0.0.1
+        image: gntousakis/5g-detector:v0.0.1
         ports:
         - containerPort: 9999
 ---

@@ -1,5 +1,5 @@
 BUILD ?= $(CURDIR)/bin
-IMAGE ?= tsi-detector
+IMAGE ?= 5g-detector
 VERSION ?= v0.0.1
 REMOTE_REGISTRY ?= localhost:5000
 
