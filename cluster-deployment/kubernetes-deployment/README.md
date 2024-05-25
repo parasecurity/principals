@@ -151,6 +151,45 @@ KUBELET_EXTRA_ARGS="--node-ip=10.9.9.2"
 gather_subset=!hardware
 ```
 
+## New insecure registry
+
+[er](https://github.com/containerd/containerd/blob/main/docs/hosts.md)
+
+The old CRI config pattern for specifying `registry.mirrors` and `registry.configs` has been DEPRECATED. You should now point your registry `config_path` to the path where your `hosts.toml` files are located. The right way to setup should be (in my example `http://172.31.0.36` is the private insecure registry):
+
+```
+$ tree
+.
+├── certs.d
+│   └── 172.31.0.36
+│       └── hosts.toml
+└── config.toml
+```
+
+where `config.toml` should include:
+
+```toml
+version = 2
+
+[plugins."io.containerd.grpc.v1.cri".registry]
+   config_path = "/etc/containerd/certs.d"
+```
+
+and in `hosts.toml`:
+
+```toml
+server = "http://172.31.0.36"
+
+[host."http://172.31.0.36"]
+  skip_verify = true
+```
+
+Restart the `containerd` service:
+
+```
+$ sudo systemctl restart containerd
+```
+
 ## TODO
 - Make deployment install kubernetes version 1.23.1 and not the latest. Kubernetes drops docker support on version 1.24.
 

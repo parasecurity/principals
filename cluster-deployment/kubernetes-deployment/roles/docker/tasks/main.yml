@@ -26,8 +26,8 @@
 - name: Install Docker Engine
   apt:   
     name:
-      - docker-ce=5:20.10.23~3-0~ubuntu-focal
-      - docker-ce-cli=5:20.10.23~3-0~ubuntu-focal
+      - docker-ce
+      - docker-ce-cli
       - containerd.io
     state: present
 

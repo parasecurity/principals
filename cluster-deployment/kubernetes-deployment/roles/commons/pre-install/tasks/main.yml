@@ -33,15 +33,51 @@
     filename: 'kubernetes'
     update_cache: false
 
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Download and add the Kubernetes GPG key
+  ansible.builtin.shell:
+    cmd: >
+      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key |
+      gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+- name: Add Kubernetes repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /'
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Update apt-get repo and cache
   apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
-  
+
 - name: Installing kubernetes cluster packages
   apt: 
     name:
-      - kubeadm=1.23.1-00
-      - kubectl=1.23.1-00
-      - kubelet=1.23.1-00
+      - kubeadm=1.28.7-1.1
+      - kubectl=1.28.7-1.1
+      - kubelet=1.28.7-1.1
+
+- name: Comment out disabled_plugins line for CRI
+  ansible.builtin.lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*disabled_plugins\s*=\s*\["cri"\])'
+    line: '# \1'
+    backrefs: yes
+
+- name: Restart containerd to apply new configuration
+  ansible.builtin.service:
+    name: containerd
+    state: restarted
+    enabled: yes
 
 - name: Start kubelet
   service:

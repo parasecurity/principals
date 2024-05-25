@@ -37,7 +37,6 @@ func init() {
 	attack.reconnections = 0
 	malices = make(map[string]*maliceStamps)
 	alices = make(map[string]*aliceStamps)
-	attack.blockedIPs = make(map[string]string)
 	allAlices = initAlice(0, "all", "cluster")
 }
 
@@ -59,6 +58,7 @@ func (d *dDos) start(now int64) {
 	d.passed = false
 	d.responding = false
 	d.downTime = 0
+	d.blockedIPs = make(map[string]string)
 	d.st.attackInitiation = now
 }
 
@@ -282,10 +282,10 @@ func analyseLogs(logs chan []string){
 
 		// EVENTS
 		// detect starting of ddos attack (udp/syn)
-		if strings.HasPrefix(pod, *attackPodName) {
+		if strings.Contains(pod, "attack") {
 			_, e := malices[pod]
 			if !e {
-				if strings.Contains(log, *attackInitLog) {
+				if strings.Contains(log, "Start attacking") {
 					malices[pod] = initMalice(timestamp, pod, node)
 					if !attack.active && !attack.passed {
 						attack.start(timestamp)
@@ -304,9 +304,6 @@ func analyseLogs(logs chan []string){
 			m, e := malices[pod]
 			if !e {
 				// new malice detected.
-				// init with invalide very late timestamp so it will be validated
-				// on 328 line in case of initial bad connection BUG 
-				malices[pod] = initMalice(timestamp + tsiSecond*60*60*24, pod, node)
 				if strings.Contains(log, "OK"){
 					malices[pod] = initMalice(timestamp, pod, node)
 					malices[pod].attackRate.packetOK++
