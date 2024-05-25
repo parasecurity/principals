@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: 5g-traffic-detection
+  labels:
+    app: 5g-traffic-detection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: 5g-traffic-detection
+  template:
+    metadata:
+      labels:
+        app: 5g-traffic-detection
+    spec:
+      containers:
+      - name: 5g-traffic-detection
+        image: 192.168.56.2:5000/5g-detector:v0.0.1
+        ports:
+        - containerPort: 9999
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: 5g-traffic-detection-service
+spec:
+  selector:
+    app: 5g-traffic-detection
+  ports:
+    - protocol: UDP
+      port: 9999
+      targetPort: 9999
+  type: NodePort
